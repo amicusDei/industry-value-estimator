@@ -1,0 +1,5 @@
+[
+  {"Instrument": "NVDA.O", "TR.CommonName": "NVIDIA Corp", "TR.Revenue": 26914000000.0, "TR.TRBCActivityCode": "57201030"},
+  {"Instrument": "MSFT.O", "TR.CommonName": "Microsoft Corp", "TR.Revenue": 211915000000.0, "TR.TRBCActivityCode": "45101010"},
+  {"Instrument": "INTC.O", "TR.CommonName": "Intel Corp", "TR.Revenue": 54228000000.0, "TR.TRBCActivityCode": "57201010"}
+]

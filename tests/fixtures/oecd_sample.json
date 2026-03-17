@@ -1,0 +1,5 @@
+[
+  {"LOCATION": "USA", "TIME_PERIOD": "2020", "INDICATOR": "GERD", "value": 720896.0},
+  {"LOCATION": "USA", "TIME_PERIOD": "2021", "INDICATOR": "GERD", "value": 756715.0},
+  {"LOCATION": "GBR", "TIME_PERIOD": "2020", "INDICATOR": "GERD", "value": 49360.0}
+]
