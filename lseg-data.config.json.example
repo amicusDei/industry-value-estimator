@@ -1,0 +1,11 @@
+{
+    "_comment": "Copy this to lseg-data.config.json in project root. The app-key can be left empty for Desktop Session — authentication flows through the open LSEG Workspace application.",
+    "sessions": {
+        "default": "desktop.workspace"
+    },
+    "desktop": {
+        "workspace": {
+            "app-key": ""
+        }
+    }
+}
