@@ -84,38 +84,38 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | — | Pending |
-| DATA-02 | — | Pending |
-| DATA-03 | — | Pending |
-| DATA-04 | — | Pending |
-| DATA-05 | — | Pending |
-| DATA-06 | — | Pending |
-| DATA-07 | — | Pending |
-| DATA-08 | — | Pending |
-| MODL-01 | — | Pending |
-| MODL-02 | — | Pending |
-| MODL-03 | — | Pending |
-| MODL-04 | — | Pending |
-| MODL-05 | — | Pending |
-| MODL-06 | — | Pending |
-| MODL-07 | — | Pending |
-| MODL-08 | — | Pending |
-| MODL-09 | — | Pending |
-| PRES-01 | — | Pending |
-| PRES-02 | — | Pending |
-| PRES-03 | — | Pending |
-| PRES-04 | — | Pending |
-| PRES-05 | — | Pending |
-| ARCH-01 | — | Pending |
-| ARCH-02 | — | Pending |
-| ARCH-03 | — | Pending |
-| ARCH-04 | — | Pending |
+| DATA-01 | Phase 1 | Pending |
+| DATA-02 | Phase 1 | Pending |
+| DATA-03 | Phase 1 | Pending |
+| DATA-04 | Phase 1 | Pending |
+| DATA-05 | Phase 1 | Pending |
+| DATA-06 | Phase 1 | Pending |
+| DATA-07 | Phase 4 | Pending |
+| DATA-08 | Phase 1 | Pending |
+| MODL-01 | Phase 2 | Pending |
+| MODL-02 | Phase 3 | Pending |
+| MODL-03 | Phase 3 | Pending |
+| MODL-04 | Phase 3 | Pending |
+| MODL-05 | Phase 3 | Pending |
+| MODL-06 | Phase 2 | Pending |
+| MODL-07 | Phase 3 | Pending |
+| MODL-08 | Phase 2 | Pending |
+| MODL-09 | Phase 2 | Pending |
+| PRES-01 | Phase 4 | Pending |
+| PRES-02 | Phase 4 | Pending |
+| PRES-03 | Phase 4 | Pending |
+| PRES-04 | Phase 5 | Pending |
+| PRES-05 | Phase 5 | Pending |
+| ARCH-01 | Phase 1 | Pending |
+| ARCH-02 | Phase 5 | Pending |
+| ARCH-03 | Phase 5 | Pending |
+| ARCH-04 | Phase 2 | Pending |
 
 **Coverage:**
 - v1 requirements: 26 total
-- Mapped to phases: 0
-- Unmapped: 26 ⚠️
+- Mapped to phases: 26
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-17 after initial definition*
+*Last updated: 2026-03-17 after roadmap creation — all 26 requirements mapped*
