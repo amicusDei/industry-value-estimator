@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Completed 01-data-foundation-01-03-PLAN.md (paused at Task 2 checkpoint:human-verify)"
-last_updated: "2026-03-17T15:11:25.366Z"
+stopped_at: Completed 01-data-foundation-01-02-PLAN.md
+last_updated: "2026-03-17T15:15:36.803Z"
 last_activity: "2026-03-17 — Completed plan 01-01: project scaffold, AI industry config, pandera schemas, 26 tests"
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 5
-  completed_plans: 2
+  completed_plans: 3
   percent: 4
 ---
 
@@ -51,6 +51,7 @@ Progress: [░░░░░░░░░░] 4%
 
 *Updated after each plan completion*
 | Phase 01-data-foundation P03 | 2 | 1 tasks | 3 files |
+| Phase 01-data-foundation P02 | 12 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -67,6 +68,9 @@ Recent decisions affecting current work:
 - [01-01]: check_no_nominal_columns() as standalone function callable independently before full PROCESSED_SCHEMA validation
 - [Phase 01-03]: Desktop Session auth config pattern: lseg-data.config.json gitignored, .example committed as template; app-key left empty
 - [Phase 01-03]: TRBC codes read from config dynamically — zero hardcoded codes in lseg.py, ensures reproducibility
+- [Phase 01-02]: _sdmx_to_dataframe helper: pandasdmx to_pandas() returns pd.Series with MultiIndex — reset_index() on Series to get flat DataFrame
+- [Phase 01-02]: patch.object on pipeline module instead of string-path patch to avoid importlib.reload bypassing mock bindings in pipeline unit tests
+- [Phase 01-02]: OECD SDMX dimension key fallback: try LOCATION first, catch exceptions, retry with COU + rename — handles API inconsistency between environments
 
 ### Pending Todos
 
@@ -79,6 +83,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-17T15:11:25.365Z
-Stopped at: Completed 01-data-foundation-01-03-PLAN.md (paused at Task 2 checkpoint:human-verify)
+Last session: 2026-03-17T15:15:36.801Z
+Stopped at: Completed 01-data-foundation-01-02-PLAN.md
 Resume file: None

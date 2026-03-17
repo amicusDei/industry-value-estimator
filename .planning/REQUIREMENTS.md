@@ -11,8 +11,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **DATA-01**: Define AI industry market boundary (what sectors, companies, and activities count as "AI")
 - [x] **DATA-02**: Define AI use cases taxonomy for structuring the analysis
-- [ ] **DATA-03**: Ingest economic data from World Bank API (GDP, R&D expenditure, ICT indicators)
-- [ ] **DATA-04**: Ingest economic data from OECD API (technology indicators, patent data)
+- [x] **DATA-03**: Ingest economic data from World Bank API (GDP, R&D expenditure, ICT indicators)
+- [x] **DATA-04**: Ingest economic data from OECD API (technology indicators, patent data)
 - [x] **DATA-05**: Ingest financial data from LSEG Workspace API (company-level data, market data)
 - [ ] **DATA-06**: Clean and normalize all data (currency conversion to constant USD, missing value handling, frequency alignment)
 - [ ] **DATA-07**: Display data source attribution on every chart and report output
@@ -86,8 +86,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | DATA-01 | Phase 1 | Pending |
 | DATA-02 | Phase 1 | Pending |
-| DATA-03 | Phase 1 | Pending |
-| DATA-04 | Phase 1 | Pending |
+| DATA-03 | Phase 1 | Complete |
+| DATA-04 | Phase 1 | Complete |
 | DATA-05 | Phase 1 | Complete |
 | DATA-06 | Phase 1 | Pending |
 | DATA-07 | Phase 4 | Pending |
