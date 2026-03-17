@@ -30,7 +30,14 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Schema validation tests run after every fetch and reject malformed API responses before they corrupt the dataset
   4. The AI industry market boundary (which sectors and activities count as "AI") is locked in a config file and every dataset row carries an industry tag
   5. A second industry can be added by dropping a new YAML file into `config/industries/` without modifying pipeline code
-**Plans**: TBD
+**Plans:** 5 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Project scaffold, config, AI boundary YAML, validation schemas, METHODOLOGY.md
+- [ ] 01-02-PLAN.md — World Bank and OECD ingestion connectors
+- [ ] 01-03-PLAN.md — LSEG Workspace ingestion connector
+- [ ] 01-04-PLAN.md — Processing pipeline (deflation, interpolation, tagging, normalization)
+- [ ] 01-05-PLAN.md — Pipeline orchestrator, extensibility verification, documentation
 
 ### Phase 2: Statistical Baseline
 **Goal**: Interpretable econometric models produce AI market size baselines and residuals, with documented assumptions and structural break analysis
@@ -84,7 +91,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Data Foundation | 0/TBD | Not started | - |
+| 1. Data Foundation | 0/5 | Planning complete | - |
 | 2. Statistical Baseline | 0/TBD | Not started | - |
 | 3. ML Ensemble and Validation | 0/TBD | Not started | - |
 | 4. Interactive Dashboard | 0/TBD | Not started | - |
