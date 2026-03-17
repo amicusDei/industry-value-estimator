@@ -1,0 +1,145 @@
+# AI Industry Market Boundary Configuration
+# Source: Phase 1 CONTEXT.md locked decisions
+# This file is the single source of truth for what counts as "AI" in the pipeline.
+# Adding a new industry = creating a new YAML file in this directory.
+
+industry: ai
+display_name: "Artificial Intelligence Industry"
+base_year: 2020  # Deflation base year — all monetary series in 2020 constant USD
+
+# 4 segments modeled separately (overlap allowed, documented)
+segments:
+  - id: ai_hardware
+    display_name: "AI Hardware (chips, GPUs, specialized silicon)"
+    overlap_note: "GPU revenue counted here AND in cloud infrastructure — document range"
+  - id: ai_infrastructure
+    display_name: "AI Infrastructure (cloud compute, data centers)"
+    overlap_note: "Cloud compute revenue overlaps with AI software platform hosting"
+  - id: ai_software
+    display_name: "AI Software & Platforms (foundation models, AI SaaS)"
+    overlap_note: "AI SaaS overlaps with enterprise adoption spend"
+  - id: ai_adoption
+    display_name: "AI Adoption (enterprise AI deployment)"
+    overlap_note: "Enterprise spend may double-count software license fees"
+
+# Geographic scope — Global aggregate + regional breakdown
+regions:
+  - id: global
+    display_name: "Global"
+  - id: us
+    display_name: "United States"
+    economy_codes: ["USA"]
+  - id: europe
+    display_name: "Europe"
+    economy_codes: ["GBR", "DEU", "FRA", "NLD", "SWE", "IRL", "CHE"]
+  - id: china
+    display_name: "China"
+    economy_codes: ["CHN"]
+  - id: row
+    display_name: "Rest of World"
+    economy_codes: ["JPN", "KOR", "IND", "ISR", "SGP", "CAN", "AUS"]
+
+# Historical range
+date_range:
+  start: "2010"
+  end: "2025"
+
+# Proxy indicators for AI activity (when direct measurement unavailable)
+proxies:
+  - id: rd_ict_pct_gdp
+    description: "R&D expenditure in ICT as % of GDP (OECD ANBERD proxy)"
+    source: oecd
+    dataset: ANBERD
+  - id: ai_patent_filings
+    description: "AI patent applications (USPTO/EPO via OECD PATS_IPC)"
+    source: oecd
+    dataset: PATS_IPC
+    ipc_filter: "G06N"
+  - id: vc_ai_investment
+    description: "VC/PE investment in AI companies (OECD/Crunchbase proxy)"
+    source: oecd
+    dataset: VC_INVEST
+  - id: public_co_ai_revenue
+    description: "Revenue of TRBC-classified AI companies (LSEG)"
+    source: lseg
+    trbc_codes: ["57201010", "57201020", "57201030", "45101010"]
+
+# World Bank indicators
+world_bank:
+  indicators:
+    - code: "NY.GDP.MKTP.CD"
+      name: gdp_current_usd
+      unit: current_usd
+      use_for: macro_denominator
+    - code: "NY.GDP.DEFL.ZS"
+      name: gdp_deflator_index
+      unit: index_2015_100
+      use_for: deflation
+    - code: "NY.GDP.MKTP.KD.ZG"
+      name: gdp_growth_annual_pct
+      unit: pct
+      use_for: context
+    - code: "GB.XPD.RSDV.GD.ZS"
+      name: rd_pct_gdp
+      unit: pct_gdp
+      use_for: proxy_rd
+    - code: "SP.POP.SCIE.RD.P6"
+      name: researchers_per_million
+      unit: per_million
+      use_for: proxy_rd_human_capital
+    - code: "TX.VAL.TECH.CD"
+      name: hightech_exports_current_usd
+      unit: current_usd
+      use_for: proxy_tech_intensity
+    - code: "IP.PAT.RESD"
+      name: patent_applications_residents
+      unit: count
+      use_for: proxy_innovation
+    - code: "BX.GSR.CCIS.CD"
+      name: ict_service_exports_current_usd
+      unit: current_usd
+      use_for: proxy_ict
+
+# OECD datasets
+oecd:
+  datasets:
+    - id: MSTI
+      name: main_science_tech_indicators
+      use_for: rd_expenditure_by_sector
+    - id: PATS_IPC
+      name: patent_filings_by_ipc_class
+      use_for: ai_patent_proxy
+      ipc_filter: "G06N"
+    - id: ANBERD
+      name: analytical_business_rd
+      use_for: rd_by_industry_including_ict
+
+# LSEG configuration
+lseg:
+  trbc_codes:
+    - code: "57201010"
+      name: "Computer Processing Hardware"
+      segment: ai_hardware
+    - code: "57201020"
+      name: "Electronic Equipment & Parts"
+      segment: ai_hardware
+    - code: "57201030"
+      name: "Semiconductors"
+      segment: ai_hardware
+    - code: "45101010"
+      name: "Internet Software & Services"
+      segment: ai_software
+  fields:
+    - "TR.Revenue"
+    - "TR.RDExpense"
+    - "TR.GrossMargin"
+    - "TR.TotalAssets"
+    - "TR.CommonName"
+    - "TR.TRBCActivity"
+    - "TR.TRBCActivityCode"
+
+# Source metadata (for DATA-07 attribution downstream)
+source_attribution:
+  world_bank: "World Bank Open Data (data.worldbank.org)"
+  oecd: "OECD.Stat (stats.oecd.org)"
+  lseg: "LSEG Workspace (Refinitiv)"
