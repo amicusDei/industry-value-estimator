@@ -9,14 +9,14 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Data Pipeline
 
-- [ ] **DATA-01**: Define AI industry market boundary (what sectors, companies, and activities count as "AI")
-- [ ] **DATA-02**: Define AI use cases taxonomy for structuring the analysis
+- [x] **DATA-01**: Define AI industry market boundary (what sectors, companies, and activities count as "AI")
+- [x] **DATA-02**: Define AI use cases taxonomy for structuring the analysis
 - [ ] **DATA-03**: Ingest economic data from World Bank API (GDP, R&D expenditure, ICT indicators)
 - [ ] **DATA-04**: Ingest economic data from OECD API (technology indicators, patent data)
 - [ ] **DATA-05**: Ingest financial data from LSEG Workspace API (company-level data, market data)
 - [ ] **DATA-06**: Clean and normalize all data (currency conversion to constant USD, missing value handling, frequency alignment)
 - [ ] **DATA-07**: Display data source attribution on every chart and report output
-- [ ] **DATA-08**: Comprehensive documentation explaining each data source, why it was chosen, and how it's processed
+- [x] **DATA-08**: Comprehensive documentation explaining each data source, why it was chosen, and how it's processed
 
 ### Modeling
 
@@ -40,7 +40,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Architecture & Documentation
 
-- [ ] **ARCH-01**: Config-driven extensible pipeline (add new industries via config, not code rewrite)
+- [x] **ARCH-01**: Config-driven extensible pipeline (add new industries via config, not code rewrite)
 - [ ] **ARCH-02**: Comprehensive code documentation explaining every module and function for learning purposes
 - [ ] **ARCH-03**: Polished GitHub README with project description, data sources, setup instructions
 - [ ] **ARCH-04**: Documented assumptions file explaining all modeling decisions and their rationale
