@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Data (raw cached data not committed)
+data/raw/world_bank/
+data/raw/oecd/
+data/raw/lseg/
+data/raw/.http_cache*
+
+# LSEG credentials
+lseg-data.config.json
+
+# Environment
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Reports (generated)
+reports/*.pdf
+reports/*.html
+
+# Models (serialized — too large for git)
+models/**/*.joblib
+models/**/*.pkl
