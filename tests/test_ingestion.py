@@ -197,9 +197,9 @@ class TestOECDIngestion:
             mock_data_msg = MagicMock()
             mock_req.data.return_value = mock_data_msg
             mock_data_msg.data = [MagicMock()]
-            mock_to_pandas.return_value = oecd_sample_df.set_index(
-                pd.MultiIndex.from_frame(oecd_sample_df[["LOCATION", "TIME_PERIOD", "INDICATOR"]])
-            )
+            # pandasdmx returns a Series with MultiIndex (dimensions as index, value as series)
+            # Simulate this: a Series indexed by (LOCATION, TIME_PERIOD, INDICATOR)
+            mock_to_pandas.return_value = _make_sdmx_series(oecd_sample_df)
 
             import importlib
             import src.ingestion.oecd as oecd_mod
@@ -228,9 +228,7 @@ class TestOECDIngestion:
             mock_req = MagicMock()
             mock_req_cls.return_value = mock_req
             mock_req.data.side_effect = mock_data_call
-            mock_to_pandas.return_value = oecd_sample_df.set_index(
-                pd.MultiIndex.from_frame(oecd_sample_df[["LOCATION", "TIME_PERIOD", "INDICATOR"]])
-            )
+            mock_to_pandas.return_value = _make_sdmx_series(oecd_sample_df)
 
             import importlib
             import src.ingestion.oecd as oecd_mod
@@ -251,9 +249,7 @@ class TestOECDIngestion:
             mock_data_msg = MagicMock()
             mock_req.data.return_value = mock_data_msg
             mock_data_msg.data = [MagicMock()]
-            mock_to_pandas.return_value = oecd_sample_df.set_index(
-                pd.MultiIndex.from_frame(oecd_sample_df[["LOCATION", "TIME_PERIOD", "INDICATOR"]])
-            )
+            mock_to_pandas.return_value = _make_sdmx_series(oecd_sample_df)
 
             import importlib
             import src.ingestion.oecd as oecd_mod
@@ -295,9 +291,7 @@ class TestOECDIngestion:
             mock_data_msg = MagicMock()
             mock_req.data.return_value = mock_data_msg
             mock_data_msg.data = [MagicMock()]
-            mock_to_pandas.return_value = oecd_sample_df.set_index(
-                pd.MultiIndex.from_frame(oecd_sample_df[["LOCATION", "TIME_PERIOD", "INDICATOR"]])
-            )
+            mock_to_pandas.return_value = _make_sdmx_series(oecd_sample_df)
 
             import importlib
             import src.ingestion.oecd as oecd_mod
@@ -338,18 +332,17 @@ class TestIngestionPipeline:
         self, mock_wb_path, mock_oecd_msti_path, mock_oecd_patents_path, tmp_path
     ):
         """Test 5: run_ingestion reads config and calls both World Bank and OECD connectors."""
+        import src.ingestion.pipeline as pipeline_mod
+
         sample_wb_df = pd.DataFrame([{"economy": "USA", "year": 2020, "NY.GDP.DEFL.ZS": 112.0}])
         sample_oecd_df = pd.DataFrame([{"LOCATION": "USA", "TIME_PERIOD": "2020", "value": 100.0}])
 
-        with patch("src.ingestion.pipeline.fetch_world_bank_indicators", return_value=sample_wb_df) as mock_wb, \
-             patch("src.ingestion.pipeline.save_raw_world_bank", return_value=mock_wb_path) as mock_wb_save, \
-             patch("src.ingestion.pipeline.fetch_oecd_msti", return_value=sample_oecd_df) as mock_msti, \
-             patch("src.ingestion.pipeline.save_raw_oecd", return_value=mock_oecd_msti_path) as mock_oecd_save, \
-             patch("src.ingestion.pipeline.fetch_oecd_ai_patents", return_value=sample_oecd_df) as mock_patents:
+        with patch.object(pipeline_mod, "fetch_world_bank_indicators", return_value=sample_wb_df) as mock_wb, \
+             patch.object(pipeline_mod, "save_raw_world_bank", return_value=mock_wb_path), \
+             patch.object(pipeline_mod, "fetch_oecd_msti", return_value=sample_oecd_df) as mock_msti, \
+             patch.object(pipeline_mod, "save_raw_oecd", return_value=mock_oecd_msti_path), \
+             patch.object(pipeline_mod, "fetch_oecd_ai_patents", return_value=sample_oecd_df) as mock_patents:
 
-            import importlib
-            import src.ingestion.pipeline as pipeline_mod
-            importlib.reload(pipeline_mod)
             results = pipeline_mod.run_ingestion("ai")
 
         # Both connectors must be called
@@ -361,18 +354,17 @@ class TestIngestionPipeline:
         self, mock_wb_path, mock_oecd_msti_path, mock_oecd_patents_path
     ):
         """Test 5b: run_ingestion returns a dict mapping step names to paths."""
+        import src.ingestion.pipeline as pipeline_mod
+
         sample_wb_df = pd.DataFrame([{"economy": "USA", "year": 2020, "NY.GDP.DEFL.ZS": 112.0}])
         sample_oecd_df = pd.DataFrame([{"LOCATION": "USA", "TIME_PERIOD": "2020", "value": 100.0}])
 
-        with patch("src.ingestion.pipeline.fetch_world_bank_indicators", return_value=sample_wb_df), \
-             patch("src.ingestion.pipeline.save_raw_world_bank", return_value=mock_wb_path), \
-             patch("src.ingestion.pipeline.fetch_oecd_msti", return_value=sample_oecd_df), \
-             patch("src.ingestion.pipeline.save_raw_oecd", return_value=mock_oecd_msti_path), \
-             patch("src.ingestion.pipeline.fetch_oecd_ai_patents", return_value=sample_oecd_df):
+        with patch.object(pipeline_mod, "fetch_world_bank_indicators", return_value=sample_wb_df), \
+             patch.object(pipeline_mod, "save_raw_world_bank", return_value=mock_wb_path), \
+             patch.object(pipeline_mod, "fetch_oecd_msti", return_value=sample_oecd_df), \
+             patch.object(pipeline_mod, "save_raw_oecd", return_value=mock_oecd_msti_path), \
+             patch.object(pipeline_mod, "fetch_oecd_ai_patents", return_value=sample_oecd_df):
 
-            import importlib
-            import src.ingestion.pipeline as pipeline_mod
-            importlib.reload(pipeline_mod)
             results = pipeline_mod.run_ingestion("ai")
 
         assert isinstance(results, dict)
@@ -383,6 +375,8 @@ class TestIngestionPipeline:
 
     def test_run_ingestion_uses_load_industry_config(self):
         """Test that pipeline reads config via load_industry_config, not hardcoded values."""
+        import src.ingestion.pipeline as pipeline_mod
+
         sample_wb_df = pd.DataFrame([{"economy": "USA", "year": 2020, "NY.GDP.DEFL.ZS": 112.0}])
         sample_oecd_df = pd.DataFrame([{"LOCATION": "USA", "TIME_PERIOD": "2020", "value": 100.0}])
         dummy_path = Path("/tmp/dummy.parquet")
@@ -395,19 +389,34 @@ class TestIngestionPipeline:
             config_loaded.append(industry_id)
             return cfg
 
-        with patch("src.ingestion.pipeline.load_industry_config", side_effect=mock_load_config), \
-             patch("src.ingestion.pipeline.fetch_world_bank_indicators", return_value=sample_wb_df), \
-             patch("src.ingestion.pipeline.save_raw_world_bank", return_value=dummy_path), \
-             patch("src.ingestion.pipeline.fetch_oecd_msti", return_value=sample_oecd_df), \
-             patch("src.ingestion.pipeline.save_raw_oecd", return_value=dummy_path), \
-             patch("src.ingestion.pipeline.fetch_oecd_ai_patents", return_value=sample_oecd_df):
+        with patch.object(pipeline_mod, "load_industry_config", side_effect=mock_load_config), \
+             patch.object(pipeline_mod, "fetch_world_bank_indicators", return_value=sample_wb_df), \
+             patch.object(pipeline_mod, "save_raw_world_bank", return_value=dummy_path), \
+             patch.object(pipeline_mod, "fetch_oecd_msti", return_value=sample_oecd_df), \
+             patch.object(pipeline_mod, "save_raw_oecd", return_value=dummy_path), \
+             patch.object(pipeline_mod, "fetch_oecd_ai_patents", return_value=sample_oecd_df):
 
-            import importlib
-            import src.ingestion.pipeline as pipeline_mod
-            importlib.reload(pipeline_mod)
             pipeline_mod.run_ingestion("ai")
 
         assert "ai" in config_loaded
+
+
+# ============================================================
+# Helper: Build a pandasdmx-shaped mock Series (OECD)
+# ============================================================
+
+def _make_sdmx_series(df: pd.DataFrame) -> pd.Series:
+    """
+    Convert oecd_sample_df (LOCATION, TIME_PERIOD, INDICATOR, value) into
+    the shape pandasdmx.to_pandas() returns: a pd.Series with MultiIndex
+    (LOCATION, TIME_PERIOD, INDICATOR).
+
+    When reset_index() is called on this Series, the result is a DataFrame
+    with columns [LOCATION, TIME_PERIOD, INDICATOR, 0] — our implementation
+    renames the value column as needed.
+    """
+    idx = pd.MultiIndex.from_frame(df[["LOCATION", "TIME_PERIOD", "INDICATOR"]])
+    return pd.Series(df["value"].values, index=idx, name="value")
 
 
 # ============================================================
