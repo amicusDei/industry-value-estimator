@@ -238,7 +238,9 @@ class TestResiduals:
         assert df["residual"].dtype in (np.float64, np.float32, "float64", "float32"), (
             f"residual column must be float, got {df['residual'].dtype}"
         )
-        assert df["segment"].dtype == object or str(df["segment"].dtype) == "string", (
+        # pandas 3.0 uses StringDtype (displayed as "str") instead of object for string columns
+        segment_dtype_str = str(df["segment"].dtype)
+        assert segment_dtype_str in ("object", "string", "str") or df["segment"].dtype == object, (
             f"segment column must be string/object, got {df['segment'].dtype}"
         )
 
