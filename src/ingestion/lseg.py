@@ -58,8 +58,12 @@ def fetch_lseg_companies(config: dict) -> pd.DataFrame:
     trbc_entries = config["lseg"]["trbc_codes"]
     trbc_codes = [entry["code"] for entry in trbc_entries]
 
-    # Build screening expression from config
-    screening_parts = [f'TR.TRBCActivityCode=="{code}"' for code in trbc_codes]
+    # Build screening expression from config.
+    # Config stores 8-digit Industry codes; use TR.TRBCIndustryCode (not
+    # TR.TRBCActivityCode which expects 10-digit Activity codes).
+    screening_parts = [
+        f'TR.TRBCIndustryCode=="{code}"' for code in trbc_codes
+    ]
     screening_expr = " OR ".join(screening_parts)
 
     # Discovery fields: always include TRBC activity info for verification
