@@ -61,7 +61,7 @@ completed: 2026-03-18
 - **Duration:** ~8 min
 - **Started:** 2026-03-18T09:23Z
 - **Completed:** 2026-03-18T09:31Z
-- **Tasks:** 1 of 2 (Task 2 is a human-verify checkpoint)
+- **Tasks:** 2 of 2 (Task 1: implementation; Task 2: human-verify checkpoint — approved)
 - **Files modified:** 3
 
 ## Accomplishments
@@ -69,13 +69,15 @@ completed: 2026-03-18
 - `run_full_pipeline()` added to `src/ingestion/pipeline.py` — industry-agnostic orchestrator that chains `fetch_*` + `normalize_*` + `write_processed_parquet` for World Bank, OECD MSTI, OECD Patents, and optional LSEG
 - `tests/test_pipeline.py` created with `TestFullPipeline` (mocked WB + Parquet write verification) and `TestSecondIndustryExtensibility` (ARCH-01: dummy industry YAML without code changes)
 - `tests/test_docs.py` created with `TestMethodologyDoc` — 8 tests validating METHODOLOGY.md sections (DATA-08)
-- Full test suite: 104 passing, 2 deselected (integration), 0 failures
+- Full test suite: 104 passing, 2 deselected (integration), 0 failures — human-verified (checkpoint approved 2026-03-18)
 
 ## Task Commits
 
 1. **Task 1: Wire full pipeline and create extensibility test with second dummy industry** - `2010bc7` (feat)
 
-**Plan metadata:** (to be committed with this SUMMARY)
+**Task 2: Verify complete data pipeline end-to-end (checkpoint:human-verify)** - approved by user (104 passed, 0 failures; 4 cosmetic warnings noted — DataFrameSchema not JSON serializable in pd.DataFrame.attrs, no functional impact)
+
+**Plan metadata:** `f05b7e6` (docs: complete pipeline wiring plan)
 
 ## Files Created/Modified
 
@@ -115,7 +117,7 @@ completed: 2026-03-18
 - Full pipeline code complete and tested — ready for Phase 2 statistical modeling
 - ARCH-01 extensibility confirmed — add industry via YAML only
 - DATA-08 documentation validated — METHODOLOGY.md passes all completeness tests
-- **Checkpoint pending:** Task 2 (human-verify) requires human approval before plan finalized
+- Checkpoint approved: 104 tests passed, 4 cosmetic warnings (DataFrameSchema not JSON serializable in pd.DataFrame.attrs — no functional impact)
 
 ---
 *Phase: 01-data-foundation*
