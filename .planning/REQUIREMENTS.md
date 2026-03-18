@@ -28,7 +28,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **MODL-06**: Implement temporal cross-validation (expanding window, no data leakage)
 - [ ] **MODL-07**: Compute SHAP values showing which variables drive forecasts
 - [x] **MODL-08**: Handle structural breaks (2022-23 GenAI surge) explicitly in models
-- [ ] **MODL-09**: Document all model assumptions, choices, and mathematical foundations
+- [x] **MODL-09**: Document all model assumptions, choices, and mathematical foundations
 
 ### Presentation
 
@@ -43,7 +43,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **ARCH-01**: Config-driven extensible pipeline (add new industries via config, not code rewrite)
 - [ ] **ARCH-02**: Comprehensive code documentation explaining every module and function for learning purposes
 - [ ] **ARCH-03**: Polished GitHub README with project description, data sources, setup instructions
-- [ ] **ARCH-04**: Documented assumptions file explaining all modeling decisions and their rationale
+- [x] **ARCH-04**: Documented assumptions file explaining all modeling decisions and their rationale
 
 ## v2 Requirements
 
@@ -100,7 +100,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MODL-06 | Phase 2 | Complete |
 | MODL-07 | Phase 3 | Pending |
 | MODL-08 | Phase 2 | Complete |
-| MODL-09 | Phase 2 | Pending |
+| MODL-09 | Phase 2 | Complete |
 | PRES-01 | Phase 4 | Pending |
 | PRES-02 | Phase 4 | Pending |
 | PRES-03 | Phase 4 | Pending |
@@ -109,7 +109,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ARCH-01 | Phase 1 | Complete |
 | ARCH-02 | Phase 5 | Pending |
 | ARCH-03 | Phase 5 | Pending |
-| ARCH-04 | Phase 2 | Pending |
+| ARCH-04 | Phase 2 | Complete |
 
 **Coverage:**
 - v1 requirements: 26 total

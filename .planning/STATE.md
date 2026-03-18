@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-03-18T12:53:47.307Z"
+stopped_at: Completed 02-04-PLAN.md
+last_updated: "2026-03-18T12:59:24.849Z"
 last_activity: "2026-03-17 — Completed plan 01-01: project scaffold, AI industry config, pandera schemas, 26 tests"
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 9
-  completed_plans: 8
+  completed_plans: 9
   percent: 4
 ---
 
@@ -58,6 +58,7 @@ Progress: [░░░░░░░░░░] 4%
 | Phase 02-statistical-baseline P01 | 4 | 2 tasks | 4 files |
 | Phase 02-statistical-baseline P02 | 15 | 2 tasks | 5 files |
 | Phase 02-statistical-baseline P03 | 3 | 2 tasks | 3 files |
+| Phase 02-statistical-baseline P04 | 3 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -92,6 +93,8 @@ Recent decisions affecting current work:
 - [Phase 02-03]: AICc (not AIC) for ARIMA order selection on short annual series (N < 30)
 - [Phase 02-03]: changepoints=['2022-01-01'] anchors Prophet to GenAI surge; manual TimeSeriesSplit CV for consistent methodology with ARIMA
 - [Phase 02-03]: Year-aligned residuals via original_index re-assignment; residuals Parquet schema: year (int), segment (str), residual (float), model_type (str)
+- [Phase 02-statistical-baseline]: Two-tier ASSUMPTIONS.md (TL;DR + detailed appendix) mirrors academic paper style for Phase 5 methodology paper
+- [Phase 02-statistical-baseline]: Every assumption accompanied by explicit sensitivity note documenting impact direction and magnitude (16 total)
 
 ### Pending Todos
 
@@ -104,6 +107,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T12:53:47.305Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-03-18T12:59:19.103Z
+Stopped at: Completed 02-04-PLAN.md
 Resume file: None
