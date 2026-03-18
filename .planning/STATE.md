@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Completed 02-01-PLAN.md: diagnostics package with structural breaks and model eval"
-last_updated: "2026-03-18T12:46:26.392Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-03-18T12:47:07.615Z"
 last_activity: "2026-03-17 — Completed plan 01-01: project scaffold, AI industry config, pandera schemas, 26 tests"
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 9
-  completed_plans: 6
+  completed_plans: 7
   percent: 4
 ---
 
@@ -56,6 +56,7 @@ Progress: [░░░░░░░░░░] 4%
 | Phase 01-data-foundation P04 | 4 | 2 tasks | 7 files |
 | Phase 01-data-foundation P05 | 8 | 1 tasks | 3 files |
 | Phase 02-statistical-baseline P01 | 4 | 2 tasks | 4 files |
+| Phase 02-statistical-baseline P02 | 15 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,9 @@ Recent decisions affecting current work:
 - [Phase 02-01]: constant-only OLS for CUSUM: linear trend detrending absorbs level shifts and reduces detection power; constant-only (ddof=1) achieves p<0.05 on step-function series
 - [Phase 02-01]: Markov switching minimum series length 20 obs: fewer obs cause EM non-convergence; fallback to dummy OLS for short or non-converging series
 - [Phase 02-01]: AICc used in compute_aic_bic: small-N correction required (n-k-1 denominator grows materially at n<50)
+- [Phase 02-02]: sklearn Pipeline enforces PCA fit-on-training-only by construction — scaler.mean_ verified in test_pca_no_leakage
+- [Phase 02-02]: temporal_cv_generic accepts arbitrary callables (fit_fn/forecast_fn) not ARIMA-specific — maximizes reuse across model types in downstream plans
+- [Phase 02-02]: diagnostics dict always captures OLS-layer diagnostics even when final model is WLS/GLSAR — preserves traceability for ASSUMPTIONS.md
 
 ### Pending Todos
 
@@ -96,6 +100,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T12:46:26.391Z
-Stopped at: Completed 02-01-PLAN.md: diagnostics package with structural breaks and model eval
+Last session: 2026-03-18T12:47:07.613Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None
