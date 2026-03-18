@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-03-18T12:47:07.615Z"
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-03-18T12:53:47.307Z"
 last_activity: "2026-03-17 — Completed plan 01-01: project scaffold, AI industry config, pandera schemas, 26 tests"
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 8
   percent: 4
 ---
 
@@ -57,6 +57,7 @@ Progress: [░░░░░░░░░░] 4%
 | Phase 01-data-foundation P05 | 8 | 1 tasks | 3 files |
 | Phase 02-statistical-baseline P01 | 4 | 2 tasks | 4 files |
 | Phase 02-statistical-baseline P02 | 15 | 2 tasks | 5 files |
+| Phase 02-statistical-baseline P03 | 3 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -88,6 +89,9 @@ Recent decisions affecting current work:
 - [Phase 02-02]: sklearn Pipeline enforces PCA fit-on-training-only by construction — scaler.mean_ verified in test_pca_no_leakage
 - [Phase 02-02]: temporal_cv_generic accepts arbitrary callables (fit_fn/forecast_fn) not ARIMA-specific — maximizes reuse across model types in downstream plans
 - [Phase 02-02]: diagnostics dict always captures OLS-layer diagnostics even when final model is WLS/GLSAR — preserves traceability for ASSUMPTIONS.md
+- [Phase 02-03]: AICc (not AIC) for ARIMA order selection on short annual series (N < 30)
+- [Phase 02-03]: changepoints=['2022-01-01'] anchors Prophet to GenAI surge; manual TimeSeriesSplit CV for consistent methodology with ARIMA
+- [Phase 02-03]: Year-aligned residuals via original_index re-assignment; residuals Parquet schema: year (int), segment (str), residual (float), model_type (str)
 
 ### Pending Todos
 
@@ -100,6 +104,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T12:47:07.613Z
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-03-18T12:53:47.305Z
+Stopped at: Completed 02-03-PLAN.md
 Resume file: None
