@@ -39,6 +39,7 @@ key-decisions:
   - "TRBC codes dynamically read from config['lseg']['trbc_codes'] — zero hardcoded codes in lseg.py"
   - "Batch size of 100 RICs per get_data() call to stay within LSEG API limits"
   - "Integration tests marked @pytest.mark.integration — excluded from default test run, require live Workspace"
+  - "TR.TRBCIndustryCode (8-digit) used in SCREEN() expression instead of TR.TRBCActivityCode (10-digit) — config stores 8-digit Industry codes, Activity codes are 10-digit and at a different hierarchy level"
 
 patterns-established:
   - "Config-driven screening: lseg.py reads TRBC codes from industry config, not source code"
@@ -48,20 +49,20 @@ patterns-established:
 requirements-completed: [DATA-05]
 
 # Metrics
-duration: 2min
-completed: 2026-03-17
+duration: ~30min
+completed: 2026-03-18
 ---
 
 # Phase 1 Plan 03: LSEG Workspace Connector Summary
 
-**LSEG Workspace connector using Desktop Session auth, TRBC-based AI company universe discovery, and batched financial data fetch written to Parquet with provenance metadata**
+**LSEG Workspace connector using Desktop Session auth, TRBC-based AI company universe discovery, and batched financial data fetch written to Parquet with provenance metadata — integration tests verified with live Workspace (2 passed in 6.69s)**
 
 ## Performance
 
-- **Duration:** 2 min
+- **Duration:** ~30 min
 - **Started:** 2026-03-17T15:08:28Z
-- **Completed:** 2026-03-17T15:10:30Z
-- **Tasks:** 1 of 2 auto tasks completed (Task 2 is a human-verify checkpoint)
+- **Completed:** 2026-03-18
+- **Tasks:** 2 (Task 1: TDD connector build; Task 2: human-verify checkpoint approved)
 - **Files modified:** 3
 
 ## Accomplishments
@@ -70,7 +71,7 @@ completed: 2026-03-17
 - Company universe built by screening TRBC codes from config/industries/ai.yaml — zero hardcoded codes in source
 - Financial data fetched in batches of 100 RICs with pandera validation after every fetch
 - Raw data written to data/raw/lseg/ as Parquet with embedded source/industry/timestamp metadata
-- All 5 mocked unit tests pass; 2 integration tests marked for human verification with live Workspace
+- All 5 mocked unit tests pass; both integration tests verified with live Workspace (test_lseg_session_opens PASSED, test_full_lseg_fetch PASSED — 6.69s); company universe populated
 
 ## Task Commits
 
@@ -78,8 +79,9 @@ Each task was committed atomically:
 
 1. **Task 1 (RED): Failing tests for LSEG connector** - `4032144` (test)
 2. **Task 1 (GREEN): LSEG connector implementation** - `216289d` (feat)
+3. **Deviation fix: TR.TRBCIndustryCode for 8-digit screening** - `67cbb95` (fix)
 
-_Note: TDD tasks have separate test and implementation commits_
+_Note: TDD tasks have separate test and implementation commits. The TRBC field fix was a deviation committed separately during integration verification._
 
 ## Files Created/Modified
 
@@ -96,11 +98,25 @@ _Note: TDD tasks have separate test and implementation commits_
 
 ## Deviations from Plan
 
-None - plan executed exactly as written.
+### Auto-fixed Issues
+
+**1. [Rule 1 - Bug] Fixed TRBC screening field: TR.TRBCActivityCode → TR.TRBCIndustryCode**
+
+- **Found during:** Task 2 (human-verify checkpoint — integration test run revealed empty or incorrect company universe)
+- **Issue:** The SCREEN() expression used `TR.TRBCActivityCode=="{code}"` but config/industries/ai.yaml stores 8-digit TRBC Industry codes (e.g., `57201010`). `TR.TRBCActivityCode` maps to 10-digit Activity codes — the wrong TRBC hierarchy level — causing the company universe fetch to return wrong or empty results
+- **Fix:** Changed screening expression in `fetch_lseg_companies` to use `TR.TRBCIndustryCode` which correctly matches 8-digit codes
+- **Files modified:** `src/ingestion/lseg.py`
+- **Verification:** Integration tests passed — `test_lseg_session_opens PASSED`, `test_full_lseg_fetch PASSED` (2 passed in 6.69s); company universe populated
+- **Committed in:** `67cbb95`
+
+---
+
+**Total deviations:** 1 auto-fixed (Rule 1 - Bug)
+**Impact on plan:** Fix was essential for correct company universe discovery. Without it, the SCREEN() expression would silently match Activity-level codes (10-digit) while config provides Industry-level codes (8-digit), yielding an empty universe. No scope creep.
 
 ## Issues Encountered
 
-None
+None beyond the TRBC field mismatch documented above.
 
 ## User Setup Required
 
@@ -113,13 +129,14 @@ None
 
 ## Next Phase Readiness
 
-- LSEG connector ready for integration with financial data processing pipeline
-- Integration test checkpoint (Task 2) must be completed with live Workspace before production use
-- Parquet output format compatible with downstream processing layer in 01-05
+- LSEG connector is production-ready: config-driven, validated, Parquet output with provenance
+- Company universe discovery verified against live LSEG Workspace — both integration tests pass
+- Parquet output at data/raw/lseg/ is the stable input for downstream statistical processing in 01-05
+- Phase 1 data foundation complete — LSEG, World Bank, and OECD connectors all operational
 
 ---
 *Phase: 01-data-foundation*
-*Completed: 2026-03-17*
+*Completed: 2026-03-18*
 
 ## Self-Check: PASSED
 
@@ -128,3 +145,5 @@ None
 - lseg-data.config.json.example: FOUND
 - Commit 4032144 (test RED): FOUND
 - Commit 216289d (feat GREEN): FOUND
+- Commit 67cbb95 (fix TRBC field): FOUND
+- Integration tests verified: test_lseg_session_opens PASSED, test_full_lseg_fetch PASSED (2 passed in 6.69s)
