@@ -8,6 +8,9 @@ in the industry YAML config file.
 Usage:
     results = run_ingestion("ai")
     # results = {"World Bank indicators": Path, "OECD MSTI": Path, "OECD AI Patents": Path}
+
+    processed = run_full_pipeline("ai")
+    # processed = {"world_bank": Path, "oecd_msti": Path, "oecd_patents": Path}
 """
 from pathlib import Path
 from tqdm import tqdm
@@ -15,6 +18,12 @@ from tqdm import tqdm
 from config.settings import load_industry_config
 from src.ingestion.world_bank import fetch_world_bank_indicators, save_raw_world_bank
 from src.ingestion.oecd import fetch_oecd_msti, fetch_oecd_ai_patents, save_raw_oecd
+from src.processing.normalize import (
+    normalize_world_bank,
+    normalize_oecd,
+    normalize_lseg,
+    write_processed_parquet,
+)
 
 
 def run_ingestion(industry_id: str, include_lseg: bool = False) -> dict[str, Path]:
@@ -71,3 +80,101 @@ def _ingest_lseg(config: dict, industry_id: str) -> Path:
     from src.ingestion.lseg import fetch_lseg_companies, save_raw_lseg
     df = fetch_lseg_companies(config)
     return save_raw_lseg(df, industry_id)
+
+
+def run_full_pipeline(
+    industry_id: str,
+    include_lseg: bool = False,
+) -> dict[str, Path]:
+    """
+    Run the complete pipeline: ingest raw data, normalize, and write processed Parquet.
+
+    This function is industry-agnostic — it reads whatever config is in
+    config/industries/{industry_id}.yaml and processes accordingly.
+
+    Each source step is wrapped in a try/except so a single source failure does
+    not abort the entire pipeline. Partial results are returned.
+
+    Parameters
+    ----------
+    industry_id : str
+        Industry identifier matching a YAML in config/industries/
+    include_lseg : bool
+        Whether to include LSEG data (requires Workspace running)
+
+    Returns
+    -------
+    dict mapping output name to processed Parquet path
+    """
+    config = load_industry_config(industry_id)
+    processed_paths = {}
+
+    # Step 1: Ingest World Bank
+    try:
+        wb_raw = fetch_world_bank_indicators(config)
+        save_raw_world_bank(wb_raw, industry_id)
+        # Step 2: Normalize World Bank
+        wb_processed = normalize_world_bank(wb_raw, config)
+        wb_path = write_processed_parquet(
+            wb_processed,
+            f"world_bank_{industry_id}.parquet",
+            source="world_bank",
+            industry_id=industry_id,
+        )
+        processed_paths["world_bank"] = wb_path
+    except Exception as e:
+        print(f"World Bank ingestion failed: {e}")
+
+    # Step 3: Ingest OECD MSTI
+    try:
+        msti_raw = fetch_oecd_msti(config)
+        save_raw_oecd(msti_raw, "msti", industry_id)
+        msti_processed = normalize_oecd(msti_raw, config, "msti")
+        msti_path = write_processed_parquet(
+            msti_processed,
+            f"oecd_msti_{industry_id}.parquet",
+            source="oecd",
+            industry_id=industry_id,
+        )
+        processed_paths["oecd_msti"] = msti_path
+    except Exception as e:
+        print(f"OECD MSTI ingestion failed: {e}")
+
+    # Step 4: Ingest OECD Patents
+    try:
+        patents_raw = fetch_oecd_ai_patents(config)
+        save_raw_oecd(patents_raw, "pats_ipc", industry_id)
+        patents_processed = normalize_oecd(patents_raw, config, "pats_ipc")
+        patents_path = write_processed_parquet(
+            patents_processed,
+            f"oecd_pats_{industry_id}.parquet",
+            source="oecd",
+            industry_id=industry_id,
+        )
+        processed_paths["oecd_patents"] = patents_path
+    except Exception as e:
+        print(f"OECD Patents ingestion failed: {e}")
+
+    # Step 5: Ingest LSEG (optional)
+    if include_lseg:
+        try:
+            from src.ingestion.lseg import (
+                fetch_lseg_companies,
+                fetch_company_financials,
+                save_raw_lseg,
+            )
+            companies = fetch_lseg_companies(config)
+            financials = fetch_company_financials(companies, config)
+            save_raw_lseg(financials, industry_id)
+            lseg_processed = normalize_lseg(financials, config)
+            lseg_path = write_processed_parquet(
+                lseg_processed,
+                f"lseg_{industry_id}.parquet",
+                source="lseg",
+                industry_id=industry_id,
+            )
+            processed_paths["lseg"] = lseg_path
+        except Exception as e:
+            print(f"LSEG ingestion failed: {e}")
+
+    return processed_paths
