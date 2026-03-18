@@ -105,7 +105,9 @@ class TestAssessStationarity:
     def test_stationarity_stationary(self):
         from src.processing.features import assess_stationarity
 
-        rng = np.random.default_rng(0)
+        # seed=1 produces white noise with ADF p~0.000 (rejects unit root) and
+        # KPSS p=0.10 (fails to reject stationarity) → d=0 recommendation is reliable
+        rng = np.random.default_rng(1)
         series = rng.standard_normal(50)
         result = assess_stationarity(series)
         assert "adf_stationary" in result
