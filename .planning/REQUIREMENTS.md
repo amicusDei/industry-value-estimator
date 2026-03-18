@@ -27,7 +27,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **MODL-05**: Generate growth forecasts with calibrated confidence intervals (80%/95%)
 - [ ] **MODL-06**: Implement temporal cross-validation (expanding window, no data leakage)
 - [ ] **MODL-07**: Compute SHAP values showing which variables drive forecasts
-- [ ] **MODL-08**: Handle structural breaks (2022-23 GenAI surge) explicitly in models
+- [x] **MODL-08**: Handle structural breaks (2022-23 GenAI surge) explicitly in models
 - [ ] **MODL-09**: Document all model assumptions, choices, and mathematical foundations
 
 ### Presentation
@@ -99,7 +99,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MODL-05 | Phase 3 | Pending |
 | MODL-06 | Phase 2 | Pending |
 | MODL-07 | Phase 3 | Pending |
-| MODL-08 | Phase 2 | Pending |
+| MODL-08 | Phase 2 | Complete |
 | MODL-09 | Phase 2 | Pending |
 | PRES-01 | Phase 4 | Pending |
 | PRES-02 | Phase 4 | Pending |

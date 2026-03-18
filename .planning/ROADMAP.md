@@ -48,7 +48,7 @@ Plans:
   2. A structural break test (Chow or CUSUM) is run before model selection and the 2022–2024 GenAI surge is handled explicitly in the chosen model
   3. Temporal cross-validation uses an expanding window with no data leakage — all preprocessors are fit only on training data
   4. A documented assumptions file exists that explains every modeling decision, parameter choice, and mathematical foundation in plain language
-**Plans:** 4 plans
+**Plans:** 1/4 plans executed
 
 Plans:
 - [ ] 02-01-PLAN.md — Dependencies, diagnostics package (structural breaks + model eval metrics)
@@ -98,7 +98,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Data Foundation | 5/5 | Complete   | 2026-03-18 |
-| 2. Statistical Baseline | 0/4 | Not started | - |
+| 2. Statistical Baseline | 1/4 | In Progress|  |
 | 3. ML Ensemble and Validation | 0/TBD | Not started | - |
 | 4. Interactive Dashboard | 0/TBD | Not started | - |
 | 5. Reports, Paper, and Portfolio | 0/TBD | Not started | - |

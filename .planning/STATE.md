@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 2 context gathered
-last_updated: "2026-03-18T09:52:45.401Z"
+stopped_at: "Completed 02-01-PLAN.md: diagnostics package with structural breaks and model eval"
+last_updated: "2026-03-18T12:46:26.392Z"
 last_activity: "2026-03-17 — Completed plan 01-01: project scaffold, AI industry config, pandera schemas, 26 tests"
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 9
+  completed_plans: 6
   percent: 4
 ---
 
@@ -55,6 +55,7 @@ Progress: [░░░░░░░░░░] 4%
 | Phase 01-data-foundation P03 | 30 | 2 tasks | 3 files |
 | Phase 01-data-foundation P04 | 4 | 2 tasks | 7 files |
 | Phase 01-data-foundation P05 | 8 | 1 tasks | 3 files |
+| Phase 02-statistical-baseline P01 | 4 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -80,6 +81,9 @@ Recent decisions affecting current work:
 - [Phase 01-04]: write_processed_parquet embeds source/industry/base_year/fetched_at as Parquet schema metadata bytes for downstream DATA-07 attribution
 - [Phase 01-05]: Pipeline test uses patch.object at pipeline module level, not wbgapi library — avoids MultiIndex reshape in world_bank.py during orchestration tests
 - [Phase 01-05]: run_full_pipeline uses same try/except per-source pattern as run_ingestion — consistent partial-success error isolation across full pipeline
+- [Phase 02-01]: constant-only OLS for CUSUM: linear trend detrending absorbs level shifts and reduces detection power; constant-only (ddof=1) achieves p<0.05 on step-function series
+- [Phase 02-01]: Markov switching minimum series length 20 obs: fewer obs cause EM non-convergence; fallback to dummy OLS for short or non-converging series
+- [Phase 02-01]: AICc used in compute_aic_bic: small-N correction required (n-k-1 denominator grows materially at n<50)
 
 ### Pending Todos
 
@@ -92,6 +96,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T09:52:45.399Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-statistical-baseline/02-CONTEXT.md
+Last session: 2026-03-18T12:46:26.391Z
+Stopped at: Completed 02-01-PLAN.md: diagnostics package with structural breaks and model eval
+Resume file: None
