@@ -14,8 +14,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **DATA-03**: Ingest economic data from World Bank API (GDP, R&D expenditure, ICT indicators)
 - [x] **DATA-04**: Ingest economic data from OECD API (technology indicators, patent data)
 - [x] **DATA-05**: Ingest financial data from LSEG Workspace API (company-level data, market data)
-- [ ] **DATA-06**: Clean and normalize all data (currency conversion to constant USD, missing value handling, frequency alignment)
-- [ ] **DATA-07**: Display data source attribution on every chart and report output
+- [x] **DATA-06**: Clean and normalize all data (currency conversion to constant USD, missing value handling, frequency alignment)
+- [x] **DATA-07**: Display data source attribution on every chart and report output
 - [x] **DATA-08**: Comprehensive documentation explaining each data source, why it was chosen, and how it's processed
 
 ### Modeling
@@ -89,8 +89,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-03 | Phase 1 | Complete |
 | DATA-04 | Phase 1 | Complete |
 | DATA-05 | Phase 1 | Complete |
-| DATA-06 | Phase 1 | Pending |
-| DATA-07 | Phase 4 | Pending |
+| DATA-06 | Phase 1 | Complete |
+| DATA-07 | Phase 4 | Complete |
 | DATA-08 | Phase 1 | Pending |
 | MODL-01 | Phase 2 | Pending |
 | MODL-02 | Phase 3 | Pending |
