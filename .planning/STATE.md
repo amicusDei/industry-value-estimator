@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-data-foundation-01-04-PLAN.md
-last_updated: "2026-03-18T09:23:11.768Z"
+stopped_at: "Completed 01-data-foundation-01-05-PLAN.md — checkpoint:human-verify"
+last_updated: "2026-03-18T09:29:59.962Z"
 last_activity: "2026-03-17 — Completed plan 01-01: project scaffold, AI industry config, pandera schemas, 26 tests"
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 5
   percent: 4
 ---
 
@@ -54,6 +54,7 @@ Progress: [░░░░░░░░░░] 4%
 | Phase 01-data-foundation P02 | 12 | 2 tasks | 4 files |
 | Phase 01-data-foundation P03 | 30 | 2 tasks | 3 files |
 | Phase 01-data-foundation P04 | 4 | 2 tasks | 7 files |
+| Phase 01-data-foundation P05 | 8 | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,8 @@ Recent decisions affecting current work:
 - [Phase 01-04]: apply_deflation builds year-indexed Series from year column, uses .values to reset index — prevents base_year lookup failure in deflate_to_base_year
 - [Phase 01-04]: normalize_oecd raises ValueError on missing economy column — silent pass-through produces invalid processed rows with no clear diagnosis
 - [Phase 01-04]: write_processed_parquet embeds source/industry/base_year/fetched_at as Parquet schema metadata bytes for downstream DATA-07 attribution
+- [Phase 01-05]: Pipeline test uses patch.object at pipeline module level, not wbgapi library — avoids MultiIndex reshape in world_bank.py during orchestration tests
+- [Phase 01-05]: run_full_pipeline uses same try/except per-source pattern as run_ingestion — consistent partial-success error isolation across full pipeline
 
 ### Pending Todos
 
@@ -89,6 +92,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T09:23:11.767Z
-Stopped at: Completed 01-data-foundation-01-04-PLAN.md
+Last session: 2026-03-18T09:29:59.961Z
+Stopped at: Completed 01-data-foundation-01-05-PLAN.md — checkpoint:human-verify
 Resume file: None
