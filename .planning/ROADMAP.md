@@ -83,7 +83,12 @@ Plans:
   2. A SHAP driver attribution panel shows which variables contribute most to the current forecast period
   3. Model diagnostics (RMSE, MAPE, R², residual plots, backtesting results) are visible in the dashboard
   4. Every chart and table displays the data source attribution (World Bank, OECD, LSEG) so outputs are self-documenting
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Dashboard package scaffold, data layer, chart builders (fan chart + backtest), test suite
+- [ ] 04-02-PLAN.md — Tab layouts (Overview, Segments, Drivers, Diagnostics), callbacks, attribution footnotes, run script
+- [ ] 04-03-PLAN.md — Visual verification checkpoint (human approval of running dashboard)
 
 ### Phase 5: Reports, Paper, and Portfolio
 **Goal**: A portfolio-quality GitHub repository exists with a PDF report, methodology paper ready for LinkedIn, comprehensive code documentation, and a polished README
@@ -106,5 +111,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. Data Foundation | 5/5 | Complete   | 2026-03-18 |
 | 2. Statistical Baseline | 5/5 | Complete   | 2026-03-22 |
 | 3. ML Ensemble and Validation | 3/3 | Complete   | 2026-03-22 |
-| 4. Interactive Dashboard | 0/TBD | Not started | - |
+| 4. Interactive Dashboard | 0/3 | Planning complete | - |
 | 5. Reports, Paper, and Portfolio | 0/TBD | Not started | - |
