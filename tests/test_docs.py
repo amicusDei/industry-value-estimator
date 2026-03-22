@@ -1,4 +1,5 @@
-"""Documentation completeness tests (DATA-08)."""
+"""Documentation completeness tests (DATA-08, ARCH-02)."""
+import ast
 from pathlib import Path
 
 
@@ -82,3 +83,83 @@ class TestAssumptionsDoc:
         content = self._content()
         for model in ["ARIMA", "Prophet", "Markov", "PCA"]:
             assert model in content, f"Missing model: {model}"
+
+
+class TestDocstringCoverage:
+    """ARCH-02: Every public function in src/ has a non-empty docstring."""
+
+    @staticmethod
+    def _get_public_functions(module_path: Path) -> list[tuple[str, str]]:
+        """Return list of (filename, function_name) for undocumented public functions."""
+        undocumented = []
+        src_dir = module_path
+        for py_file in sorted(src_dir.rglob("*.py")):
+            if "__pycache__" in str(py_file):
+                continue
+            rel = py_file.relative_to(module_path.parent)
+            try:
+                tree = ast.parse(py_file.read_text())
+            except SyntaxError:
+                continue
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    if node.name.startswith("_"):
+                        continue  # skip private
+                    docstring = ast.get_docstring(node)
+                    if not docstring or len(docstring.strip()) < 10:
+                        undocumented.append((str(rel), node.name))
+        return undocumented
+
+    def test_all_public_functions_documented(self):
+        src_dir = Path(__file__).parent.parent / "src"
+        undocumented = self._get_public_functions(src_dir)
+        if undocumented:
+            msg = f"{len(undocumented)} undocumented public functions:\n"
+            for filepath, func in undocumented[:20]:
+                msg += f"  {filepath}::{func}\n"
+            if len(undocumented) > 20:
+                msg += f"  ... and {len(undocumented) - 20} more"
+        assert len(undocumented) == 0, msg
+
+    def test_module_docstrings_exist(self):
+        src_dir = Path(__file__).parent.parent / "src"
+        missing = []
+        for py_file in sorted(src_dir.rglob("*.py")):
+            if "__pycache__" in str(py_file) or py_file.name == "__init__.py":
+                continue
+            try:
+                tree = ast.parse(py_file.read_text())
+            except SyntaxError:
+                continue
+            docstring = ast.get_docstring(tree)
+            if not docstring or len(docstring.strip()) < 10:
+                rel = py_file.relative_to(src_dir.parent)
+                missing.append(str(rel))
+        assert len(missing) == 0, f"Modules without docstrings: {missing}"
+
+
+class TestArchitectureDoc:
+    """ARCH-02: docs/ARCHITECTURE.md exists with required sections."""
+
+    @staticmethod
+    def _content() -> str:
+        path = Path(__file__).parent.parent / "docs" / "ARCHITECTURE.md"
+        assert path.exists(), "docs/ARCHITECTURE.md must exist"
+        return path.read_text()
+
+    def test_architecture_exists(self):
+        content = self._content()
+        assert len(content) > 200
+
+    def test_architecture_has_data_flow(self):
+        content = self._content()
+        assert "mermaid" in content.lower() or "data flow" in content.lower()
+
+    def test_architecture_has_module_responsibilities(self):
+        content = self._content()
+        for module in ["ingestion", "processing", "models", "inference", "dashboard"]:
+            assert module in content.lower(), f"Missing module: {module}"
+
+    def test_architecture_has_design_decisions(self):
+        content = self._content()
+        assert "design" in content.lower() or "decision" in content.lower()

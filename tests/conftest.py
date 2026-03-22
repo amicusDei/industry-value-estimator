@@ -7,3 +7,6 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "integration: marks tests requiring live API access (LSEG Workspace)"
     )
+    config.addinivalue_line(
+        "markers", "pdf: marks tests requiring WeasyPrint + kaleido (deselect with '-m \"not pdf\"')"
+    )
