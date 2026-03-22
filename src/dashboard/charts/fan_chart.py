@@ -161,6 +161,7 @@ def make_fan_chart(df: pd.DataFrame, segment: str, usd_col: str) -> go.Figure:
     )
 
     # --- Layout ---
+    usd_label = "Nominal USD" if usd_col == "point_estimate_nominal" else "Real 2020 USD (Index)"
     fig.update_layout(
         plot_bgcolor="white",
         paper_bgcolor="white",
@@ -171,9 +172,17 @@ def make_fan_chart(df: pd.DataFrame, segment: str, usd_col: str) -> go.Figure:
             xanchor="right",
             x=1,
         ),
-        xaxis=dict(gridcolor=COLOR_AXES),
-        yaxis=dict(gridcolor=COLOR_AXES),
-        margin=dict(l=60, r=40, t=60, b=40),
+        xaxis=dict(
+            title=dict(text="Year", font=dict(size=12)),
+            gridcolor=COLOR_AXES,
+            tickfont=dict(size=11),
+        ),
+        yaxis=dict(
+            title=dict(text=usd_label, font=dict(size=12)),
+            gridcolor=COLOR_AXES,
+            tickfont=dict(size=11),
+        ),
+        margin=dict(l=70, r=40, t=60, b=60),
     )
 
     return fig
