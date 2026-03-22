@@ -67,7 +67,12 @@ Plans:
   3. Growth forecasts to 2030 include calibrated 80% and 95% confidence intervals — no bare point forecasts are exposed as outputs
   4. SHAP values are computed and show which variables (R&D spend, patent filings, VC investment) drive the forecast
   5. Serialized model artifacts are saved to `models/ai_industry/` and can be loaded by the inference engine without re-training
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — LightGBM point estimator, feature engineering, quantile models for CI bounds
+- [ ] 03-02-PLAN.md — Ensemble combiner, forecast engine with dual units and vintage, SHAP attribution
+- [ ] 03-03-PLAN.md — Pipeline runner script, model serialization, integration verification
 
 ### Phase 4: Interactive Dashboard
 **Goal**: A Dash dashboard displays the pre-computed forecast artifacts with interactive charts, driver attribution, and model diagnostics
@@ -100,6 +105,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Data Foundation | 5/5 | Complete   | 2026-03-18 |
 | 2. Statistical Baseline | 5/5 | Complete   | 2026-03-22 |
-| 3. ML Ensemble and Validation | 0/TBD | Not started | - |
+| 3. ML Ensemble and Validation | 0/3 | Not started | - |
 | 4. Interactive Dashboard | 0/TBD | Not started | - |
 | 5. Reports, Paper, and Portfolio | 0/TBD | Not started | - |
