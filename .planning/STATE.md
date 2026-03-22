@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-04-PLAN.md
-last_updated: "2026-03-18T12:59:24.849Z"
+stopped_at: Completed 02-05-PLAN.md
+last_updated: "2026-03-22T12:21:16.398Z"
 last_activity: "2026-03-17 — Completed plan 01-01: project scaffold, AI industry config, pandera schemas, 26 tests"
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 10
+  completed_plans: 10
   percent: 4
 ---
 
@@ -59,6 +59,7 @@ Progress: [░░░░░░░░░░] 4%
 | Phase 02-statistical-baseline P02 | 15 | 2 tasks | 5 files |
 | Phase 02-statistical-baseline P03 | 3 | 2 tasks | 3 files |
 | Phase 02-statistical-baseline P04 | 3 | 2 tasks | 2 files |
+| Phase 02-statistical-baseline P05 | 8 | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,8 @@ Recent decisions affecting current work:
 - [Phase 02-03]: Year-aligned residuals via original_index re-assignment; residuals Parquet schema: year (int), segment (str), residual (float), model_type (str)
 - [Phase 02-statistical-baseline]: Two-tier ASSUMPTIONS.md (TL;DR + detailed appendix) mirrors academic paper style for Phase 5 methodology paper
 - [Phase 02-statistical-baseline]: Every assumption accompanied by explicit sensitivity note documenting impact direction and magnitude (16 total)
+- [Phase 02-05]: sys.path injection in script header resolves src/config imports for both python scripts/... and python -m scripts... invocations
+- [Phase 02-05]: All 4 AI segments selected Prophet as winner on synthetic data — structural break at 2022 favors Prophet changepoint prior; split will differ on live API data
 
 ### Pending Todos
 
@@ -107,6 +110,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T12:59:19.103Z
-Stopped at: Completed 02-04-PLAN.md
+Last session: 2026-03-22T12:21:16.396Z
+Stopped at: Completed 02-05-PLAN.md
 Resume file: None
