@@ -1,3 +1,18 @@
+"""
+Dashboard style tokens and typography constants.
+
+Centralizes all visual design decisions for the AI Industry Value Estimator dashboard.
+Using module-level constants rather than inline style dicts ensures consistency across
+all chart and layout components and makes design changes a single-point update.
+
+Color system:
+    Deep blue (#1E5AC8): primary brand color for lines, highlights, and interactive elements
+    Coral (#E05A3A): negative values and contrast color in bar charts
+    Secondary background (#F4F6FA): tab content area and subtle card backgrounds
+    Axes (#E8EBF0): gridlines and table borders
+
+CI band fills use semi-transparent blue to layer 80% and 95% bands visually.
+"""
 # Color tokens from UI-SPEC
 COLOR_DEEP_BLUE = "#1E5AC8"
 COLOR_CORAL = "#E05A3A"

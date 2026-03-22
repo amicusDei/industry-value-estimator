@@ -1,3 +1,24 @@
+"""
+Dash application entry point and module-level data loading.
+
+This module initializes the Dash app and pre-loads all data at startup. Data is read
+once from Parquet files and stored as module globals (FORECASTS_DF, RESIDUALS_DF) for
+efficient reuse across callback invocations — Dash callbacks are called on every user
+interaction, so data loading inside callbacks would create unacceptable latency.
+
+Value chain multiplier calibration is performed at module load time:
+1. Reads anchor values from config/industries/ai.yaml (§ value_chain)
+2. Derives per-segment multipliers: multiplier = anchor_usd_for_segment / index_at_anchor_year
+3. Attaches USD columns (usd_point, usd_ci80_lower, etc.) to FORECASTS_DF
+This calibration converts the dimensionless PCA composite index to USD billions for display.
+
+Normal/Expert mode content distinction:
+- Normal mode: USD headlines, narrative insights, accessible language
+- Expert mode: raw composite index values, multiplier derivation tables, ASSUMPTIONS.md refs
+
+See docs/ASSUMPTIONS.md section Value Chain Multiplier Calibration for the $200B 2023
+anchor selection rationale and sensitivity analysis.
+"""
 import sys
 from pathlib import Path
 
