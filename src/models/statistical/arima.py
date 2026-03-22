@@ -163,9 +163,11 @@ def run_arima_cv(
     values = series.values
 
     def fit_fn(train: np.ndarray):
+        """Fit ARIMA on the training slice. Signature required by temporal_cv_generic."""
         return ARIMA(train, order=order).fit()
 
     def forecast_fn(fitted, steps: int) -> np.ndarray:
+        """Produce steps-ahead point forecasts. Signature required by temporal_cv_generic."""
         pm = fitted.get_forecast(steps=steps).predicted_mean
         # predicted_mean may be pd.Series or np.ndarray depending on whether the
         # training data was a Series or ndarray — normalise to ndarray.

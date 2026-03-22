@@ -120,12 +120,14 @@ def lgbm_cv_for_segment(
     _state = {"train_size": 0}
 
     def fit_fn(train_y: np.ndarray) -> lgb.LGBMRegressor:
+        """Fit LightGBM on training slice; record training size for forecast_fn alignment."""
         n = len(train_y)
         _state["train_size"] = n
         X_train = feature_matrix[:n]
         return fit_lgbm_point(X_train, train_y)
 
     def forecast_fn(model: lgb.LGBMRegressor, steps: int) -> np.ndarray:
+        """Predict test slice using feature rows aligned after the training window."""
         start = _state["train_size"]
         X_test = feature_matrix[start : start + steps]
         return model.predict(X_test)

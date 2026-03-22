@@ -4,6 +4,20 @@ Ensemble combiner for blending statistical baseline and LightGBM correction.
 Uses per-segment inverse-RMSE weighting to combine forecasts. The LightGBM
 output is a residual correction (additive), not an independent full forecast.
 
+Additive blend vs. convex combination: Most ensemble methods use a convex combination
+(w1 * model1 + w2 * model2 = total, w1 + w2 = 1). Here we use an additive blend
+because LightGBM is trained on residuals — it does not produce a full forecast level,
+only a correction to the statistical baseline. Formula: stat_pred + lgbm_weight * correction.
+The stat_weight is accepted for API symmetry but is not used in the blend calculation.
+
+Inverse-RMSE weighting: models with lower out-of-sample CV error receive higher weight.
+The epsilon guard (1e-10) prevents division by zero for a model with RMSE ≈ 0 (a
+near-perfect fit on synthetic data): in that case the near-zero-RMSE model receives
+weight ≈ 1.0 and the other model weight ≈ 0.0, which is the correct behaviour.
+
+See docs/ASSUMPTIONS.md section Modeling Assumptions for ensemble weighting strategy
+and the additive vs. parallel blend decision.
+
 Exports:
 - compute_ensemble_weights: inverse-RMSE weights summing to 1.0
 - blend_forecasts: additive blend (stat_pred + lgbm_weight * correction)

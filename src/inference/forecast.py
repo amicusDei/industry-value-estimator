@@ -2,6 +2,21 @@
 Forecast engine: project 2025-2030, build output DataFrame with CI bounds,
 vintage column, and dual units (real 2020 USD + nominal USD).
 
+Dual units rationale: the statistical model outputs dimensionless PCA composite index
+scores, which are converted to real 2020 USD via value chain multipliers in app.py.
+For display purposes, nominal USD is also provided using a 2.5% annual CAGR assumption
+as a simple inflation proxy. This allows the dashboard to show both "apples-to-apples"
+constant-dollar comparisons (real 2020 USD) and the intuitive "current dollar" figures
+that non-technical audiences expect. See docs/ASSUMPTIONS.md section Modeling Assumptions
+for the 2.5% CAGR assumption and its sensitivity (±1% CAGR changes 2030 nominal by ~±6%).
+
+Confidence interval construction: CI bounds (80% and 95%) come from the quantile
+regression models trained in Phase 3. clip_ci_bounds enforces monotonic ordering
+(ci95_lower ≤ ci80_lower ≤ point ≤ ci80_upper ≤ ci95_upper) to prevent numerical
+artifacts from making inner bands wider than outer bands.
+
+See docs/ASSUMPTIONS.md section Interpretation Caveats for CI band interpretation.
+
 Exports:
 - build_forecast_dataframe: assemble full output DataFrame with all required columns
 - clip_ci_bounds: enforce monotonic CI ordering for a single row

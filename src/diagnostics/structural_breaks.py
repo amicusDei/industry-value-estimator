@@ -1,4 +1,24 @@
-"""Structural break detection: CUSUM, Chow test, Markov switching with fallback."""
+"""
+Structural break detection for AI industry time series.
+
+Provides three complementary structural break tests, used together to identify
+the 2022 GenAI structural break that fundamentally changed AI market dynamics:
+
+- CUSUM (cumulative sum of residuals): non-parametric, tests whether the mean has
+  shifted anywhere in the series. Most sensitive to gradual drift or sustained shifts.
+- Chow test: parametric, tests for a known break at a specified index. Most sensitive
+  to sharp level changes. Use when the break year is known (e.g., 2022 ChatGPT launch).
+- Markov switching: probabilistic, estimates regime probabilities and transition matrix.
+  Preferred for identifying when the series switches between growth regimes.
+
+Why three tests? No single test has universally superior power for macroeconomic breaks.
+CUSUM is robust but low-power for sharp breaks; Chow requires a known break date; Markov
+switching is powerful but may not converge on short annual series (N < 20). The fallback
+to dummy-variable OLS ensures graceful degradation on short or non-converging series.
+
+See docs/ASSUMPTIONS.md section Modeling Assumptions for the structural break at 2022
+and its treatment in Prophet (explicit changepoint) and ARIMA (higher d may absorb it).
+"""
 
 import warnings
 

@@ -1,4 +1,20 @@
-"""Model evaluation metrics: RMSE, MAPE, R-squared, AIC/BIC/AICc, Ljung-Box, model comparison."""
+"""
+Model evaluation metrics for AI industry forecast diagnostics.
+
+Provides: RMSE, MAPE, R-squared, AIC/BIC/AICc, Ljung-Box autocorrelation test,
+and a model comparison function that selects the winner per segment.
+
+Metric selection rationale:
+- MAPE is the primary model selection criterion: scale-independent, directly comparable
+  across the four AI segments which operate at very different index magnitudes.
+- RMSE is the secondary criterion and is displayed in the dashboard diagnostics tab.
+- R-squared is reported for completeness but NOT used for selection — it is inflated
+  by trend in time series data (a naive random walk achieves R^2 > 0.9 on a growth series).
+- AICc (not AIC) is used for ARIMA order selection because N < 30 annual observations
+  makes the small-sample correction numerically significant.
+
+See docs/ASSUMPTIONS.md section Cross-Validation Assumptions for metric interpretation.
+"""
 
 import numpy as np
 from statsmodels.stats.diagnostic import acorr_ljungbox

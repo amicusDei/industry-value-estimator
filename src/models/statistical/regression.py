@@ -5,13 +5,19 @@ Provides:
 - fit_top_down_ols_with_upgrade: OLS with diagnostic-driven upgrade to WLS or GLSAR
 - temporal_cv_generic: expanding-window temporal cross-validation scaffold
 
-Design philosophy:
-- OLS is the starting point for the top-down GDP share model
-- Breusch-Pagan test detects heteroscedasticity → upgrade to WLS
-- Ljung-Box test detects residual autocorrelation → upgrade to GLSAR
-- All upgrade decisions are documented in the returned diagnostics dict
+OLS-to-WLS-to-GLSAR upgrade chain rationale:
+Starting with OLS and upgrading diagnostically is more defensible than pre-selecting
+WLS or GLSAR because the upgrade decision is data-driven and documented. OLS provides
+the diagnostic residuals needed to detect heteroscedasticity (Breusch-Pagan) and
+autocorrelation (Ljung-Box). If OLS assumptions are met, OLS is retained — using a
+more complex model without evidence wastes degrees of freedom.
+
+The diagnostics dict always captures the OLS-layer statistics even when the final
+model is WLS or GLSAR, preserving traceability: reviewers can see what the data
+suggested and why the upgrade was triggered.
 
 See RESEARCH.md Pattern 7 (Temporal CV) and Pattern 8 (OLS Diagnostic-Driven Upgrade).
+See docs/ASSUMPTIONS.md section Modeling Assumptions for the regression upgrade criteria.
 """
 import numpy as np
 from sklearn.model_selection import TimeSeriesSplit
