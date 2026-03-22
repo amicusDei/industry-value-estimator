@@ -152,3 +152,23 @@ New section "Value Chain Multiplier Calibration" (~100 lines):
 - [x] 1712b3c — feat(04-03): add value chain multiplier and differentiate normal/expert modes
 
 ## Self-Check: PASSED
+
+---
+
+## Checkpoint Approval
+
+**Approved after 3 rounds of feedback (2026-03-22)**
+
+User confirmed:
+- Dashboard structure works
+- Normal mode shows dollar headlines with value chain multiplier
+- Expert mode shows raw indices and methodology
+- Fan charts render correctly
+- SHAP image visible
+- Diagnostics explained
+- Segment dropdown works
+- Normal/Expert toggle differentiates the user experience
+
+**Round 1 (e5ea702):** Visual polish, chart context, diagnostics methodology
+**Round 2 (9a204eb):** Fan chart lines, SHAP image, R²/MAPE, dropdown, normal/expert mode
+**Round 3 (1712b3c):** Value chain multiplier, USD headlines, mode differentiation, ASSUMPTIONS.md
