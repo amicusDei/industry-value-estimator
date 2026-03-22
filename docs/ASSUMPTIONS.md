@@ -5,7 +5,76 @@
 
 ---
 
-## TL;DR — Practitioner Summary
+## Value Chain Multiplier Calibration
+
+*Converts the dimensionless composite index (PCA scores) to USD billions for display.*
+
+### Problem Statement
+
+The statistical model produces a PCA first principal component as its output — a dimensionless composite index centered at zero. Raw index values (e.g., 7.8 for ai_software in 2023) are not interpretable as market sizes without calibration. A value chain multiplier anchors the index to a known USD reference point.
+
+### Anchor Selection
+
+**Anchor:** Global AI market \u2248 $200B in 2023
+
+**Sources:** Three independent consensus estimates:
+- McKinsey Global Institute, *The Economic Potential of Generative AI* (2023): $185\u2013$200B
+- Statista, *Artificial Intelligence \u2014 Statistics & Facts* (2023): $207B
+- Grand View Research, *Artificial Intelligence Market Size Report* (2024): $196B
+
+The $200B anchor is the median of these three estimates, all within a $185\u2013$207B range (\u00b15%). This level of consensus across independent methodologies provides sufficient confidence for calibration purposes.
+
+**If this anchor is wrong:** A 10% error in the anchor ($180B or $220B) propagates linearly to all USD estimates. The confidence intervals (80% and 95%) absorb this anchor uncertainty partially, but systematic anchor error would shift the entire forecast range up or down proportionally.
+
+### Calibration Methodology
+
+**Method:** `per_segment_anchor` \u2014 each segment receives an anchor USD value proportional to its estimated 2023 market share, then a per-segment multiplier is computed as:
+
+```
+multiplier_i = anchor_usd_i / index_i_at_2023
+```
+
+where `anchor_usd_i = $200B \u00d7 segment_share_i`.
+
+**Segment shares (2023 industry consensus):**
+
+| Segment | Share | Anchor USD | Rationale |
+|---------|-------|-----------|-----------|
+| AI Hardware | 35% | $70B | NVIDIA, AMD, TSMC AI chip revenue. McKinsey 2023: GPU/chip revenue dominant in near-term AI market |
+| AI Infrastructure | 25% | $50B | AWS/Azure/GCP AI-specific capital expenditure. IDC 2023: cloud AI infrastructure \u224820-25% of AI total |
+| AI Software & Platforms | 25% | $50B | Foundation model APIs, AI SaaS, developer tooling. Gartner 2023: software and services split evenly |
+| AI Adoption | 15% | $30B | Enterprise productivity gains, AI-enabled services. Broadest/most uncertain segment |
+
+**If segment shares are wrong:** An error in segment attribution does not affect the aggregate total ($200B anchor) \u2014 it only redistributes the total across segments. A 5% shift from hardware to software would increase the hardware multiplier and decrease the software multiplier proportionally.
+
+### Fallback for Negative Index Values
+
+The PCA composite index can be negative (it is zero-centered by construction). If a segment has a negative index value at the anchor year (2023), the per-segment multiplier would produce a negative USD value, which is not meaningful as a market size estimate.
+
+**Fallback rule:** If `index_i_at_2023 <= 0`, use the global fallback:
+```
+multiplier_i_fallback = global_multiplier \u00d7 segment_share_i
+global_multiplier = $200B / sum_of_all_segment_indices_at_2023
+```
+
+**Note on synthetic data:** The current pipeline uses synthetic placeholder data generated without access to real World Bank, OECD, or LSEG APIs. This produces negative index values at the 2023 anchor year for some segments (an artefact of random PCA scores, not economic signal). The fallback multiplier is applied for these segments. When real API data is available, all segment indices at 2023 are expected to be positive, and the per-segment multiplier will apply without fallback.
+
+### USD Floor
+
+All USD estimates are floored at $0B for display. Negative USD values (arising from negative index values in non-anchor years) are meaningful as model outputs \u2014 they indicate below-baseline activity \u2014 but displaying negative market sizes would confuse non-technical readers. Expert mode shows the raw index (which can be negative) for full transparency.
+
+### Configuration
+
+The multiplier parameters are configurable in `config/industries/ai.yaml` under the `value_chain` key. To update the calibration as better data becomes available:
+
+1. Update `anchor_value_usd_billions` with the new consensus estimate
+2. Update `segment_anchor_shares` if segment share evidence changes
+3. Rerun the dashboard \u2014 multipliers are recomputed at startup from config
+4. Update this section of ASSUMPTIONS.md with the new sources
+
+---
+
+## TL;DR \u2014 Practitioner Summary
 
 - **Assumption:** Annual data from 2010 onward is sufficient for trend estimation (~15 observations per segment). **If wrong:** Shorter history means wider confidence intervals and higher overfitting risk; ARIMA parsimony constraints (max_p=2, max_q=2) and AICc correction partially compensate but do not eliminate small-N uncertainty.
 

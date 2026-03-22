@@ -92,7 +92,7 @@ def build_segments_layout(segment: str, usd_col: str, mode: str = "normal") -> h
     usd_col : str
         Column name for point line.
     mode : str
-        "normal" for narrative view, "expert" for technical detail view.
+        "normal" for narrative USD view, "expert" for raw index + methodology view.
 
     Returns
     -------
@@ -100,16 +100,28 @@ def build_segments_layout(segment: str, usd_col: str, mode: str = "normal") -> h
         Dash component tree for the Segments tab.
     """
     expert = mode == "expert"
+    usd_mode = not expert  # Normal: USD chart; Expert: raw index chart
+
+    if usd_mode:
+        tab_subtitle = (
+            "Each panel shows estimated market size (USD billions) for one of the four AI market segments "
+            "from 2010 to 2030. The solid line is the historical baseline; the dashed line is the median "
+            "forecast. Blue shading shows 80% (darker) and 95% (lighter) confidence intervals. "
+            "Values are calibrated to the ~$200B 2023 industry consensus and expressed in 2020 constant USD."
+        )
+    else:
+        tab_subtitle = (
+            "Expert mode: Y-axis shows raw composite index values (PCA scores). "
+            "Negative values are valid \u2014 they represent below-baseline activity for that segment/year. "
+            "Segments are modeled independently using the best-fitting model per segment (ARIMA or Prophet)."
+        )
+
     tab_intro = html.Div([
-        html.H2("Per-Segment Forecast Fan Charts", style=_SECTION_HEADING_STYLE),
-        html.P(
-            "Each panel shows the historical index trajectory and 2030 forecast for one of the four AI "
-            "market segments. The solid line is confirmed historical data; the dashed line is the median "
-            "forecast. Blue shading shows 80% (darker) and 95% (lighter) confidence intervals \u2014 "
-            "wider bands indicate greater uncertainty, which grows with forecast horizon. "
-            "Segments are modeled independently using the best-fitting model per segment (ARIMA or Prophet).",
-            style=_SECTION_SUBTITLE_STYLE,
+        html.H2(
+            "Per-Segment Forecast Fan Charts" if usd_mode else "Per-Segment Raw Index Fan Charts",
+            style=_SECTION_HEADING_STYLE,
         ),
+        html.P(tab_subtitle, style=_SECTION_SUBTITLE_STYLE),
     ], style={
         "backgroundColor": "#FFFFFF",
         "borderRadius": "8px",
@@ -155,7 +167,7 @@ def build_segments_layout(segment: str, usd_col: str, mode: str = "normal") -> h
         for pair in seg_pairs:
             cols = []
             for seg in pair:
-                fig = make_fan_chart(FORECASTS_DF, seg, usd_col)
+                fig = make_fan_chart(FORECASTS_DF, seg, usd_col, usd_mode=usd_mode)
                 display_name = SEGMENT_DISPLAY.get(seg, seg)
                 description = _SEGMENT_DESCRIPTIONS.get(seg, "")
                 col = dbc.Col([
@@ -183,7 +195,7 @@ def build_segments_layout(segment: str, usd_col: str, mode: str = "normal") -> h
         return html.Div([tab_intro] + extra + rows, style={"paddingTop": "8px"})
     else:
         # Single segment full-width
-        fig = make_fan_chart(FORECASTS_DF, segment, usd_col)
+        fig = make_fan_chart(FORECASTS_DF, segment, usd_col, usd_mode=usd_mode)
         display_name = SEGMENT_DISPLAY.get(segment, segment)
         description = _SEGMENT_DESCRIPTIONS.get(segment, "")
         extra = [expert_note] if expert_note else []

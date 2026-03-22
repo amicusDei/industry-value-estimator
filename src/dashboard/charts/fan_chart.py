@@ -8,6 +8,9 @@ Produces a Plotly figure with:
 - Forecast dashed line (bridged from last historical point)
 - Vertical forecast boundary line
 - Shaded forecast region
+
+In normal mode (usd_mode=True), all axes show USD billions.
+In expert mode (usd_mode=False), the raw composite index is shown.
 """
 from __future__ import annotations
 
@@ -23,41 +26,70 @@ from .styles import (
 )
 
 
-def make_fan_chart(df: pd.DataFrame, segment: str, usd_col: str) -> go.Figure:
+def _fmt_usd_hover(val: float) -> str:
+    """Format a USD billions value for hover labels."""
+    if val >= 1000:
+        return f"${val / 1000:.2f}T"
+    return f"${val:.1f}B"
+
+
+def make_fan_chart(
+    df: pd.DataFrame,
+    segment: str,
+    usd_col: str,
+    usd_mode: bool = False,
+) -> go.Figure:
     """
     Build a fan chart figure for a given segment.
 
     Parameters
     ----------
     df : pd.DataFrame
-        Full forecasts DataFrame (forecasts_ensemble.parquet schema).
+        Full forecasts DataFrame (forecasts_ensemble.parquet schema),
+        must include usd_point/usd_ci80_lower/usd_ci80_upper/usd_ci95_lower/usd_ci95_upper
+        columns if usd_mode=True.
     segment : str
         Segment ID (e.g. "ai_software") or "all" to aggregate all segments.
     usd_col : str
-        Column name for the point line. Either "point_estimate_real_2020" or
-        "point_estimate_nominal". CI bands always use real 2020 USD columns.
+        Column name for the raw index point line. Either "point_estimate_real_2020" or
+        "point_estimate_nominal". Used only when usd_mode=False.
+    usd_mode : bool
+        If True, plot the USD columns (usd_point, usd_ci*) on the Y-axis with
+        USD billion labels. If False, plot the raw index (usd_col) with index labels.
 
     Returns
     -------
     go.Figure
         Plotly figure with 4+ traces and forecast boundary annotations.
     """
+    # Choose which columns to plot based on mode
+    if usd_mode:
+        point_col = "usd_point"
+        ci80_lower_col = "usd_ci80_lower"
+        ci80_upper_col = "usd_ci80_upper"
+        ci95_lower_col = "usd_ci95_lower"
+        ci95_upper_col = "usd_ci95_upper"
+    else:
+        point_col = usd_col
+        ci80_lower_col = "ci80_lower"
+        ci80_upper_col = "ci80_upper"
+        ci95_lower_col = "ci95_lower"
+        ci95_upper_col = "ci95_upper"
+
     # --- Aggregate or filter ---
     if segment == "all":
+        agg_cols = {
+            point_col: "sum",
+            ci80_lower_col: "sum",
+            ci80_upper_col: "sum",
+            ci95_lower_col: "sum",
+            ci95_upper_col: "sum",
+            "is_forecast": "any",
+        }
+        # Avoid duplicate keys if point_col overlaps with ci cols (shouldn't happen)
         agg = (
             df.groupby("year", as_index=False)
-            .agg(
-                {
-                    usd_col: "sum",
-                    "point_estimate_real_2020": "sum",
-                    "point_estimate_nominal": "sum",
-                    "ci80_lower": "sum",
-                    "ci80_upper": "sum",
-                    "ci95_lower": "sum",
-                    "ci95_upper": "sum",
-                    "is_forecast": "any",
-                }
-            )
+            .agg(agg_cols)
             .sort_values("year")
             .reset_index(drop=True)
         )
@@ -75,10 +107,16 @@ def make_fan_chart(df: pd.DataFrame, segment: str, usd_col: str) -> go.Figure:
 
     fig = go.Figure()
 
+    # Build hover template based on mode
+    if usd_mode:
+        hover_tpl = "<b>%{x}</b><br>$%{y:.1f}B<extra></extra>"
+    else:
+        hover_tpl = "<b>%{x}</b><br>%{y:.2f}<extra></extra>"
+
     # --- 95% CI band (toself fill) — zorder=1 keeps fills behind lines ---
     if len(fore) > 0:
         x_ci = list(fore["year"]) + list(fore["year"][::-1])
-        y_ci95 = list(fore["ci95_upper"]) + list(fore["ci95_lower"][::-1])
+        y_ci95 = list(fore[ci95_upper_col]) + list(fore[ci95_lower_col][::-1])
         fig.add_trace(
             go.Scatter(
                 x=x_ci,
@@ -95,7 +133,7 @@ def make_fan_chart(df: pd.DataFrame, segment: str, usd_col: str) -> go.Figure:
         )
 
         # --- 80% CI band ---
-        y_ci80 = list(fore["ci80_upper"]) + list(fore["ci80_lower"][::-1])
+        y_ci80 = list(fore[ci80_upper_col]) + list(fore[ci80_lower_col][::-1])
         fig.add_trace(
             go.Scatter(
                 x=x_ci,
@@ -116,13 +154,13 @@ def make_fan_chart(df: pd.DataFrame, segment: str, usd_col: str) -> go.Figure:
         fig.add_trace(
             go.Scatter(
                 x=hist["year"],
-                y=hist[usd_col],
+                y=hist[point_col],
                 mode="lines",
                 line=dict(color=COLOR_DEEP_BLUE, width=2.5),
                 name="Historical",
                 legendrank=1,
                 zorder=4,
-                hovertemplate="<b>%{x}</b><br>%{y:.2f}<extra></extra>",
+                hovertemplate=hover_tpl,
             )
         )
 
@@ -131,10 +169,10 @@ def make_fan_chart(df: pd.DataFrame, segment: str, usd_col: str) -> go.Figure:
         if len(hist) > 0:
             # Bridge: include last historical point as first forecast point
             bridge_x = [int(hist["year"].iloc[-1])] + list(fore["year"])
-            bridge_y = [float(hist[usd_col].iloc[-1])] + list(fore[usd_col])
+            bridge_y = [float(hist[point_col].iloc[-1])] + list(fore[point_col])
         else:
             bridge_x = list(fore["year"])
-            bridge_y = list(fore[usd_col])
+            bridge_y = list(fore[point_col])
 
         fig.add_trace(
             go.Scatter(
@@ -146,7 +184,7 @@ def make_fan_chart(df: pd.DataFrame, segment: str, usd_col: str) -> go.Figure:
                 name="Forecast",
                 legendrank=0,
                 zorder=5,
-                hovertemplate="<b>%{x}</b><br>%{y:.2f}<extra></extra>",
+                hovertemplate=hover_tpl,
             )
         )
 
@@ -170,7 +208,13 @@ def make_fan_chart(df: pd.DataFrame, segment: str, usd_col: str) -> go.Figure:
     )
 
     # --- Layout ---
-    usd_label = "Nominal USD" if usd_col == "point_estimate_nominal" else "Real 2020 USD (Index)"
+    if usd_mode:
+        y_label = "USD Billions (2020 constant)"
+    elif usd_col == "point_estimate_nominal":
+        y_label = "Nominal USD (Index)"
+    else:
+        y_label = "Composite Index (PCA score)"
+
     fig.update_layout(
         plot_bgcolor="white",
         paper_bgcolor="white",
@@ -187,7 +231,7 @@ def make_fan_chart(df: pd.DataFrame, segment: str, usd_col: str) -> go.Figure:
             tickfont=dict(size=11),
         ),
         yaxis=dict(
-            title=dict(text=usd_label, font=dict(size=12)),
+            title=dict(text=y_label, font=dict(size=12)),
             gridcolor=COLOR_AXES,
             tickfont=dict(size=11),
         ),

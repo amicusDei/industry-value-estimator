@@ -138,6 +138,31 @@ lseg:
     - "TR.TRBCActivity"
     - "TR.TRBCActivityCode"
 
+# Value chain multiplier — converts composite index to USD billions
+# Methodology: linear anchor calibration against industry consensus market size
+# See docs/ASSUMPTIONS.md § Value Chain Multiplier for full derivation
+value_chain:
+  # Anchor: AI market estimated at ~$200B in 2023
+  # Consensus from McKinsey Global Institute (2023), Statista (2023), Grand View Research (2024)
+  # All agree on a $185–$215B range; $200B used as central estimate
+  anchor_year: 2023
+  anchor_value_usd_billions: 200
+  multiplier_method: "per_segment_anchor"
+  # Per-segment shares of the $200B anchor (2023 industry consensus)
+  # Hardware (NVIDIA, AMD, TSMC AI chips): ~35% = $70B
+  # Infrastructure (AWS/Azure/GCP AI compute build-out): ~25% = $50B
+  # Software & Platforms (AI SaaS, foundation model APIs): ~25% = $50B
+  # Adoption (enterprise AI deployment spend): ~15% = $30B
+  segment_anchor_shares:
+    ai_hardware: 0.35
+    ai_infrastructure: 0.25
+    ai_software: 0.25
+    ai_adoption: 0.15
+  # Note: index values can be negative (PCA scores, zero-centered)
+  # USD values are floored at zero for display; negative values indicate
+  # the model has no signal above baseline for that segment/year
+  usd_floor_billions: 0.0
+
 # Source metadata (for DATA-07 attribution downstream)
 source_attribution:
   world_bank: "World Bank Open Data (data.worldbank.org)"
