@@ -33,7 +33,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Presentation
 
 - [x] **PRES-01**: Interactive Dash dashboard with time series charts and forecast fan charts
-- [ ] **PRES-02**: SHAP driver attribution visualization in dashboard
+- [x] **PRES-02**: SHAP driver attribution visualization in dashboard
 - [x] **PRES-03**: Model diagnostics display (RMSE, MAPE, R², residual plots, backtesting results)
 - [ ] **PRES-04**: Exportable PDF report with analysis and projections
 - [ ] **PRES-05**: Methodology paper suitable for LinkedIn publication
@@ -41,7 +41,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Architecture & Documentation
 
 - [x] **ARCH-01**: Config-driven extensible pipeline (add new industries via config, not code rewrite)
-- [ ] **ARCH-02**: Comprehensive code documentation explaining every module and function for learning purposes
+- [x] **ARCH-02**: Comprehensive code documentation explaining every module and function for learning purposes
 - [ ] **ARCH-03**: Polished GitHub README with project description, data sources, setup instructions
 - [x] **ARCH-04**: Documented assumptions file explaining all modeling decisions and their rationale
 
@@ -102,12 +102,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MODL-08 | Phase 2 | Complete |
 | MODL-09 | Phase 2 | Complete |
 | PRES-01 | Phase 4 | Complete |
-| PRES-02 | Phase 4 | Pending |
+| PRES-02 | Phase 4 | Complete |
 | PRES-03 | Phase 4 | Complete |
 | PRES-04 | Phase 5 | Pending |
 | PRES-05 | Phase 5 | Pending |
 | ARCH-01 | Phase 1 | Complete |
-| ARCH-02 | Phase 5 | Pending |
+| ARCH-02 | Phase 5 | Complete |
 | ARCH-03 | Phase 5 | Pending |
 | ARCH-04 | Phase 2 | Complete |
 
