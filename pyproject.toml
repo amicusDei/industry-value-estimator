@@ -4,6 +4,8 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.12"
 dependencies = [
+    "dash>=4.0.0",
+    "dash-bootstrap-components>=2.0.4",
     "lightgbm>=4.6.0",
     "lseg-data>=2.1.0",
     "numpy>=2.4.3",
