@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-01-PLAN.md
-last_updated: "2026-03-22T13:51:25.980Z"
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-03-22T13:56:24.011Z"
 last_activity: "2026-03-17 — Completed plan 01-01: project scaffold, AI industry config, pandera schemas, 26 tests"
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 16
-  completed_plans: 14
+  completed_plans: 15
   percent: 4
 ---
 
@@ -64,6 +64,7 @@ Progress: [░░░░░░░░░░] 4%
 | Phase 03-ml-ensemble-and-validation P02 | 3 | 2 tasks | 7 files |
 | Phase 03-ml-ensemble-and-validation P03 | 2 | 1 tasks | 2 files |
 | Phase 04-interactive-dashboard P01 | 2 | 2 tasks | 9 files |
+| Phase 04-interactive-dashboard P02 | 2 | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -114,6 +115,9 @@ Recent decisions affecting current work:
 - [Phase 04-interactive-dashboard]: CI bands always use real 2020 USD; usd_col param only toggles point line (historical/forecast traces)
 - [Phase 04-interactive-dashboard]: MAPE and R^2 documented as N/A — residuals_statistical.parquet has only residual column, no actual/predicted
 - [Phase 04-interactive-dashboard]: Forecast bridge: last historical point prepended to forecast trace x/y arrays for visual continuity at boundary
+- [Phase 04-interactive-dashboard]: Tab layout builders are pure functions (segment, usd_col) → html.Div — stateless, uniform callback dispatch
+- [Phase 04-interactive-dashboard]: Headline uses Forecast Index label, not USD trillions — values are normalized composite indices
+- [Phase 04-interactive-dashboard]: Global controls outside tab-content to prevent state reset on tab switch (Pitfall 3)
 
 ### Pending Todos
 
@@ -126,6 +130,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T13:51:25.979Z
-Stopped at: Completed 04-01-PLAN.md
+Last session: 2026-03-22T13:56:24.009Z
+Stopped at: Completed 04-02-PLAN.md
 Resume file: None
