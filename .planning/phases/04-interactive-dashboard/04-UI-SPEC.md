@@ -62,8 +62,6 @@ Two weights only: regular (400) and semibold (600).
 | Body | 16px | 400 | 1.5 | General text, diagnostics table cell values, tooltip copy |
 | Label | 12px | 400 | 1.4 | Attribution footnotes, axis tick labels override, scorecard metric row labels |
 
-Attribution footnote is 11px (sub-label) — sole exception below the label tier, reserved exclusively for DATA-07 source text below charts. Source: RESEARCH.md Pattern 4.
-
 ---
 
 ## Color
@@ -212,7 +210,7 @@ Every chart must have an `html.P()` attribution footnote immediately below its `
 
 Attribution footnote style (applied to all instances):
 ```python
-{"fontSize": "11px", "color": "#888888", "marginTop": "4px", "marginBottom": "0", "fontStyle": "italic"}
+{"fontSize": "12px", "color": "#888888", "marginTop": "4px", "marginBottom": "0", "fontStyle": "italic"}
 ```
 
 ---
@@ -298,7 +296,7 @@ No third-party component registries used. All components are either Dash core (`
 | SHAP as embedded PNG from assets/ | RESEARCH.md Pattern 5 — discretion decision |
 | #1E5AC8 deep blue hex | RESEARCH.md fan chart code example |
 | CI fill opacities (0.10 / 0.20) | RESEARCH.md fan chart code example |
-| Attribution footnote style (11px, #888) | RESEARCH.md Pattern 4 code example |
+| Attribution footnote style (12px, #888, italic) | RESEARCH.md Pattern 4 — updated: 11px promoted to 12px Label tier to satisfy 4-size typography rule |
 | dash-bootstrap-components for grid layout | Claude discretion (CONTEXT.md discretion area) |
 | Coral #E05A3A as secondary accent | Claude discretion (CONTEXT.md discretion area) |
 | dcc.Loading type="circle" for loading states | Claude discretion (CONTEXT.md discretion area) |
