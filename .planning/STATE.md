@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Completed 03-01-PLAN.md: LightGBM point and quantile models"
-last_updated: "2026-03-22T12:53:06.843Z"
+stopped_at: "Completed 03-02-PLAN.md: Ensemble combiner, forecast engine with CI bounds and dual units, SHAP attribution"
+last_updated: "2026-03-22T12:58:43.464Z"
 last_activity: "2026-03-17 — Completed plan 01-01: project scaffold, AI industry config, pandera schemas, 26 tests"
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 13
-  completed_plans: 11
+  completed_plans: 12
   percent: 4
 ---
 
@@ -61,6 +61,7 @@ Progress: [░░░░░░░░░░] 4%
 | Phase 02-statistical-baseline P04 | 3 | 2 tasks | 2 files |
 | Phase 02-statistical-baseline P05 | 8 | 1 tasks | 2 files |
 | Phase 03-ml-ensemble-and-validation P01 | 3 | 2 tasks | 6 files |
+| Phase 03-ml-ensemble-and-validation P02 | 3 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -101,6 +102,10 @@ Recent decisions affecting current work:
 - [Phase 02-05]: All 4 AI segments selected Prophet as winner on synthetic data — structural break at 2022 favors Prophet changepoint prior; split will differ on live API data
 - [Phase 03-01]: libomp installed via Homebrew — LightGBM macOS dylib requires OpenMP at runtime
 - [Phase 03-01]: Closure with mutable _state dict aligns feature_matrix to temporal_cv_generic y-slice API without changing the shared CV scaffold
+- [Phase 03-02]: Additive blend confirmed: LightGBM corrects statistical residuals (stat_pred + lgbm_weight * correction), not a parallel full forecast
+- [Phase 03-02]: 2.5% annual CAGR as inflation proxy for real-to-nominal USD conversion — upgradeable to live World Bank NY.GDP.DEFL.ZS deflator
+- [Phase 03-02]: Epsilon guard (1e-10) in compute_ensemble_weights prevents division by zero; zero-RMSE model receives near-maximum weight
+- [Phase 03-02]: matplotlib.use('Agg') called inside save_shap_summary_plot to keep headless-safe without forcing global backend change at import time
 
 ### Pending Todos
 
@@ -113,6 +118,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T12:53:06.841Z
-Stopped at: Completed 03-01-PLAN.md: LightGBM point and quantile models
+Last session: 2026-03-22T12:58:43.463Z
+Stopped at: Completed 03-02-PLAN.md: Ensemble combiner, forecast engine with CI bounds and dual units, SHAP attribution
 Resume file: None

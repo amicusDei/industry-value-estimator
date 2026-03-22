@@ -22,11 +22,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **MODL-01**: Build statistical baseline model (ARIMA and/or OLS regression) for AI market size estimation
 - [x] **MODL-02**: Build ML refinement model (LightGBM) trained on statistical model residuals
-- [ ] **MODL-03**: Create hybrid ensemble combining statistical and ML outputs with documented weighting
-- [ ] **MODL-04**: Generate market size point estimates with units and vintage date
+- [x] **MODL-03**: Create hybrid ensemble combining statistical and ML outputs with documented weighting
+- [x] **MODL-04**: Generate market size point estimates with units and vintage date
 - [x] **MODL-05**: Generate growth forecasts with calibrated confidence intervals (80%/95%)
 - [x] **MODL-06**: Implement temporal cross-validation (expanding window, no data leakage)
-- [ ] **MODL-07**: Compute SHAP values showing which variables drive forecasts
+- [x] **MODL-07**: Compute SHAP values showing which variables drive forecasts
 - [x] **MODL-08**: Handle structural breaks (2022-23 GenAI surge) explicitly in models
 - [x] **MODL-09**: Document all model assumptions, choices, and mathematical foundations
 
@@ -94,11 +94,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-08 | Phase 1 | Complete |
 | MODL-01 | Phase 2 | Complete |
 | MODL-02 | Phase 3 | Complete |
-| MODL-03 | Phase 3 | Pending |
-| MODL-04 | Phase 3 | Pending |
+| MODL-03 | Phase 3 | Complete |
+| MODL-04 | Phase 3 | Complete |
 | MODL-05 | Phase 3 | Complete |
 | MODL-06 | Phase 2 | Complete |
-| MODL-07 | Phase 3 | Pending |
+| MODL-07 | Phase 3 | Complete |
 | MODL-08 | Phase 2 | Complete |
 | MODL-09 | Phase 2 | Complete |
 | PRES-01 | Phase 4 | Pending |
