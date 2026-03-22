@@ -122,7 +122,7 @@ _METRIC_INFO = {
 }
 
 
-def build_diagnostics_layout(segment: str, usd_col: str) -> html.Div:
+def build_diagnostics_layout(segment: str, usd_col: str, mode: str = "normal") -> html.Div:
     """
     Build the Diagnostics tab layout.
 
@@ -132,12 +132,15 @@ def build_diagnostics_layout(segment: str, usd_col: str) -> html.Div:
         Segment ID or "all" to show diagnostics for all segments.
     usd_col : str
         USD column toggle (not used for diagnostics display).
+    mode : str
+        "normal" for narrative view, "expert" for technical detail view with formulas.
 
     Returns
     -------
     html.Div
         Dash component tree for the Diagnostics tab.
     """
+    expert = mode == "expert"
     # --- Methodology intro card ---
     methodology_card = html.Div([
         html.H2("Model Diagnostics", style=_SECTION_HEADING_STYLE),
@@ -214,9 +217,12 @@ def build_diagnostics_layout(segment: str, usd_col: str) -> html.Div:
         for s in display_segments
     ]
 
-    def _fmt(val) -> str:
+    def _fmt(val, metric_key: str = "") -> str:
         if isinstance(val, float):
             return f"{val:.4f}"
+        # "N/A" means not computable from residuals-only parquet
+        if val == "N/A" and metric_key in ("mape", "r2"):
+            return "Needs actuals"
         return str(val)
 
     metric_rows = []
@@ -232,13 +238,48 @@ def build_diagnostics_layout(segment: str, usd_col: str) -> html.Div:
         )]
         for seg in display_segments:
             diag = DIAGNOSTICS.get(seg, {})
-            cells.append(html.Td(_fmt(diag.get(metric_key, "N/A")), style=_TABLE_CELL_STYLE))
+            raw_val = diag.get(metric_key, "N/A")
+            fmt_val = _fmt(raw_val, metric_key)
+            cell_style = {
+                **_TABLE_CELL_STYLE,
+                **({"color": "#999", "fontStyle": "italic"} if fmt_val == "Needs actuals" else {}),
+            }
+            cells.append(html.Td(fmt_val, style=cell_style))
         metric_rows.append(html.Tr(cells))
 
     scorecard_table = html.Table(
         [html.Thead(html.Tr(header_cells)), html.Tbody(metric_rows)],
         style={"width": "100%", "borderCollapse": "collapse"},
     )
+
+    # Build RMSE highlight cards (one per displayed segment)
+    rmse_highlight_cards = []
+    for seg in display_segments:
+        diag = DIAGNOSTICS.get(seg, {})
+        rmse_val = diag.get("rmse", None)
+        seg_label = SEGMENT_DISPLAY.get(seg, seg)
+        rmse_highlight_cards.append(
+            html.Div([
+                html.Div(seg_label, style={
+                    "fontSize": "12px", "color": "#666", "marginBottom": "4px",
+                    "fontWeight": 500,
+                }),
+                html.Div(
+                    f"RMSE: {rmse_val:.4f}" if isinstance(rmse_val, float) else "RMSE: —",
+                    style={
+                        "fontSize": "18px", "fontWeight": 700,
+                        "color": COLOR_DEEP_BLUE,
+                    },
+                ),
+            ], style={
+                "backgroundColor": "rgba(30,90,200,0.05)",
+                "border": f"1px solid {COLOR_DEEP_BLUE}",
+                "borderRadius": "6px",
+                "padding": "12px 16px",
+                "flex": "1",
+                "minWidth": "160px",
+            })
+        )
 
     scorecard_card = html.Div([
         html.H3("Out-of-Sample Fit Scorecard", style={
@@ -249,10 +290,17 @@ def build_diagnostics_layout(segment: str, usd_col: str) -> html.Div:
             "marginTop": "0",
         }),
         html.P(
-            "Lower RMSE/MAPE is better. Higher R\u00b2 is better (but treat with caution for trend time series). "
-            "All values computed on held-out CV folds \u2014 not in-sample fit.",
+            "RMSE is the primary metric computed from the residuals parquet \u2014 it measures average forecast "
+            "error magnitude in index units. MAPE and R\u00b2 require the actual observed values alongside "
+            "predictions: these will be available once the full pipeline runs with real source data. "
+            "All RMSE values are from out-of-sample expanding-window CV folds, not in-sample fit.",
             style={"fontSize": "13px", "color": "#666", "marginBottom": "14px"},
         ),
+        # RMSE highlight row
+        html.Div(rmse_highlight_cards, style={
+            "display": "flex", "gap": "12px", "flexWrap": "wrap",
+            "marginBottom": "16px",
+        }),
         scorecard_table,
         html.P(
             "Sources: World Bank Open Data, OECD.Stat, LSEG Workspace "
@@ -299,9 +347,59 @@ def build_diagnostics_layout(segment: str, usd_col: str) -> html.Div:
         ),
     ], style={**_CARD_STYLE, "marginBottom": "0"})
 
-    return html.Div([
-        methodology_card,
-        metric_glossary_card,
-        scorecard_card,
-        backtest_card,
-    ], style={"paddingTop": "8px"})
+    sections = [methodology_card, metric_glossary_card, scorecard_card, backtest_card]
+
+    if expert:
+        expert_card = html.Div([
+            html.H3(
+                "Expert View \u2014 CV Design, Formulas & Assumptions",
+                style={"fontSize": "16px", "fontWeight": 600, "color": "#7C4DFF", "marginBottom": "12px", "marginTop": "0"},
+            ),
+            html.H4("Cross-Validation Design", style={"fontSize": "14px", "fontWeight": 600, "marginBottom": "6px"}),
+            html.Ul([
+                html.Li("Strategy: sklearn TimeSeriesSplit expanding-window (chronological order preserved)", style={"fontSize": "13px"}),
+                html.Li("n_splits = 3 folds. Training windows: ~9 obs \u2192 ~11 obs \u2192 ~13 obs. Test: 1 year per fold.", style={"fontSize": "13px"}),
+                html.Li("No leakage: StandardScaler for PCA composites is fit on training fold only (train_end_idx parameter).", style={"fontSize": "13px"}),
+                html.Li("Prophet CV: manual TimeSeriesSplit refits (not Prophet's built-in cross_validation \u2014 incompatible with 15-year annual panels).", style={"fontSize": "13px"}),
+            ], style={"paddingLeft": "20px", "marginBottom": "12px"}),
+            html.H4("Metric Formulas", style={"fontSize": "14px", "fontWeight": 600, "marginBottom": "6px"}),
+            html.Div([
+                html.Code(
+                    "RMSE = \u221a(mean((y_actual - y_predicted)\u00b2))  [computed from residuals_statistical.parquet]",
+                    style={"display": "block", "fontFamily": "monospace", "fontSize": "12px",
+                           "backgroundColor": "#F4F6FA", "padding": "6px 10px", "borderRadius": "4px", "marginBottom": "4px"},
+                ),
+                html.Code(
+                    "MAPE = mean(|y_actual - y_predicted| / |y_actual|) \u00d7 100  [requires actual values \u2014 not in residuals parquet]",
+                    style={"display": "block", "fontFamily": "monospace", "fontSize": "12px",
+                           "backgroundColor": "#F4F6FA", "padding": "6px 10px", "borderRadius": "4px", "marginBottom": "4px"},
+                ),
+                html.Code(
+                    "R\u00b2 = 1 - SS_res/SS_tot  where SS_res=\u03a3(y-\u0177)\u00b2, SS_tot=\u03a3(y-\u0233)\u00b2  [requires actual values \u2014 not in residuals parquet]",
+                    style={"display": "block", "fontFamily": "monospace", "fontSize": "12px",
+                           "backgroundColor": "#F4F6FA", "padding": "6px 10px", "borderRadius": "4px", "marginBottom": "8px"},
+                ),
+            ]),
+            html.P([
+                html.Strong("Why MAPE/R\u00b2 show 'Needs actuals': "),
+                "The residuals_statistical.parquet file stores the residual column only (y_actual - y_predicted). "
+                "Computing MAPE and R\u00b2 requires both y_actual and y_predicted independently. "
+                "These become available when the full pipeline runs on real source data and logs the CV fold predictions.",
+            ], style={"fontSize": "13px", "color": "#444", "lineHeight": "1.6", "marginBottom": "8px"}),
+            html.P([
+                html.Strong("Model selection rule: "),
+                "Winner per segment = model with lower CV MAPE (ARIMA vs. Prophet). "
+                "R\u00b2 and in-sample AIC are reported for completeness but NOT used for selection. "
+                "See docs/ASSUMPTIONS.md \u00a7 Metric Interpretation and \u00a7 Model Selection is Per-Segment.",
+            ], style={"fontSize": "13px", "color": "#444", "lineHeight": "1.6", "marginBottom": "0"}),
+        ], style={
+            "backgroundColor": "#FAF8FF",
+            "border": "1px solid #C5B0FF",
+            "borderLeft": "4px solid #7C4DFF",
+            "borderRadius": "8px",
+            "padding": "18px 20px",
+            "marginTop": "24px",
+        })
+        sections.append(expert_card)
+
+    return html.Div(sections, style={"paddingTop": "8px"})

@@ -81,7 +81,7 @@ _SEGMENT_DESC_STYLE = {
 }
 
 
-def build_segments_layout(segment: str, usd_col: str) -> html.Div:
+def build_segments_layout(segment: str, usd_col: str, mode: str = "normal") -> html.Div:
     """
     Build the Segments tab layout.
 
@@ -91,12 +91,15 @@ def build_segments_layout(segment: str, usd_col: str) -> html.Div:
         Segment ID or "all" to show all four segments in a 2x2 grid.
     usd_col : str
         Column name for point line.
+    mode : str
+        "normal" for narrative view, "expert" for technical detail view.
 
     Returns
     -------
     html.Div
         Dash component tree for the Segments tab.
     """
+    expert = mode == "expert"
     tab_intro = html.Div([
         html.H2("Per-Segment Forecast Fan Charts", style=_SECTION_HEADING_STYLE),
         html.P(
@@ -115,6 +118,35 @@ def build_segments_layout(segment: str, usd_col: str) -> html.Div:
         "boxShadow": "0 1px 4px rgba(0,0,0,0.08)",
         "border": "1px solid #E8EBF0",
     })
+
+    # Expert mode: segment model type reference table
+    expert_note = None
+    if expert:
+        expert_note = html.Div([
+            html.H4(
+                "Expert View \u2014 Per-Segment Modeling Detail",
+                style={"fontSize": "14px", "fontWeight": 600, "color": "#7C4DFF", "marginBottom": "8px", "marginTop": "0"},
+            ),
+            html.Ul([
+                html.Li("Each segment uses the model with lower CV MAPE: ARIMA(p,d,q) via auto_arima AICc or Facebook Prophet.", style={"fontSize": "13px"}),
+                html.Li("ARIMA order selection: max_p=2, max_q=2, seasonal=False, information_criterion='aicc'.", style={"fontSize": "13px"}),
+                html.Li("Prophet: single explicit changepoint at 2022-01-01, changepoint_prior_scale=0.1, no weekly/daily seasonality.", style={"fontSize": "13px"}),
+                html.Li("CV folds: expanding-window TimeSeriesSplit, n_splits=3. Preprocessing (StandardScaler for PCA) fit on training fold only.", style={"fontSize": "13px"}),
+                html.Li("CI bands: 80% and 95% bootstrap intervals derived from model residuals (500 resamples).", style={"fontSize": "13px"}),
+                html.Li([
+                    "Independence assumption: segments modeled separately, aggregate = sum. ",
+                    html.Strong("Cross-segment spillovers are NOT modeled."),
+                    " See docs/ASSUMPTIONS.md \u00a7 Per-Segment Independence.",
+                ], style={"fontSize": "13px"}),
+            ], style={"paddingLeft": "20px", "marginBottom": "0"}),
+        ], style={
+            "backgroundColor": "#FAF8FF",
+            "border": "1px solid #C5B0FF",
+            "borderLeft": "4px solid #7C4DFF",
+            "borderRadius": "6px",
+            "padding": "14px 18px",
+            "marginBottom": "20px",
+        })
 
     if segment == "all":
         # 2x2 grid showing all 4 segments
@@ -147,14 +179,17 @@ def build_segments_layout(segment: str, usd_col: str) -> html.Div:
                 ], width=6, style={"marginBottom": "20px"})
                 cols.append(col)
             rows.append(dbc.Row(cols))
-        return html.Div([tab_intro] + rows, style={"paddingTop": "8px"})
+        extra = [expert_note] if expert_note else []
+        return html.Div([tab_intro] + extra + rows, style={"paddingTop": "8px"})
     else:
         # Single segment full-width
         fig = make_fan_chart(FORECASTS_DF, segment, usd_col)
         display_name = SEGMENT_DISPLAY.get(segment, segment)
         description = _SEGMENT_DESCRIPTIONS.get(segment, "")
+        extra = [expert_note] if expert_note else []
         return html.Div([
             tab_intro,
+        ] + extra + [
             html.Div([
                 html.H3(display_name, style=_SEGMENT_HEADING_STYLE),
                 html.P(description, style=_SEGMENT_DESC_STYLE),

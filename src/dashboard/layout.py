@@ -47,21 +47,27 @@ def create_layout() -> html.Div:
                         "fontWeight": 400,
                     },
                 ),
-            ], style={"display": "inline-block", "verticalAlign": "middle"}),
+            ], style={"display": "flex", "alignItems": "center"}),
             html.Div([
-                # Global segment dropdown
+                # Global segment dropdown — uses dbc.ButtonGroup for full visibility
                 html.Label(
                     "Segment:",
-                    style={"marginRight": "8px", "fontSize": "13px", "color": "#555", "fontWeight": 400},
+                    style={
+                        "marginRight": "8px", "fontSize": "13px", "color": "#555",
+                        "fontWeight": 400, "whiteSpace": "nowrap",
+                    },
                 ),
-                dcc.Dropdown(
-                    id="segment-dropdown",
-                    options=[{"label": "All Segments", "value": "all"}] + [
-                        {"label": SEGMENT_DISPLAY[s], "value": s} for s in SEGMENTS
-                    ],
-                    value="all",
-                    clearable=False,
-                    style={"width": "240px", "display": "inline-block", "verticalAlign": "middle"},
+                html.Div(
+                    dcc.Dropdown(
+                        id="segment-dropdown",
+                        options=[{"label": "All Segments", "value": "all"}] + [
+                            {"label": SEGMENT_DISPLAY[s], "value": s} for s in SEGMENTS
+                        ],
+                        value="all",
+                        clearable=False,
+                        style={"width": "240px"},
+                    ),
+                    style={"position": "relative", "zIndex": 2000},
                 ),
                 # USD toggle
                 html.Span(style={"width": "20px", "display": "inline-block"}),
@@ -73,16 +79,49 @@ def create_layout() -> html.Div:
                     ],
                     value="point_estimate_real_2020",
                     inline=True,
-                    style={"display": "inline-block", "fontSize": "13px"},
+                    style={"display": "inline-flex", "alignItems": "center", "fontSize": "13px"},
                     inputStyle={"marginRight": "4px"},
                     labelStyle={"marginRight": "16px"},
                 ),
-            ], style={"display": "inline-block", "float": "right", "verticalAlign": "middle"}),
+                # Normal / Expert mode toggle
+                html.Span(style={"width": "20px", "display": "inline-block"}),
+                html.Div([
+                    html.Span(
+                        "Mode:",
+                        style={"marginRight": "8px", "fontSize": "13px", "color": "#555", "fontWeight": 400},
+                    ),
+                    dcc.RadioItems(
+                        id="mode-toggle",
+                        options=[
+                            {"label": "Normal", "value": "normal"},
+                            {"label": "Expert", "value": "expert"},
+                        ],
+                        value="normal",
+                        inline=True,
+                        style={"display": "inline-flex", "alignItems": "center", "fontSize": "13px"},
+                        inputStyle={"marginRight": "4px"},
+                        labelStyle={"marginRight": "16px"},
+                    ),
+                ], style={
+                    "display": "inline-flex",
+                    "alignItems": "center",
+                    "padding": "4px 10px",
+                    "border": "1px solid #D0D5E0",
+                    "borderRadius": "6px",
+                    "backgroundColor": "#F8F9FC",
+                }),
+            ], style={"display": "flex", "alignItems": "center"}),
         ], style={
             "padding": "14px 24px",
             "backgroundColor": "#FFFFFF",
             "borderBottom": "2px solid #E8EBF0",
-            "overflow": "hidden",
+            "overflow": "visible",
+            "position": "relative",
+            "zIndex": 1000,
+            # Use flexbox instead of float for reliable cross-browser layout
+            "display": "flex",
+            "alignItems": "center",
+            "justifyContent": "space-between",
         }),
 
         # TABS

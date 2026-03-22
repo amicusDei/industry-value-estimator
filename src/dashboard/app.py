@@ -34,9 +34,14 @@ for segment, grp in RESIDUALS_DF.groupby("segment"):
         "r2": "N/A",    # Cannot compute — no actual values in residuals parquet
     }
 
+# Resolve the project root so assets/ is always served correctly regardless
+# of which directory the app module lives in.
+_assets_folder = str(Path(__file__).resolve().parent.parent.parent / "assets")
+
 # Dash app instance
 app = dash.Dash(
     __name__,
+    assets_folder=_assets_folder,
     external_stylesheets=[dbc.themes.BOOTSTRAP],
     suppress_callback_exceptions=True,
 )

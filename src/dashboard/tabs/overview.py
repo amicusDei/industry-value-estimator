@@ -43,7 +43,7 @@ _SECTION_SUBTITLE_STYLE = {
 }
 
 
-def build_overview_layout(segment: str, usd_col: str) -> html.Div:
+def build_overview_layout(segment: str, usd_col: str, mode: str = "normal") -> html.Div:
     """
     Build the Overview tab layout.
 
@@ -54,12 +54,15 @@ def build_overview_layout(segment: str, usd_col: str) -> html.Div:
     usd_col : str
         Column name for point line. Either "point_estimate_real_2020" or
         "point_estimate_nominal".
+    mode : str
+        "normal" for narrative view, "expert" for technical detail view.
 
     Returns
     -------
     html.Div
         Dash component tree for the Overview tab.
     """
+    expert = mode == "expert"
     # --- Headline stat ---
     df_2030 = FORECASTS_DF[FORECASTS_DF["year"] == 2030]
     if segment == "all":
@@ -163,7 +166,81 @@ def build_overview_layout(segment: str, usd_col: str) -> html.Div:
         ),
     ], style=_CARD_STYLE)
 
-    return html.Div([headline, fan_section, bar_section], style={"paddingTop": "8px"})
+    # --- Expert mode: model parameters panel ---
+    sections = [headline, fan_section]
+
+    if expert:
+        # Show raw data points, ensemble parameters, forecast origin year
+        from src.dashboard.app import RESIDUALS_DF
+        import numpy as np
+
+        # Compute per-segment RMSE for the expert panel
+        rmse_rows = []
+        for seg in SEGMENTS:
+            grp = RESIDUALS_DF[RESIDUALS_DF["segment"] == seg]
+            if len(grp) > 0:
+                rmse_val = float(np.sqrt(np.mean(grp["residual"].to_numpy() ** 2)))
+                rmse_rows.append(html.Tr([
+                    html.Td(SEGMENT_DISPLAY.get(seg, seg), style={"padding": "6px 12px", "fontSize": "13px", "fontWeight": 500}),
+                    html.Td(f"{rmse_val:.4f}", style={"padding": "6px 12px", "fontSize": "13px", "fontFamily": "monospace"}),
+                ]))
+
+        expert_card = html.Div([
+            html.H2(
+                "Expert View \u2014 Model Parameters & Data",
+                style={**_SECTION_HEADING_STYLE, "color": "#7C4DFF"},
+            ),
+            html.P(
+                "This panel is visible in Expert mode only. It surfaces the underlying model parameters, "
+                "raw numerical outputs, and methodology references for technical reviewers.",
+                style=_SECTION_SUBTITLE_STYLE,
+            ),
+            # Forecast ensemble config
+            dbc.Row([
+                dbc.Col([
+                    html.H4("Ensemble Composition", style={"fontSize": "14px", "fontWeight": 600, "marginBottom": "8px"}),
+                    html.Ul([
+                        html.Li("Models: ARIMA (pmdarima auto_arima, AICc criterion) + Prophet (Facebook Prophet 1.1)", style={"fontSize": "13px"}),
+                        html.Li("Ensemble: equal-weight average of ARIMA and Prophet point estimates", style={"fontSize": "13px"}),
+                        html.Li("CI bands: bootstrap-derived from model residuals (500 draws)", style={"fontSize": "13px"}),
+                        html.Li("ARIMA order constraints: max_p=2, max_q=2, seasonal=False", style={"fontSize": "13px"}),
+                        html.Li("Prophet: changepoint at 2022-01-01, changepoint_prior_scale=0.1", style={"fontSize": "13px"}),
+                    ], style={"paddingLeft": "20px", "marginBottom": "0"}),
+                ], width=6),
+                dbc.Col([
+                    html.H4("Out-of-Sample RMSE by Segment", style={"fontSize": "14px", "fontWeight": 600, "marginBottom": "8px"}),
+                    html.Table(
+                        [
+                            html.Thead(html.Tr([
+                                html.Th("Segment", style={"padding": "6px 12px", "fontSize": "13px", "backgroundColor": "#F4F6FA"}),
+                                html.Th("RMSE (index units)", style={"padding": "6px 12px", "fontSize": "13px", "backgroundColor": "#F4F6FA"}),
+                            ])),
+                            html.Tbody(rmse_rows),
+                        ],
+                        style={"borderCollapse": "collapse", "width": "100%", "border": "1px solid #E8EBF0"},
+                    ),
+                ], width=6),
+            ]),
+            html.Hr(style={"margin": "16px 0", "borderColor": "#E8EBF0"}),
+            html.P([
+                html.Strong("Assumptions reference: "),
+                "See ",
+                html.Code("docs/ASSUMPTIONS.md", style={"fontSize": "12px"}),
+                " for all modeling assumptions, their rationale, and what-if analysis. "
+                "Key assumptions: (1) structural break at 2022 (GenAI surge) explicitly modeled; "
+                "(2) ~15 training observations per segment \u2014 AICc small-sample correction applied; "
+                "(3) segments modeled independently with post-hoc aggregation; "
+                "(4) PCA first PC of 6 proxy indicators = AI market activity index.",
+            ], style={"fontSize": "13px", "color": "#444", "lineHeight": "1.6", "marginBottom": "0"}),
+        ], style={
+            **_CARD_STYLE,
+            "border": "1px solid #C5B0FF",
+            "borderLeft": "4px solid #7C4DFF",
+        })
+        sections.append(expert_card)
+
+    sections.append(bar_section)
+    return html.Div(sections, style={"paddingTop": "8px"})
 
 
 def _build_segment_bar(segment: str, usd_col: str) -> go.Figure:

@@ -19,8 +19,9 @@ from src.dashboard.tabs.diagnostics import build_diagnostics_layout
     Input("main-tabs", "value"),
     Input("segment-dropdown", "value"),
     Input("usd-toggle", "value"),
+    Input("mode-toggle", "value"),
 )
-def render_tab(active_tab: str, segment: str, usd_col: str):
+def render_tab(active_tab: str, segment: str, usd_col: str, mode: str):
     """
     Render the content area for the currently active tab.
 
@@ -32,18 +33,21 @@ def render_tab(active_tab: str, segment: str, usd_col: str):
         Global segment filter value ("all" or segment ID).
     usd_col : str
         USD column toggle value ("point_estimate_real_2020" or "point_estimate_nominal").
+    mode : str
+        Display mode ("normal" for narrative view, "expert" for technical detail view).
 
     Returns
     -------
     dash component
         Layout component tree for the selected tab.
     """
+    mode = mode or "normal"
     if active_tab == "overview":
-        return build_overview_layout(segment, usd_col)
+        return build_overview_layout(segment, usd_col, mode)
     elif active_tab == "segments":
-        return build_segments_layout(segment, usd_col)
+        return build_segments_layout(segment, usd_col, mode)
     elif active_tab == "drivers":
-        return build_drivers_layout(segment, usd_col)
+        return build_drivers_layout(segment, usd_col, mode)
     elif active_tab == "diagnostics":
-        return build_diagnostics_layout(segment, usd_col)
-    return build_overview_layout(segment, usd_col)
+        return build_diagnostics_layout(segment, usd_col, mode)
+    return build_overview_layout(segment, usd_col, mode)

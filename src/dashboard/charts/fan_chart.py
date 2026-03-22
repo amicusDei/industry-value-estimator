@@ -75,7 +75,7 @@ def make_fan_chart(df: pd.DataFrame, segment: str, usd_col: str) -> go.Figure:
 
     fig = go.Figure()
 
-    # --- 95% CI band (toself fill) ---
+    # --- 95% CI band (toself fill) — zorder=1 keeps fills behind lines ---
     if len(fore) > 0:
         x_ci = list(fore["year"]) + list(fore["year"][::-1])
         y_ci95 = list(fore["ci95_upper"]) + list(fore["ci95_lower"][::-1])
@@ -87,7 +87,9 @@ def make_fan_chart(df: pd.DataFrame, segment: str, usd_col: str) -> go.Figure:
                 fillcolor=CI95_FILL,
                 line=dict(color="rgba(0,0,0,0)", width=0),
                 hoverinfo="skip",
-                showlegend=False,
+                showlegend=True,
+                legendrank=3,
+                zorder=1,
                 name="95% CI",
             )
         )
@@ -102,25 +104,29 @@ def make_fan_chart(df: pd.DataFrame, segment: str, usd_col: str) -> go.Figure:
                 fillcolor=CI80_FILL,
                 line=dict(color="rgba(0,0,0,0)", width=0),
                 hoverinfo="skip",
-                showlegend=False,
+                showlegend=True,
+                legendrank=2,
+                zorder=2,
                 name="80% CI",
             )
         )
 
-    # --- Historical line ---
+    # --- Historical line — zorder=4 renders on top of CI fills ---
     if len(hist) > 0:
         fig.add_trace(
             go.Scatter(
                 x=hist["year"],
                 y=hist[usd_col],
                 mode="lines",
-                line=dict(color=COLOR_DEEP_BLUE, width=2),
+                line=dict(color=COLOR_DEEP_BLUE, width=2.5),
                 name="Historical",
+                legendrank=1,
+                zorder=4,
                 hovertemplate="<b>%{x}</b><br>%{y:.2f}<extra></extra>",
             )
         )
 
-    # --- Forecast line (bridged from last historical point) ---
+    # --- Forecast line (bridged from last historical point) — zorder=5 on top ---
     if len(fore) > 0:
         if len(hist) > 0:
             # Bridge: include last historical point as first forecast point
@@ -134,9 +140,12 @@ def make_fan_chart(df: pd.DataFrame, segment: str, usd_col: str) -> go.Figure:
             go.Scatter(
                 x=bridge_x,
                 y=bridge_y,
-                mode="lines",
-                line=dict(color=COLOR_DEEP_BLUE, width=2, dash="dash"),
+                mode="lines+markers",
+                marker=dict(size=5, color=COLOR_DEEP_BLUE),
+                line=dict(color=COLOR_DEEP_BLUE, width=2.5, dash="dash"),
                 name="Forecast",
+                legendrank=0,
+                zorder=5,
                 hovertemplate="<b>%{x}</b><br>%{y:.2f}<extra></extra>",
             )
         )
