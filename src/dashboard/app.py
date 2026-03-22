@@ -41,3 +41,9 @@ app = dash.Dash(
     suppress_callback_exceptions=True,
 )
 app.title = "AI Industry Value Estimator"
+
+# Import layout and callbacks AFTER app is created
+from src.dashboard.layout import create_layout  # noqa: E402
+import src.dashboard.callbacks  # noqa: F401, E402 — registers callbacks via decorator
+
+app.layout = create_layout()
