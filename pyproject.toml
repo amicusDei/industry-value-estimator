@@ -6,6 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
     "dash>=4.0.0",
     "dash-bootstrap-components>=2.0.4",
+    "kaleido>=1.2.0",
     "lightgbm>=4.6.0",
     "lseg-data>=2.1.0",
     "numpy>=2.4.3",
@@ -24,6 +25,7 @@ dependencies = [
     "statsmodels>=0.14.6",
     "tqdm>=4.67.3",
     "wbgapi>=1.0.14",
+    "weasyprint>=68.1",
 ]
 
 [dependency-groups]
@@ -33,3 +35,4 @@ dev = [
     "pytest>=9.0.2",
     "ruff>=0.15.6",
 ]
+
