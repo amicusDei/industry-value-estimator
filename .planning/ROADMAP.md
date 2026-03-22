@@ -99,7 +99,13 @@ Plans:
   2. A methodology writeup exists that explains the hybrid model approach, data sources, validation strategy, and key findings in language suitable for LinkedIn publication
   3. Every module and function in `src/` has docstrings that explain what it does, why the approach was chosen, and any domain-specific concepts — readable by someone learning the implementation
   4. The GitHub README includes project description, data sources, setup instructions with the exact commands to reproduce the pipeline, and example output images
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Install dependencies (WeasyPrint, kaleido), run full pipeline with real API data
+- [ ] 05-02-PLAN.md — Tutorial-style docstrings for all src/ modules, architecture guide
+- [ ] 05-03-PLAN.md — PDF report generation (executive brief + full analytical report)
+- [ ] 05-04-PLAN.md — LinkedIn methodology paper, GitHub README, dashboard screenshot
 
 ## Progress
 
@@ -112,4 +118,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Statistical Baseline | 5/5 | Complete   | 2026-03-22 |
 | 3. ML Ensemble and Validation | 3/3 | Complete   | 2026-03-22 |
 | 4. Interactive Dashboard | 3/3 | Complete   | 2026-03-22 |
-| 5. Reports, Paper, and Portfolio | 0/TBD | Not started | - |
+| 5. Reports, Paper, and Portfolio | 0/4 | Not started | - |
