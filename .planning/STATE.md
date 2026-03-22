@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Completed 03-02-PLAN.md: Ensemble combiner, forecast engine with CI bounds and dual units, SHAP attribution"
-last_updated: "2026-03-22T12:58:43.464Z"
+stopped_at: "Completed 03-03-PLAN.md: end-to-end ensemble pipeline runner, model serialization, forecasts_ensemble.parquet"
+last_updated: "2026-03-22T13:03:21.719Z"
 last_activity: "2026-03-17 — Completed plan 01-01: project scaffold, AI industry config, pandera schemas, 26 tests"
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 13
-  completed_plans: 12
+  completed_plans: 13
   percent: 4
 ---
 
@@ -62,6 +62,7 @@ Progress: [░░░░░░░░░░] 4%
 | Phase 02-statistical-baseline P05 | 8 | 1 tasks | 2 files |
 | Phase 03-ml-ensemble-and-validation P01 | 3 | 2 tasks | 6 files |
 | Phase 03-ml-ensemble-and-validation P02 | 3 | 2 tasks | 7 files |
+| Phase 03-ml-ensemble-and-validation P03 | 2 | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -106,6 +107,8 @@ Recent decisions affecting current work:
 - [Phase 03-02]: 2.5% annual CAGR as inflation proxy for real-to-nominal USD conversion — upgradeable to live World Bank NY.GDP.DEFL.ZS deflator
 - [Phase 03-02]: Epsilon guard (1e-10) in compute_ensemble_weights prevents division by zero; zero-RMSE model receives near-maximum weight
 - [Phase 03-02]: matplotlib.use('Agg') called inside save_shap_summary_plot to keep headless-safe without forcing global backend change at import time
+- [Phase 03-ml-ensemble-and-validation]: Statistical baseline RMSE = std(residuals): stat model's predicted correction of its own residuals is zero, making residual std the natural RMSE baseline for inverse-RMSE weighting
+- [Phase 03-ml-ensemble-and-validation]: Forecast features use constant forward projection: last two known residuals projected flat for 2025-2030 — no-information extrapolation for mean-reverting residuals
 
 ### Pending Todos
 
@@ -118,6 +121,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T12:58:43.463Z
-Stopped at: Completed 03-02-PLAN.md: Ensemble combiner, forecast engine with CI bounds and dual units, SHAP attribution
+Last session: 2026-03-22T13:03:21.718Z
+Stopped at: Completed 03-03-PLAN.md: end-to-end ensemble pipeline runner, model serialization, forecasts_ensemble.parquet
 Resume file: None
