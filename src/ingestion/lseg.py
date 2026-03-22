@@ -49,11 +49,32 @@ def fetch_lseg_companies(config: dict) -> pd.DataFrame:
     """
     Fetch all companies classified under AI-related TRBC sector codes.
 
-    Builds a SCREEN() expression from the TRBC codes in config/industries/ai.yaml.
-    The first run also serves as TRBC code verification — if the company universe
-    returns fewer than 50 companies, the codes may need adjustment.
+    TRBC (Thomson Reuters Business Classification) is the methodological anchor
+    for company universe selection. Using TRBC codes rather than ad-hoc company
+    lists makes the selection reproducible and defensible: the same codes will
+    always return the same universe given the same universe definition date.
 
-    Returns DataFrame with columns: Instrument (RIC), plus requested fields.
+    Builds a SCREEN() expression from the TRBC codes in config/industries/ai.yaml.
+    The config stores 8-digit Industry codes (TR.TRBCIndustryCode), not 10-digit
+    Activity codes (TR.TRBCActivityCode). The screening expression is constructed
+    dynamically so that adding or removing TRBC codes in the YAML automatically
+    updates the universe without any code changes.
+
+    The first run also serves as TRBC code verification — if the company universe
+    returns fewer than 50 companies, the codes may need adjustment. The discovery
+    fields (TR.TRBCActivity, TR.TRBCActivityCode) help diagnose unexpected results.
+
+    Parameters
+    ----------
+    config : dict
+        Industry config loaded from YAML. Must have key: lseg.trbc_codes (list
+        of {code, segment} entries).
+
+    Returns
+    -------
+    pd.DataFrame
+        Company universe with columns: Instrument (RIC), TR.CommonName,
+        TR.TRBCActivity, TR.TRBCActivityCode. Validated against LSEG_RAW_SCHEMA.
     """
     trbc_entries = config["lseg"]["trbc_codes"]
     trbc_codes = [entry["code"] for entry in trbc_entries]
@@ -91,14 +112,23 @@ def fetch_company_financials(
     """
     Fetch annual financial data for the AI company universe.
 
+    Requests are batched at 100 RICs per call to respect LSEG API rate limits.
+    The LSEG get_data API accepts lists of instruments but may reject very large
+    lists, and batch processing also improves error isolation (a single instrument
+    failure in one batch doesn't abort the full fetch).
+
     Parameters
     ----------
     companies_df : pd.DataFrame
-        Output of fetch_lseg_companies — must have 'Instrument' column with RIC codes
+        Output of fetch_lseg_companies — must have 'Instrument' column with RIC codes.
     config : dict
-        Industry config with lseg.fields list
+        Industry config with lseg.fields list specifying which financial fields to fetch.
 
-    Returns DataFrame with financial data indexed by Instrument.
+    Returns
+    -------
+    pd.DataFrame
+        Financial data DataFrame with columns: Instrument plus all fields in config.
+        Validated against LSEG_RAW_SCHEMA.
     """
     rics = companies_df["Instrument"].tolist()
     fields = config["lseg"]["fields"]

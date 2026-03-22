@@ -9,6 +9,16 @@ Provides:
 
 All preprocessing is designed to be fit on training data only to prevent data leakage
 in temporal cross-validation. See RESEARCH.md Pattern 6 and Pitfall 3.
+
+PCA composite rationale: AI market activity has no single clean observable metric.
+Six proxies capture different facets (R&D spend, patent filings, VC investment, public
+company revenue, researcher density, high-tech exports). PCA reduces these to the first
+principal component — the linear combination that maximises explained variance. This is
+preferable to manual weighting because it is data-driven and reproducible across
+different industry configs.
+
+See docs/ASSUMPTIONS.md section Modeling Assumptions for the composite index approach,
+explained variance thresholds, and sensitivity to number of principal components.
 """
 import warnings
 
@@ -74,6 +84,18 @@ def build_pca_composite(
 
     The pipeline is fit ONLY on indicator_matrix[:train_end_idx] to prevent data leakage.
     The trained pipeline is then applied to the full matrix to produce scores for all years.
+
+    Why train-only fitting matters: if PCA were fit on the full matrix (including test years),
+    the scaler's mean and standard deviation would absorb future information. The PC loadings
+    would subtly reflect the trend direction of the test period, making the composite index
+    look like it has better predictive power than it actually does. This is the canonical
+    temporal leakage pitfall in time-series feature engineering.
+
+    The sklearn Pipeline ensures scaler and PCA are always fit together in the correct order.
+    The fitted Pipeline is returned so callers can verify non-leakage by inspecting
+    pipe.named_steps["scaler"].mean_ (should reflect only training period values).
+
+    See docs/ASSUMPTIONS.md section Modeling Assumptions for PCA composite rationale.
 
     Parameters
     ----------

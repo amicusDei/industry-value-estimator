@@ -32,12 +32,30 @@ def normalize_world_bank(
     """
     Normalize raw World Bank data through the full pipeline.
 
+    The rename step (step 1) is critical for correct deflation: apply_deflation
+    in step 2 identifies monetary columns by the '_nominal_' pattern. Columns that
+    are NOT monetary (e.g., R&D as % of GDP, patent counts) must NOT get the
+    '_nominal_' suffix — they pass through unchanged.
+
     Steps:
-    1. Rename monetary columns to _nominal_ convention
-    2. Deflate using GDP deflator to 2020 constant USD
-    3. Interpolate missing values
-    4. Tag with industry and source
-    5. Validate against PROCESSED_SCHEMA
+    1. Rename monetary columns to _nominal_ convention (e.g., NY.GDP.MKTP.CD -> gdp_nominal_usd)
+    2. Deflate using GDP deflator to 2020 constant USD (removes _nominal_ columns)
+    3. Interpolate missing values with estimated_flag
+    4. Tag with industry and source (adds industry_tag, industry_segment, source columns)
+    5. Validate against PROCESSED_SCHEMA (pandera, raises on schema mismatch)
+
+    Parameters
+    ----------
+    raw_df : pd.DataFrame
+        Validated raw World Bank DataFrame from fetch_world_bank_indicators().
+    config : dict
+        Industry config for tagging (industry name and economies).
+
+    Returns
+    -------
+    pd.DataFrame
+        Processed DataFrame conforming to PROCESSED_SCHEMA. All monetary columns
+        are in 2020 constant USD (no _nominal_ columns remain).
     """
     df = raw_df.copy()
 
@@ -85,8 +103,36 @@ def normalize_oecd(
     """
     Normalize raw OECD data through the pipeline.
 
-    OECD data is typically in long format with value column.
-    Monetary OECD indicators (GERD) need deflation; count indicators (patents) do not.
+    OECD data is typically in long format with a 'value' column. Unlike World Bank,
+    OECD data does not need deflation in the current pipeline because the composite
+    index construction (PCA) standardizes all indicators anyway — deflation of OECD
+    count variables (patents, researchers) would be incorrect. If GERD monetary values
+    are used directly in future, deflation should be added here.
+
+    Validates that the 'economy' column exists (derived from LOCATION in raw OECD data).
+    Raises ValueError rather than silently passing through rows with no economy —
+    silent pass-through would produce invalid processed rows with no economy identifier,
+    which would then fail the PROCESSED_SCHEMA check at an opaque location downstream.
+
+    Parameters
+    ----------
+    raw_df : pd.DataFrame
+        Validated raw OECD DataFrame. Expected columns: LOCATION (renamed to economy),
+        TIME_PERIOD (renamed to year), value.
+    config : dict
+        Industry config for tagging.
+    dataset_name : str
+        Dataset identifier string (e.g., "msti", "pats_ipc") — used in error messages.
+
+    Returns
+    -------
+    pd.DataFrame
+        Processed DataFrame conforming to PROCESSED_SCHEMA.
+
+    Raises
+    ------
+    ValueError
+        If 'economy' column is missing after column rename attempt.
     """
     df = raw_df.copy()
 
@@ -127,8 +173,27 @@ def normalize_lseg(
     """
     Normalize raw LSEG company data.
 
-    LSEG data is company-level and uses TRBC codes for segment assignment.
-    Monetary columns (revenue, R&D) need deflation if year information is available.
+    LSEG data is company-level (one row per company instrument), not country-level.
+    The TRBC code mapping in config/industries/*.yaml drives segment assignment —
+    each company is tagged to the AI segment (hardware, infrastructure, software, adoption)
+    that its TRBC Industry code maps to. Companies with no mapping default to ai_software.
+
+    The 'economy' column is set to 'GLOBAL' as a placeholder because LSEG company data
+    spans multiple countries and the PROCESSED_SCHEMA requires a non-null economy value.
+    This is a known limitation — see docs/ASSUMPTIONS.md section Data Source Assumptions.
+
+    Parameters
+    ----------
+    raw_df : pd.DataFrame
+        Validated raw LSEG DataFrame from fetch_company_financials().
+    config : dict
+        Industry config with lseg.trbc_codes for segment mapping.
+
+    Returns
+    -------
+    pd.DataFrame
+        Processed DataFrame conforming to PROCESSED_SCHEMA. Segment column populated
+        from TRBC code mapping.
     """
     df = raw_df.copy()
 

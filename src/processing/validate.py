@@ -36,13 +36,22 @@ WORLD_BANK_RAW_SCHEMA = DataFrameSchema(
 
 def make_world_bank_indicator_check(indicator_code: str) -> DataFrameSchema:
     """
-    Create a schema that validates a specific World Bank indicator column exists
-    and has reasonable values.
+    Create a schema that validates a specific World Bank indicator column exists and has
+    reasonable values.
+
+    This factory is used for per-indicator validation beyond the base schema — for example,
+    checking that GDP values are positive, or that deflator values are in a sensible range.
+    The base WORLD_BANK_RAW_SCHEMA only validates structural columns (economy, year).
 
     Parameters
     ----------
     indicator_code : str
-        World Bank indicator code, e.g. "NY.GDP.MKTP.CD"
+        World Bank indicator code, e.g. "NY.GDP.MKTP.CD".
+
+    Returns
+    -------
+    DataFrameSchema
+        A pandera schema that validates the named indicator column as nullable float.
     """
     return DataFrameSchema(
         {
@@ -98,7 +107,28 @@ PROCESSED_SCHEMA = DataFrameSchema(
 def check_no_nominal_columns(df) -> bool:
     """
     Verify that no column in the processed DataFrame has '_nominal_' in its name.
-    All monetary columns must be deflated to _real_2020 before reaching processed layer.
+
+    This is the safeguard that enforces the nominal/real distinction at the processed
+    layer boundary. Calling this function before writing to data/processed/ guarantees
+    that all monetary columns have been properly deflated to constant base-year USD.
+
+    This check is callable standalone for unit testing the deflation step, or it is
+    called automatically inside validate_processed() as part of the full validation chain.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Any DataFrame to check for nominal column contamination.
+
+    Returns
+    -------
+    bool
+        True if no nominal columns are found.
+
+    Raises
+    ------
+    ValueError
+        If any column name contains '_nominal_', listing the offending columns.
     """
     nominal_cols = [c for c in df.columns if "_nominal_" in c.lower()]
     if nominal_cols:
@@ -109,21 +139,94 @@ def check_no_nominal_columns(df) -> bool:
 
 
 def validate_raw_world_bank(df):
-    """Validate raw World Bank fetch. Raises SchemaError on failure."""
+    """
+    Validate raw World Bank fetch against WORLD_BANK_RAW_SCHEMA.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Raw World Bank DataFrame to validate.
+
+    Returns
+    -------
+    pd.DataFrame
+        The validated (and optionally coerced) DataFrame.
+
+    Raises
+    ------
+    pandera.errors.SchemaError
+        If required columns are missing or data types are incorrect.
+    """
     return WORLD_BANK_RAW_SCHEMA.validate(df)
 
 
 def validate_raw_oecd(df):
-    """Validate raw OECD fetch. Raises SchemaError on failure."""
+    """
+    Validate raw OECD fetch against OECD_RAW_SCHEMA.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Raw OECD pandasdmx DataFrame to validate.
+
+    Returns
+    -------
+    pd.DataFrame
+        The validated DataFrame.
+
+    Raises
+    ------
+    pandera.errors.SchemaError
+        If LOCATION, TIME_PERIOD, or value columns are missing or invalid.
+    """
     return OECD_RAW_SCHEMA.validate(df)
 
 
 def validate_raw_lseg(df):
-    """Validate raw LSEG fetch. Raises SchemaError on failure."""
+    """
+    Validate raw LSEG fetch against LSEG_RAW_SCHEMA.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Raw LSEG DataFrame from ld.get_data().
+
+    Returns
+    -------
+    pd.DataFrame
+        The validated DataFrame.
+
+    Raises
+    ------
+    pandera.errors.SchemaError
+        If the Instrument column is missing or contains nulls.
+    """
     return LSEG_RAW_SCHEMA.validate(df)
 
 
 def validate_processed(df):
-    """Validate processed layer DataFrame. Raises SchemaError or ValueError."""
+    """
+    Validate processed layer DataFrame against PROCESSED_SCHEMA.
+
+    Runs both the nominal-column check (no '_nominal_' columns allowed) and the
+    pandera schema validation. Raises on the first failure encountered.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Processed DataFrame to validate before writing to data/processed/.
+
+    Returns
+    -------
+    pd.DataFrame
+        The validated DataFrame.
+
+    Raises
+    ------
+    ValueError
+        If any nominal columns remain in the DataFrame.
+    pandera.errors.SchemaError
+        If the DataFrame does not conform to PROCESSED_SCHEMA.
+    """
     check_no_nominal_columns(df)
     return PROCESSED_SCHEMA.validate(df)

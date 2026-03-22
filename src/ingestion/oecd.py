@@ -72,13 +72,32 @@ def fetch_oecd_msti(config: dict) -> pd.DataFrame:
     """
     Fetch OECD Main Science and Technology Indicators (MSTI).
 
-    Variables include GERD (Gross Domestic R&D Expenditure), researchers count,
-    and R&D intensity by performing sector.
+    MSTI provides the R&D side of the composite AI activity index: GERD (Gross
+    Domestic R&D Expenditure), researcher headcounts, and R&D intensity. These
+    are the best available proxies for pre-commercial AI investment activity —
+    the years before revenue appears in company financials (LSEG).
+
+    The SDMX API is notoriously inconsistent: the same dataset may use 'LOCATION',
+    'COU', or 'REF_AREA' as the country dimension key depending on the environment
+    and API version. This function implements a try/fallback pattern for robustness.
+    On the first run, the OECD SDMX calls take 30-60 seconds — requests-cache
+    caches the HTTP responses for 30 days to avoid repeat network calls.
 
     NOTE: OECD SDMX dimension keys must be verified against live metadata.
     The first run should call oecd.datastructure('MSTI') to inspect available
-    dimensions before finalizing the query. If dimension names differ from
-    expected (e.g., 'COU' instead of 'LOCATION'), adjust the key dict.
+    dimensions before finalizing the query.
+
+    Parameters
+    ----------
+    config : dict
+        Industry config loaded from YAML (e.g., load_industry_config("ai")).
+        Must have keys: oecd.datasets (list), date_range.start/end, economies.
+
+    Returns
+    -------
+    pd.DataFrame
+        Long-format OECD MSTI data validated against OECD_RAW_SCHEMA.
+        Columns include LOCATION, TIME_PERIOD, and data indicator columns.
     """
     _setup_oecd_cache()
 
@@ -126,8 +145,30 @@ def fetch_oecd_ai_patents(config: dict) -> pd.DataFrame:
     Fetch OECD patent filings filtered to IPC class G06N (AI/computing methods).
 
     IPC G06N: 'Computing; Calculating or Counting — methods based on specific
-    computational models' — the standard proxy for AI patent activity in
-    OECD methodology papers.
+    computational models' — the standard proxy for AI patent activity used in
+    OECD methodology papers and academic AI measurement literature (Giczy et al.,
+    Vinuesa et al.). G06N covers machine learning, neural networks, evolutionary
+    computation, and related techniques.
+
+    Patent filings are a leading indicator of commercializable AI innovation:
+    they appear 2-4 years before product revenue and 1-2 years before published
+    research, making them a useful forward-looking signal in the composite index.
+
+    The IPC filter is read from config to allow future expansion to other AI-related
+    IPC classes (e.g., G06F, G06K). Default: G06N.
+
+    Parameters
+    ----------
+    config : dict
+        Industry config loaded from YAML. Must have keys: oecd.datasets (list with
+        PATS_IPC entry optionally containing ipc_filter), date_range.start/end,
+        economies.
+
+    Returns
+    -------
+    pd.DataFrame
+        Long-format OECD patent data validated against OECD_RAW_SCHEMA.
+        Columns include LOCATION, TIME_PERIOD, IPC class, and patent count.
     """
     _setup_oecd_cache()
 

@@ -5,10 +5,19 @@ Every interpolated value is flagged with estimated_flag=True.
 This is NON-NEGOTIABLE — unflagged interpolation creates invisible data
 that undermines the credibility of the entire analysis.
 
-Strategy (from CONTEXT.md):
+Why interpolate rather than drop? Econometric time-series models (ARIMA, Prophet)
+require contiguous annual series. Dropping years breaks the temporal structure and
+reduces the effective training window from ~15 to ~10 observations in the worst case.
+Linear interpolation is methodologically defensible for 1-2 year gaps in macroeconomic
+indicators because these series evolve smoothly. The estimated_flag column lets
+downstream users weight or exclude interpolated observations in sensitivity analysis.
+
+Strategy:
 - Linear interpolation for dense series (<=2 consecutive gaps)
-- Cubic spline for sparse series (>2 consecutive gaps)
+- Index-based interpolation for sparse series (>2 consecutive gaps)
 - All interpolated values flagged as estimated
+
+See docs/ASSUMPTIONS.md section Data Source Assumptions for gap-filling rationale.
 """
 import pandas as pd
 import numpy as np

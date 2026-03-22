@@ -6,7 +6,9 @@ World Bank GDP deflator (NY.GDP.DEFL.ZS).
 
 The GDP deflator from World Bank uses 2015=100 as its native base.
 This module re-bases to 2020=100 internally by dividing all deflator
-values by the 2020 observation.
+values by the 2020 observation. Base year 2020 was chosen because it
+falls within the training window and pre-dates the GenAI structural break
+at 2022, making it a stable anchor for cross-temporal comparisons.
 
 Column naming convention:
 - Input: columns with '_nominal_' in the name (e.g., gdp_nominal_2023)
@@ -15,6 +17,9 @@ Column naming convention:
 
 This module is the single enforcement point for the nominal/real distinction.
 No nominal column should EVER reach data/processed/.
+
+See docs/ASSUMPTIONS.md section Data Source Assumptions for deflation rationale
+and sensitivity analysis (impact of base-year choice on all USD estimates).
 """
 import pandas as pd
 from config.settings import BASE_YEAR
@@ -29,7 +34,19 @@ def deflate_to_base_year(
     """
     Convert a nominal USD series to constant base_year USD.
 
+    CPI deflation removes the effect of price-level changes over time, making
+    values from different years directly comparable in "real" purchasing power.
+    The World Bank GDP deflator (NY.GDP.DEFL.ZS) captures economy-wide price
+    changes, which is more appropriate for AI industry proxies than CPI (which
+    weights consumer goods) or PPI (which weights producer goods only).
+
     Formula: real_value = nominal_value * (deflator[base_year] / deflator[year])
+
+    This re-bases the deflator series so that base_year=1.0, then multiplies
+    all nominal values by this scaling factor. Values before the base year are
+    scaled UP (prices were lower historically); values after are scaled DOWN.
+
+    See docs/ASSUMPTIONS.md section Data Source Assumptions for deflation rationale.
 
     Parameters
     ----------
@@ -76,12 +93,19 @@ def apply_deflation(
     """
     Apply deflation to all nominal columns in a DataFrame.
 
-    Finds all columns containing '_nominal_' in their name,
-    deflates them using the deflator column, and renames them
-    to '_real_{base_year}'.
+    This is the project's primary data cleaning step: it enforces the invariant
+    that no nominal monetary series reaches the processed layer. It scans for
+    all columns with '_nominal_' in their name, deflates each using deflate_to_base_year,
+    and renames them to '_real_{base_year}'. Non-monetary columns are passed through
+    unchanged.
 
-    Drops the original nominal columns. The deflator column is kept
-    for audit purposes.
+    Why auto-detect by column name pattern? Because the indicator roster changes
+    with different industry configs. Hardcoding column names would require updating
+    this function every time a new source is added. The '_nominal_' naming convention
+    is enforced at normalize.py (rename step) before this function is called.
+
+    See docs/ASSUMPTIONS.md section Data Source Assumptions for base year selection
+    rationale (2020 chosen for stability within training window, pre-GenAI break).
 
     Parameters
     ----------
@@ -96,12 +120,13 @@ def apply_deflation(
     Returns
     -------
     pd.DataFrame
-        With nominal columns replaced by real columns.
+        With nominal columns replaced by real columns. Original nominal columns
+        are dropped; the deflator column is retained for audit purposes.
 
     Raises
     ------
     RuntimeError
-        If the deflator column is missing.
+        If the deflator column is missing from the DataFrame.
     """
     if deflator_col not in df.columns:
         raise RuntimeError(

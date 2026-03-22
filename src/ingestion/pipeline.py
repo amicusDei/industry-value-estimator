@@ -3,7 +3,16 @@ Ingestion pipeline orchestrator.
 
 Reads the industry config and routes to the appropriate data source connectors.
 The pipeline is industry-agnostic: it processes whatever sources are declared
-in the industry YAML config file.
+in the industry YAML config file — no hardcoded source list in this module.
+
+Config-driven design (ARCH-01): adding a new data source requires only updating
+config/industries/{id}.yaml and adding a connector module. The orchestrator
+automatically picks it up via the steps list pattern.
+
+Error isolation: each source step in run_full_pipeline is wrapped in try/except so
+a single API failure (e.g., OECD timeout) does not abort the pipeline. Partial
+results are returned, allowing downstream processing to proceed with whatever data
+was successfully fetched.
 
 Usage:
     results = run_ingestion("ai")

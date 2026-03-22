@@ -50,8 +50,25 @@ def tag_lseg_by_trbc(
     """
     Tag LSEG company data with industry segments based on TRBC code mapping.
 
-    Uses the trbc_codes section of config to map each company's
-    TRBCActivityCode to an industry segment.
+    Uses the trbc_codes section of config to map each company's TRBCActivityCode to an
+    industry segment. This is config-driven — no hardcoded TRBC-to-segment mappings in
+    this module. Adding a new segment requires only updating config/industries/*.yaml.
+
+    Companies with a TRBC code not in the mapping default to 'ai_software'. This is an
+    explicit design choice: unknown TRBC codes are more likely to be software/platform
+    plays than hardware or infrastructure, given the AI TRBC code set.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Raw LSEG DataFrame with TR.TRBCActivityCode or trbc_code column.
+    config : dict
+        Industry config with lseg.trbc_codes list of {code, segment} entries.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with added columns: industry_tag, industry_segment, source.
     """
     result = df.copy()
     result["industry_tag"] = config["industry"]

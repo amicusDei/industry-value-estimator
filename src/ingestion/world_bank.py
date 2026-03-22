@@ -25,14 +25,30 @@ def fetch_world_bank_indicators(config: dict) -> pd.DataFrame:
     """
     Fetch all World Bank indicators specified in the industry config.
 
-    Always includes NY.GDP.DEFL.ZS (GDP deflator) for downstream deflation.
-    Returns wide-format DataFrame: rows = (economy, year), cols = indicator codes.
-    Validates against WORLD_BANK_RAW_SCHEMA before returning.
+    The wbgapi library returns data in a MultiIndex format (economy × series as rows,
+    years as columns). This function reshapes that to wide format: rows = (economy, year),
+    columns = indicator codes. This wide format is required for downstream deflation —
+    each row must have both the nominal value column AND the deflator column side-by-side.
+
+    Always includes NY.GDP.DEFL.ZS (GDP deflator) regardless of what is in the config,
+    because deflation is non-negotiable for all monetary series. This is enforced here
+    rather than in normalize.py because it is a data correctness requirement, not a
+    processing choice.
+
+    Validates against WORLD_BANK_RAW_SCHEMA (pandera) before returning. If the schema
+    fails, the pipeline raises SchemaError immediately rather than writing corrupt data.
 
     Parameters
     ----------
     config : dict
-        Industry config loaded from YAML (e.g., load_industry_config("ai"))
+        Industry config loaded from YAML (e.g., load_industry_config("ai")).
+        Must have keys: world_bank.indicators (list of {code}), date_range.start/end.
+
+    Returns
+    -------
+    pd.DataFrame
+        Wide-format DataFrame with columns: economy (str), year (int), plus one column
+        per World Bank indicator code. Validated against WORLD_BANK_RAW_SCHEMA.
     """
     indicator_codes = [ind["code"] for ind in config["world_bank"]["indicators"]]
 
@@ -71,10 +87,25 @@ def save_raw_world_bank(df: pd.DataFrame, industry_id: str = "ai") -> Path:
     """
     Write raw World Bank data to data/raw/world_bank/ as immutable Parquet.
 
-    The file includes provenance metadata (source, fetch timestamp).
-    Raw data is NEVER modified after writing.
+    Provenance metadata (source, industry, fetch timestamp) is embedded directly
+    in the Parquet file schema metadata using pyarrow. This satisfies DATA-07
+    (data source attribution) without requiring a separate sidecar file. The
+    metadata travels with the data even if the file is copied to a different location.
 
-    Returns the path to the written file.
+    Raw data is NEVER modified after writing. If a re-fetch is needed, write a new
+    timestamped file — the old one stays on disk as an audit record.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Validated World Bank DataFrame from fetch_world_bank_indicators().
+    industry_id : str
+        Industry identifier for filename namespacing (default: "ai").
+
+    Returns
+    -------
+    Path
+        Path to the written Parquet file.
     """
     output_dir = DATA_RAW / "world_bank"
     output_dir.mkdir(parents=True, exist_ok=True)
