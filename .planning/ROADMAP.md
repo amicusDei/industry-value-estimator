@@ -34,10 +34,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [x] 01-01-PLAN.md — Project scaffold, config, AI boundary YAML, validation schemas, METHODOLOGY.md
-- [ ] 01-02-PLAN.md — World Bank and OECD ingestion connectors
-- [ ] 01-03-PLAN.md — LSEG Workspace ingestion connector
-- [ ] 01-04-PLAN.md — Processing pipeline (deflation, interpolation, tagging, normalization)
-- [ ] 01-05-PLAN.md — Pipeline orchestrator, extensibility verification, documentation
+- [x] 01-02-PLAN.md — World Bank and OECD ingestion connectors
+- [x] 01-03-PLAN.md — LSEG Workspace ingestion connector
+- [x] 01-04-PLAN.md — Processing pipeline (deflation, interpolation, tagging, normalization)
+- [x] 01-05-PLAN.md — Pipeline orchestrator, extensibility verification, documentation
 
 ### Phase 2: Statistical Baseline
 **Goal**: Interpretable econometric models produce AI market size baselines and residuals, with documented assumptions and structural break analysis
@@ -51,11 +51,11 @@ Plans:
 **Plans:** 5/5 plans complete
 
 Plans:
-- [ ] 02-01-PLAN.md — Dependencies, diagnostics package (structural breaks + model eval metrics)
-- [ ] 02-02-PLAN.md — Feature engineering (PCA composite, stationarity), OLS regression, temporal CV helper
-- [ ] 02-03-PLAN.md — ARIMA + Prophet per-segment fitting, model comparison, residual Parquet output
-- [ ] 02-04-PLAN.md — ASSUMPTIONS.md documentation with automated completeness tests
-- [ ] 02-05-PLAN.md — Gap closure: pipeline runner to persist residuals_statistical.parquet
+- [x] 02-01-PLAN.md — Dependencies, diagnostics package (structural breaks + model eval metrics)
+- [x] 02-02-PLAN.md — Feature engineering (PCA composite, stationarity), OLS regression, temporal CV helper
+- [x] 02-03-PLAN.md — ARIMA + Prophet per-segment fitting, model comparison, residual Parquet output
+- [x] 02-04-PLAN.md — ASSUMPTIONS.md documentation with automated completeness tests
+- [x] 02-05-PLAN.md — Gap closure: pipeline runner to persist residuals_statistical.parquet
 
 ### Phase 3: ML Ensemble and Validation
 **Goal**: A hybrid statistical + ML ensemble produces the final AI market size estimates and 2030 growth forecasts with calibrated confidence intervals
@@ -70,9 +70,9 @@ Plans:
 **Plans:** 3/3 plans complete
 
 Plans:
-- [ ] 03-01-PLAN.md — LightGBM point estimator, feature engineering, quantile models for CI bounds
-- [ ] 03-02-PLAN.md — Ensemble combiner, forecast engine with dual units and vintage, SHAP attribution
-- [ ] 03-03-PLAN.md — Pipeline runner script, model serialization, integration verification
+- [x] 03-01-PLAN.md — LightGBM point estimator, feature engineering, quantile models for CI bounds
+- [x] 03-02-PLAN.md — Ensemble combiner, forecast engine with dual units and vintage, SHAP attribution
+- [x] 03-03-PLAN.md — Pipeline runner script, model serialization, integration verification
 
 ### Phase 4: Interactive Dashboard
 **Goal**: A Dash dashboard displays the pre-computed forecast artifacts with interactive charts, driver attribution, and model diagnostics
@@ -86,9 +86,9 @@ Plans:
 **Plans:** 3/3 plans complete
 
 Plans:
-- [ ] 04-01-PLAN.md — Dashboard package scaffold, data layer, chart builders (fan chart + backtest), test suite
-- [ ] 04-02-PLAN.md — Tab layouts (Overview, Segments, Drivers, Diagnostics), callbacks, attribution footnotes, run script
-- [ ] 04-03-PLAN.md — Visual verification checkpoint (human approval of running dashboard)
+- [x] 04-01-PLAN.md — Dashboard package scaffold, data layer, chart builders (fan chart + backtest), test suite
+- [x] 04-02-PLAN.md — Tab layouts (Overview, Segments, Drivers, Diagnostics), callbacks, attribution footnotes, run script
+- [x] 04-03-PLAN.md — Visual verification checkpoint (human approval of running dashboard)
 
 ### Phase 5: Reports, Paper, and Portfolio
 **Goal**: A portfolio-quality GitHub repository exists with a PDF report, methodology paper ready for LinkedIn, comprehensive code documentation, and a polished README
@@ -102,10 +102,10 @@ Plans:
 **Plans:** 4/4 plans complete
 
 Plans:
-- [ ] 05-01-PLAN.md — Install dependencies (WeasyPrint, kaleido), run full pipeline with real API data
-- [ ] 05-02-PLAN.md — Tutorial-style docstrings for all src/ modules, architecture guide
-- [ ] 05-03-PLAN.md — PDF report generation (executive brief + full analytical report)
-- [ ] 05-04-PLAN.md — LinkedIn methodology paper, GitHub README, dashboard screenshot
+- [x] 05-01-PLAN.md — Install dependencies (WeasyPrint, kaleido), run full pipeline with real API data
+- [x] 05-02-PLAN.md — Tutorial-style docstrings for all src/ modules, architecture guide
+- [x] 05-03-PLAN.md — PDF report generation (executive brief + full analytical report)
+- [x] 05-04-PLAN.md — LinkedIn methodology paper, GitHub README, dashboard screenshot
 
 ## Progress
 

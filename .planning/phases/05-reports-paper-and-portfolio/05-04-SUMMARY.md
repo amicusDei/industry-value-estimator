@@ -60,7 +60,7 @@ completed: "2026-03-23"
 - **Duration:** ~12 min
 - **Started:** 2026-03-23T10:10:00Z
 - **Completed:** 2026-03-23T10:22:00Z
-- **Tasks:** 1 of 2 complete (Task 2 is human-verify checkpoint)
+- **Tasks:** 2 of 2 complete (Task 2 checkpoint approved by user 2026-03-23)
 - **Files modified:** 5
 
 ## Accomplishments
@@ -74,6 +74,7 @@ completed: "2026-03-23"
 ## Task Commits
 
 1. **Task 1: Methodology paper, README, fan chart export, tests** — `1707df4` (feat)
+2. **Task 2: Human-verify checkpoint** — approved by user (no code commit — verification only)
 
 ## Files Created/Modified
 
@@ -89,6 +90,12 @@ completed: "2026-03-23"
 - **Methodology paper tone**: First-person professional narrative aimed at LinkedIn audience of data scientists, hiring managers, and finance professionals. Explains technical concepts accessibly without dumbing down.
 - **README screenshot**: Uses `load_report_context()` to attach USD columns (same multiplier logic as app.py and data_context.py) before passing to `make_fan_chart()`. Consistent with the report generation pipeline.
 - **Data lag transparency**: 2024 shows a sharp PCA index drop due to known indicator reporting lag (OECD/World Bank series published ~12-18 months behind). The paper documents this honestly rather than suppressing it.
+
+## Checkpoint Outcome
+
+**Task 2 (human-verify):** Approved by user on 2026-03-23.
+
+**User note:** Portfolio outputs accepted. User noted the dashboard needs a restart (`uv run python scripts/run_dashboard.py`) to display real pipeline data. This is expected behavior — forecast data is loaded at module startup, and the pipeline ran after the dashboard was last started. Restarting the dashboard process picks up the latest data. Not a bug.
 
 ## Deviations from Plan
 
