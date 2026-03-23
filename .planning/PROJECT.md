@@ -2,11 +2,11 @@
 
 ## What This Is
 
-A hybrid statistical and machine learning system that estimates AI industry market size and forecasts growth to 2030 — combining World Bank, OECD, and LSEG data with ARIMA/Prophet baselines and LightGBM ensemble refinement. Features an interactive Dash dashboard with Normal/Expert modes, exportable PDF reports, and a methodology paper for LinkedIn.
+An analyst's best friend for AI industry valuation — a data-driven tool that estimates real AI market size, attributes AI revenue within mixed-tech conglomerates, and forecasts sector growth to 2030. Features a three-tier dashboard (Basic/Normal/Expert), exportable PDF reports, and a methodology paper. Built to produce numbers that pass the sniff test against known benchmarks.
 
 ## Core Value
 
-Produce defensible, data-driven AI industry valuations and growth forecasts that go beyond rough estimates — combining econometric rigor with modern ML techniques.
+Be an analyst's best friend: produce AI industry valuations and growth forecasts grounded in real market data that people can actually trust and act on.
 
 ## Current State (v1.0 shipped 2026-03-23)
 
@@ -34,7 +34,14 @@ Produce defensible, data-driven AI industry valuations and growth forecasts that
 
 ### Active
 
-(None — v1.0 complete. Define v1.1 requirements via `/gsd:new-milestone`)
+- [ ] Rework model from ground up — anchor on real market data (published estimates, company filings with AI revenue attribution, DCF/multiplier models for private companies)
+- [ ] AI revenue attribution for mixed-tech public companies (isolate AI portion from conglomerates)
+- [ ] Handle private company valuation opacity (DCF, AI value multipliers, revenue proxies)
+- [ ] Backtesting and validation against known market sizes and analyst consensus
+- [ ] Fix diagnostics — real actuals so MAPE, R², and other metrics compute
+- [ ] Realistic forecast trajectories reflecting actual AI industry growth
+- [ ] New Basic dashboard tier — total AI market cap, growth rates, expected value, segment breakdown
+- [ ] Update Normal/Expert modes to reflect real model outputs
 
 ### Out of Scope
 
@@ -43,7 +50,6 @@ Produce defensible, data-driven AI industry valuations and growth forecasts that
 - Mobile-responsive design — desktop browser is the target
 - User authentication / multi-user features — personal tool
 - Scenario analysis with interactive sliders — v2 feature (SCEN-01)
-- Bottom-up cross-validation from company filings — v2 feature (BOTT-01)
 
 ## Context
 
@@ -73,6 +79,20 @@ Produce defensible, data-driven AI industry valuations and growth forecasts that
 | Quantile regression for CIs | Directly produces interval bounds without distributional assumptions | ✓ Good — 80%/95% intervals |
 | Value chain multiplier | Converts composite index to USD market size | ⚠️ Revisit — calibration depends on anchor estimate accuracy |
 | Normal/Expert mode toggle | Two audiences: executives vs technical reviewers | ✓ Good — clean separation of content depth |
+| v1.1: Ground-up model rework | v1.0 PCA composite approach produced flat/unrealistic forecasts; proxy indicators don't measure AI revenue | — Pending |
+| v1.1: Real market data anchoring | Published estimates + company filings as ground truth; econometric indicators as explanatory drivers | — Pending |
+| v1.1: Three-tier dashboard | Basic tier for quick market intelligence; Normal/Expert for depth | — Pending |
+
+## Current Milestone: v1.1 Model Credibility & Usability
+
+**Goal:** Rework the model from ground up to produce trustworthy, real-world AI valuations — and add a Basic dashboard tier that makes the output immediately useful to any analyst.
+
+**Target features:**
+- Ground-up model rebuild anchored on real market data
+- AI revenue attribution for mixed-tech companies and private company valuation
+- Backtesting with real actuals (working MAPE, R², diagnostics)
+- Basic dashboard tier (market cap, growth rates, expected value)
+- Updated Normal/Expert views with credible outputs
 
 ---
-*Last updated: 2026-03-23 after v1.0 milestone*
+*Last updated: 2026-03-23 after v1.1 milestone started*
