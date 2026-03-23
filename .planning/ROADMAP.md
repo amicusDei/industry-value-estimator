@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Statistical Baseline** - Fit interpretable econometric models and establish the baseline forecast (gap closure in progress) (completed 2026-03-22)
 - [x] **Phase 3: ML Ensemble and Validation** - Train the ML refinement layer, build the ensemble, and produce forecast artifacts (completed 2026-03-22)
 - [x] **Phase 4: Interactive Dashboard** - Build the Dash dashboard that reads pre-computed forecast artifacts (completed 2026-03-22)
-- [ ] **Phase 5: Reports, Paper, and Portfolio** - Generate PDF reports, write the methodology paper, and finalize the GitHub portfolio
+- [x] **Phase 5: Reports, Paper, and Portfolio** - Generate PDF reports, write the methodology paper, and finalize the GitHub portfolio (completed 2026-03-23)
 
 ## Phase Details
 
@@ -99,7 +99,7 @@ Plans:
   2. A methodology writeup exists that explains the hybrid model approach, data sources, validation strategy, and key findings in language suitable for LinkedIn publication
   3. Every module and function in `src/` has docstrings that explain what it does, why the approach was chosen, and any domain-specific concepts — readable by someone learning the implementation
   4. The GitHub README includes project description, data sources, setup instructions with the exact commands to reproduce the pipeline, and example output images
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 - [ ] 05-01-PLAN.md — Install dependencies (WeasyPrint, kaleido), run full pipeline with real API data
@@ -118,4 +118,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Statistical Baseline | 5/5 | Complete   | 2026-03-22 |
 | 3. ML Ensemble and Validation | 3/3 | Complete   | 2026-03-22 |
 | 4. Interactive Dashboard | 3/3 | Complete   | 2026-03-22 |
-| 5. Reports, Paper, and Portfolio | 3/4 | In Progress|  |
+| 5. Reports, Paper, and Portfolio | 4/4 | Complete   | 2026-03-23 |

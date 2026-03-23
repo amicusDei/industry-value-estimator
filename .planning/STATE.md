@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-03-PLAN.md (PDF report generation)
-last_updated: "2026-03-23T09:41:36.326Z"
+stopped_at: "Checkpoint: human-verify methodology paper, README, screenshot (05-04 Task 2)"
+last_updated: "2026-03-23T09:51:08.173Z"
 last_activity: "2026-03-17 — Completed plan 01-01: project scaffold, AI industry config, pandera schemas, 26 tests"
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 20
-  completed_plans: 19
+  completed_plans: 20
   percent: 4
 ---
 
@@ -69,6 +69,7 @@ Progress: [░░░░░░░░░░] 4%
 | Phase 05-reports-paper-and-portfolio P02 | 10 | 4 tasks | 35 files |
 | Phase 05-reports-paper-and-portfolio P01 | 45 | 3 tasks | 11 files |
 | Phase 05-reports-paper-and-portfolio P03 | 18 | 2 tasks | 12 files |
+| Phase 05-reports-paper-and-portfolio P04 | 12 | 1 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -132,6 +133,8 @@ Recent decisions affecting current work:
 - [Phase 05-03]: PDF artifacts committed to git — PRES-04 plan explicitly requires reports/executive_brief.pdf and reports/full_report.pdf as plan artifacts; adjusted .gitignore
 - [Phase 05-03]: load_report_context mode='normal'/'expert' mirrors dashboard normal/expert distinction — executive brief uses normal mode, full report uses expert mode with diagnostics
 - [Phase 05-03]: kaleido v1 API: fig.to_image(format='png') not engine='kaleido' (deprecated in Plotly 6.x) — documented in chart_export.py
+- [Phase 05-04]: Real data key findings used in paper/README: $200B 2023 anchor, $171B 2021, $82B 2019 — 2024 excluded with documented data lag explanation
+- [Phase 05-04]: Methodology paper: first-person LinkedIn narrative tone covering PCA composite + ARIMA/Prophet + LightGBM hybrid with GitHub call-to-action
 
 ### Pending Todos
 
@@ -144,6 +147,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T09:41:36.324Z
-Stopped at: Completed 05-03-PLAN.md (PDF report generation)
+Last session: 2026-03-23T09:51:08.171Z
+Stopped at: Checkpoint: human-verify methodology paper, README, screenshot (05-04 Task 2)
 Resume file: None

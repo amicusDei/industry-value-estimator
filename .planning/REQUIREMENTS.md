@@ -36,13 +36,13 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **PRES-02**: SHAP driver attribution visualization in dashboard
 - [x] **PRES-03**: Model diagnostics display (RMSE, MAPE, R², residual plots, backtesting results)
 - [x] **PRES-04**: Exportable PDF report with analysis and projections
-- [ ] **PRES-05**: Methodology paper suitable for LinkedIn publication
+- [x] **PRES-05**: Methodology paper suitable for LinkedIn publication
 
 ### Architecture & Documentation
 
 - [x] **ARCH-01**: Config-driven extensible pipeline (add new industries via config, not code rewrite)
 - [x] **ARCH-02**: Comprehensive code documentation explaining every module and function for learning purposes
-- [ ] **ARCH-03**: Polished GitHub README with project description, data sources, setup instructions
+- [x] **ARCH-03**: Polished GitHub README with project description, data sources, setup instructions
 - [x] **ARCH-04**: Documented assumptions file explaining all modeling decisions and their rationale
 
 ## v2 Requirements
@@ -105,10 +105,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PRES-02 | Phase 4 | Complete |
 | PRES-03 | Phase 4 | Complete |
 | PRES-04 | Phase 5 | Complete |
-| PRES-05 | Phase 5 | Pending |
+| PRES-05 | Phase 5 | Complete |
 | ARCH-01 | Phase 1 | Complete |
 | ARCH-02 | Phase 5 | Complete |
-| ARCH-03 | Phase 5 | Pending |
+| ARCH-03 | Phase 5 | Complete |
 | ARCH-04 | Phase 2 | Complete |
 
 **Coverage:**
