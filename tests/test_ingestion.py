@@ -210,33 +210,27 @@ class TestOECDIngestion:
         assert "LOCATION" in result.columns
         assert "TIME_PERIOD" in result.columns
 
-    def test_fetch_oecd_ai_patents_filters_to_g06n(self, ai_config, oecd_sample_df):
-        """Test 2: fetch_oecd_ai_patents uses IPC class G06N from config."""
-        ipc_filters_used = []
+    def test_fetch_oecd_ai_patents_uses_b_icts_measure(self, ai_config, oecd_sample_df):
+        """Test 2: fetch_oecd_ai_patents filters MSTI data to B_ICTS measure.
 
-        def mock_data_call(dataset, key, params):
-            if "IPC" in key:
-                ipc_filters_used.append(key["IPC"])
-            mock_msg = MagicMock()
-            mock_msg.data = [MagicMock()]
-            return mock_msg
+        After OECD API migration, PATS_IPC (G06N) was retired. The function
+        now uses MSTI B_ICTS (ICT-sector BERD) as the AI patent/R&D proxy.
+        """
+        # Add B_ICTS MEASURE column to sample data so the filter has something to select
+        sample_with_measure = oecd_sample_df.copy()
+        sample_with_measure["MEASURE"] = "B_ICTS"
 
-        with patch("pandasdmx.Request") as mock_req_cls, \
-             patch("pandasdmx.to_pandas") as mock_to_pandas, \
-             patch("requests_cache.install_cache"):
+        with patch("src.ingestion.oecd._fetch_msti_via_new_api") as mock_msti_api, \
+             patch("src.ingestion.oecd._setup_oecd_cache"):
+            mock_msti_api.return_value = sample_with_measure
 
-            mock_req = MagicMock()
-            mock_req_cls.return_value = mock_req
-            mock_req.data.side_effect = mock_data_call
-            mock_to_pandas.return_value = _make_sdmx_series(oecd_sample_df)
+            from src.ingestion.oecd import fetch_oecd_ai_patents
+            result = fetch_oecd_ai_patents(ai_config)
 
-            import importlib
-            import src.ingestion.oecd as oecd_mod
-            importlib.reload(oecd_mod)
-            result = oecd_mod.fetch_oecd_ai_patents(ai_config)
-
-        # G06N should appear as the IPC filter
-        assert any("G06N" in f for f in ipc_filters_used)
+        # _fetch_msti_via_new_api should have been called (not the old IPC path)
+        mock_msti_api.assert_called_once()
+        # Result should be a DataFrame (B_ICTS filtered from MSTI)
+        assert isinstance(result, pd.DataFrame)
 
     def test_returned_dataframes_pass_oecd_schema(self, ai_config, oecd_sample_df):
         """Test 3: Returned DataFrames pass OECD_RAW_SCHEMA validation."""
