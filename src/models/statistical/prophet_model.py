@@ -3,15 +3,16 @@ Prophet per-segment fitting with explicit 2022 changepoint, forecasting, residua
 temporal CV, and residual Parquet output for Phase 3 ML training.
 
 Provides:
-- fit_prophet_segment: Fit Prophet with explicit 2022 GenAI changepoint
+- fit_prophet_segment: Fit Prophet with configurable GenAI changepoint year
 - forecast_prophet: Future dataframe + prediction
 - get_prophet_residuals: Year-indexed in-sample residuals
 - run_prophet_cv: Manual expanding-window CV (not Prophet's built-in — see Open Question 3)
 - save_all_residuals: Write segment residuals to Parquet with validated schema
 
 Design notes:
-- changepoints=["2022-01-01"] gives Prophet an explicit GenAI surge anchor
-  (RESEARCH.md Pitfall 2 and Pattern 3)
+- changepoints=[f"{changepoint_year}-01-01"] gives Prophet an explicit GenAI surge anchor
+  (RESEARCH.md Pitfall 2 and Pattern 3); default changepoint_year=2022 for backward
+  compatibility, overridable via detected structural break year from Phase 6 wiring
 - changepoint_prior_scale=0.1 allows post-break trend flexibility
 - yearly/weekly/daily seasonality disabled — annual data has no within-year seasonality
 - Prophet CV uses manual TimeSeriesSplit refits, not Prophet's cross_validation —
@@ -37,9 +38,13 @@ logging.getLogger("cmdstanpy").setLevel(logging.WARNING)
 logging.getLogger("prophet").setLevel(logging.WARNING)
 
 
-def fit_prophet_segment(df: pd.DataFrame, segment: str) -> Prophet:
+def fit_prophet_segment(
+    df: pd.DataFrame,
+    segment: str,
+    changepoint_year: int = 2022,
+) -> Prophet:
     """
-    Fit Prophet on a single AI segment with an explicit 2022 changepoint.
+    Fit Prophet on a single AI segment with a configurable changepoint year.
 
     Data preparation:
     - Filters df to rows where industry_segment == segment
@@ -48,7 +53,7 @@ def fit_prophet_segment(df: pd.DataFrame, segment: str) -> Prophet:
     - Converts ds to datetime (YYYY-01-01)
 
     Model configuration:
-    - changepoints=["2022-01-01"]: explicit GenAI surge anchor
+    - changepoints=[f"{changepoint_year}-01-01"]: explicit GenAI surge anchor
     - changepoint_prior_scale=0.1: above default to allow post-break flex
     - yearly_seasonality=False: annual data — no within-year seasonality
     - weekly_seasonality=False, daily_seasonality=False
@@ -59,6 +64,10 @@ def fit_prophet_segment(df: pd.DataFrame, segment: str) -> Prophet:
         Long-format DataFrame with columns: year, value_real_2020, industry_segment.
     segment : str
         AI segment name (e.g. "ai_software", "ai_hardware").
+    changepoint_year : int, optional
+        Year to use as explicit Prophet changepoint. Default 2022 (GenAI surge).
+        Override with a detected structural break year from _run_break_detection()
+        in scripts/run_statistical_pipeline.py.
 
     Returns
     -------
@@ -75,9 +84,9 @@ def fit_prophet_segment(df: pd.DataFrame, segment: str) -> Prophet:
     seg["ds"] = pd.to_datetime(seg["ds"].astype(str) + "-01-01")
 
     model = Prophet(
-        changepoints=["2022-01-01"],        # explicit GenAI surge anchor
-        changepoint_prior_scale=0.1,        # above default 0.05 for post-break flex
-        yearly_seasonality=False,           # annual data — no intra-year seasonality
+        changepoints=[f"{changepoint_year}-01-01"],  # configurable GenAI surge anchor
+        changepoint_prior_scale=0.1,                 # above default 0.05 for post-break flex
+        yearly_seasonality=False,                    # annual data — no intra-year seasonality
         weekly_seasonality=False,
         daily_seasonality=False,
     )
@@ -137,6 +146,7 @@ def run_prophet_cv(
     df: pd.DataFrame,
     segment: str,
     n_splits: int = 3,
+    changepoint_year: int = 2022,
 ) -> list[dict]:
     """
     Expanding-window temporal cross-validation for Prophet.
@@ -157,6 +167,11 @@ def run_prophet_cv(
         AI segment name.
     n_splits : int
         Number of expanding-window CV folds. Default 3.
+    changepoint_year : int, optional
+        Year to use as explicit Prophet changepoint in each CV fold. Default 2022.
+        Override with a detected structural break year from _run_break_detection()
+        in scripts/run_statistical_pipeline.py. Must match the changepoint_year
+        passed to fit_prophet_segment to ensure consistent CV and final-fit changepoints.
 
     Returns
     -------
@@ -182,11 +197,11 @@ def run_prophet_cv(
         train_df = seg_df.iloc[train_idx].copy()
         test_df = seg_df.iloc[test_idx].copy()
 
-        # Only fit if the changepoint 2022 falls within the training period or before it
+        # Only fit if the configured changepoint year falls within the training period or before it
         # If not, use generic changepoints from the training data span
         train_years = train_df["ds"].dt.year
-        if 2022 in train_years.values:
-            changepoints = ["2022-01-01"]
+        if changepoint_year in train_years.values:
+            changepoints = [f"{changepoint_year}-01-01"]
         else:
             changepoints = []
 
