@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-01-PLAN.md (real data pipeline)
-last_updated: "2026-03-23T09:30:53.410Z"
+stopped_at: Completed 05-03-PLAN.md (PDF report generation)
+last_updated: "2026-03-23T09:41:36.326Z"
 last_activity: "2026-03-17 — Completed plan 01-01: project scaffold, AI industry config, pandera schemas, 26 tests"
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 20
-  completed_plans: 18
+  completed_plans: 19
   percent: 4
 ---
 
@@ -68,6 +68,7 @@ Progress: [░░░░░░░░░░] 4%
 | Phase 04-interactive-dashboard P03 | 90 | 1 tasks | 6 files |
 | Phase 05-reports-paper-and-portfolio P02 | 10 | 4 tasks | 35 files |
 | Phase 05-reports-paper-and-portfolio P01 | 45 | 3 tasks | 11 files |
+| Phase 05-reports-paper-and-portfolio P03 | 18 | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -128,6 +129,9 @@ Recent decisions affecting current work:
 - [Phase 05-01]: OECD PATS_IPC replaced by MSTI B_ICTS (ICT-sector BERD) as AI patent proxy — stats.oecd.org deprecated, PATS_IPC not available in new sdmx.oecd.org API
 - [Phase 05-01]: Per-economy deflation fix: apply_deflation builds (economy, year) lookup map to avoid Series ambiguity with duplicate year indices across 16 economies
 - [Phase 05-01]: PCA composite per segment with 3-indicator subset — hardware (exports+patents+ICT-BERD), infra (GDP+ICT-svc+BERD), software (ICT-svc+RD%+GERD), adoption (RD%+researchers+GDP)
+- [Phase 05-03]: PDF artifacts committed to git — PRES-04 plan explicitly requires reports/executive_brief.pdf and reports/full_report.pdf as plan artifacts; adjusted .gitignore
+- [Phase 05-03]: load_report_context mode='normal'/'expert' mirrors dashboard normal/expert distinction — executive brief uses normal mode, full report uses expert mode with diagnostics
+- [Phase 05-03]: kaleido v1 API: fig.to_image(format='png') not engine='kaleido' (deprecated in Plotly 6.x) — documented in chart_export.py
 
 ### Pending Todos
 
@@ -140,6 +144,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T09:30:53.408Z
-Stopped at: Completed 05-01-PLAN.md (real data pipeline)
+Last session: 2026-03-23T09:41:36.324Z
+Stopped at: Completed 05-03-PLAN.md (PDF report generation)
 Resume file: None
