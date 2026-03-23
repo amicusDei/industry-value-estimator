@@ -113,3 +113,81 @@ class TestConfigLoader:
         assert "GBR" in codes
         # Should be sorted and deduplicated
         assert codes == sorted(set(codes))
+
+
+class TestMarketBoundary:
+    """DATA-08: Market boundary definition locked in ai.yaml."""
+
+    @pytest.fixture
+    def ai_config(self):
+        return load_industry_config("ai")
+
+    def test_market_boundary_exists(self, ai_config):
+        """market_boundary section exists in ai.yaml."""
+        assert "market_boundary" in ai_config
+
+    def test_definition_locked_date(self, ai_config):
+        """definition_locked is a non-empty date string."""
+        mb = ai_config["market_boundary"]
+        assert "definition_locked" in mb
+        assert len(str(mb["definition_locked"])) >= 10  # YYYY-MM-DD minimum
+
+    def test_scope_statement_nonempty(self, ai_config):
+        """scope_statement is a substantial string (not placeholder)."""
+        mb = ai_config["market_boundary"]
+        assert len(mb["scope_statement"]) > 100
+
+    def test_overlap_zones_documented(self, ai_config):
+        """At least 2 overlap zones are documented."""
+        mb = ai_config["market_boundary"]
+        assert len(mb["overlap_zones"]) >= 2
+
+    def test_adjusted_total_method_documented(self, ai_config):
+        """adjusted_total_method explains how overlaps are handled."""
+        mb = ai_config["market_boundary"]
+        assert "adjusted_total_method" in mb
+        assert len(mb["adjusted_total_method"]) > 50
+
+
+class TestScopeMapping:
+    """DATA-08: Scope mapping table maps analyst firms to our segments."""
+
+    @pytest.fixture
+    def ai_config(self):
+        return load_industry_config("ai")
+
+    def test_scope_mapping_table_exists(self, ai_config):
+        """scope_mapping_table section exists."""
+        assert "scope_mapping_table" in ai_config
+
+    def test_minimum_firms(self, ai_config):
+        """At least 6 analyst firms are mapped."""
+        smt = ai_config["scope_mapping_table"]
+        assert len(smt) >= 6
+
+    def test_required_firms_present(self, ai_config):
+        """IDC, Gartner, and Grand View are all mapped."""
+        firms = {e["firm"] for e in ai_config["scope_mapping_table"]}
+        for required in ["IDC", "Gartner", "Grand View Research"]:
+            assert required in firms, f"Missing required firm: {required}"
+
+    def test_each_firm_has_coefficient(self, ai_config):
+        """Every firm has scope_coefficient and scope_coefficient_range."""
+        for entry in ai_config["scope_mapping_table"]:
+            assert "scope_coefficient" in entry, f"{entry['firm']} missing scope_coefficient"
+            assert "scope_coefficient_range" in entry, f"{entry['firm']} missing range"
+            low, high = entry["scope_coefficient_range"]
+            assert low <= entry["scope_coefficient"] <= high
+
+    def test_each_firm_has_scope_docs(self, ai_config):
+        """Every firm has includes and excludes documentation."""
+        for entry in ai_config["scope_mapping_table"]:
+            assert "includes" in entry, f"{entry['firm']} missing includes"
+            assert "excludes" in entry, f"{entry['firm']} missing excludes"
+
+    def test_edgar_companies_coverage(self, ai_config):
+        """edgar_companies covers all 4 value chain layers with 13+ companies."""
+        ec = ai_config["edgar_companies"]
+        assert len(ec) >= 13
+        layers = {c["value_chain_layer"] for c in ec}
+        assert layers == {"ai_hardware", "ai_infrastructure", "ai_software", "ai_adoption"}
