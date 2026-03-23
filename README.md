@@ -29,7 +29,7 @@ Based on real World Bank, OECD, and LSEG data (2010–2024 vintage):
 
 ```bash
 # Clone and install
-git clone https://github.com/simonleowegner/industry-value-estimator
+git clone https://github.com/amicusDei/industry-value-estimator
 cd industry-value-estimator
 uv sync
 
