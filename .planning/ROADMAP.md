@@ -36,13 +36,13 @@
   2. A corpus of 10+ published analyst estimates per segment exists in `market_anchors_ai.parquet` with vintage date, source firm, scope definition, and methodology notes per row
   3. 10-K/10-Q segment disclosures for 10-15 key public AI companies are ingested via SEC EDGAR and stored in a validated Parquet file
   4. A single defensible historical AI market size time series (2017-2025, by segment) exists reconciled across sources, with documented reconciliation decisions and a clear audit trail explaining why each source was accepted or discarded
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 08-01: Market boundary definition and config extension
-- [ ] 08-02: Published analyst estimate corpus assembly
-- [ ] 08-03: SEC EDGAR company filings ingestion (edgartools)
-- [ ] 08-04: Ground truth time series reconciliation and validation
+- [ ] 08-01-PLAN.md — Lock market boundary definition, scope mapping table, and EDGAR company list in ai.yaml + METHODOLOGY.md
+- [ ] 08-02-PLAN.md — Create analyst estimate YAML registry (40+ entries) and market_anchors.py ingestion module
+- [ ] 08-03-PLAN.md — Build EDGAR XBRL extraction module (edgartools) for 13+ AI companies
+- [ ] 08-04-PLAN.md — Reconcile ground truth time series with deflation, interpolation, and pipeline integration
 
 #### Phase 9: Ground-Up Model Rework and Value Chain Design
 
