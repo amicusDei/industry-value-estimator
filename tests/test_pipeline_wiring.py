@@ -104,7 +104,6 @@ def _make_smooth_linear_series(start_year: int = 2010, n: int = 15) -> pd.Series
 # Tests for _load_lseg_scalar() — added to run_statistical_pipeline.py in Plan 06-02
 # ---------------------------------------------------------------------------
 
-@pytest.mark.xfail(reason="Plan 06-02 adds _load_lseg_scalar() to run_statistical_pipeline.py")
 class TestLsegScalar:
     """Tests for _load_lseg_scalar() pipeline helper (Plan 06-02 wires this)."""
 
@@ -172,7 +171,6 @@ class TestLsegScalar:
 # Tests for _run_break_detection() — added to run_statistical_pipeline.py in Plan 06-02
 # ---------------------------------------------------------------------------
 
-@pytest.mark.xfail(reason="Plan 06-02 adds _run_break_detection() to run_statistical_pipeline.py")
 class TestBreakDetection:
     """Tests for _run_break_detection() pipeline helper (Plan 06-02 wires this)."""
 
@@ -211,7 +209,6 @@ class TestBreakDetection:
 # Tests that assess_stationarity is called in run_pipeline — Plan 06-02 wires this
 # ---------------------------------------------------------------------------
 
-@pytest.mark.xfail(reason="Plan 06-02 wires assess_stationarity calls into run_pipeline")
 class TestStationarityWiring:
     """Tests that assess_stationarity is called in the pipeline (Plan 06-02 wires this)."""
 
@@ -244,7 +241,6 @@ class TestStationarityWiring:
 # Tests that fit_top_down_ols_with_upgrade is called in run_pipeline — Plan 06-02 wires this
 # ---------------------------------------------------------------------------
 
-@pytest.mark.xfail(reason="Plan 06-02 wires fit_top_down_ols_with_upgrade calls into run_pipeline")
 class TestOlsWiring:
     """Tests that OLS is called in the pipeline (Plan 06-02 wires this)."""
 
