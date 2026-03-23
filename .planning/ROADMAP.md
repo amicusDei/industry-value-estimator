@@ -119,7 +119,11 @@ Plans:
   2. `run_cusum` and `run_chow` are called in the pipeline and their detected break year configures Prophet's changepoint (not hardcoded 2022)
   3. `assess_stationarity` is called before ARIMA order selection and its results are logged
   4. `fit_top_down_ols_with_upgrade` produces a GDP-share regression as a complementary model alongside per-segment ARIMA/Prophet
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Prophet changepoint_year parameter extension, integration test scaffold
+- [ ] 06-02-PLAN.md — Wire LSEG scalar, break detection, stationarity, and OLS into pipeline
 
 ### Phase 7: Dashboard Attribution Polish
 **Goal**: Dashboard source attribution strings are read from config/industries/ai.yaml SOURCE_ATTRIBUTION dict, not hardcoded
@@ -143,5 +147,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 3. ML Ensemble and Validation | 3/3 | Complete   | 2026-03-22 |
 | 4. Interactive Dashboard | 3/3 | Complete   | 2026-03-22 |
 | 5. Reports, Paper, and Portfolio | 4/4 | Complete   | 2026-03-23 |
-| 6. Pipeline Integration Wiring | 0/TBD | Not started | - |
+| 6. Pipeline Integration Wiring | 0/2 | Not started | - |
 | 7. Dashboard Attribution Polish | 0/TBD | Not started | - |
