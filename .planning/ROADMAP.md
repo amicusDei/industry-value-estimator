@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: ML Ensemble and Validation** - Train the ML refinement layer, build the ensemble, and produce forecast artifacts (completed 2026-03-22)
 - [x] **Phase 4: Interactive Dashboard** - Build the Dash dashboard that reads pre-computed forecast artifacts (completed 2026-03-22)
 - [x] **Phase 5: Reports, Paper, and Portfolio** - Generate PDF reports, write the methodology paper, and finalize the GitHub portfolio (completed 2026-03-23)
-- [ ] **Phase 6: Pipeline Integration Wiring** - Wire LSEG data, structural break detection, and orphaned statistical functions into the production pipeline (gap closure)
+- [x] **Phase 6: Pipeline Integration Wiring** - Wire LSEG data, structural break detection, and orphaned statistical functions into the production pipeline (gap closure) (completed 2026-03-23)
 - [ ] **Phase 7: Dashboard Attribution Polish** - Replace hardcoded attribution strings with config-driven SOURCE_ATTRIBUTION dict (gap closure)
 
 ## Phase Details
@@ -119,7 +119,7 @@ Plans:
   2. `run_cusum` and `run_chow` are called in the pipeline and their detected break year configures Prophet's changepoint (not hardcoded 2022)
   3. `assess_stationarity` is called before ARIMA order selection and its results are logged
   4. `fit_top_down_ols_with_upgrade` produces a GDP-share regression as a complementary model alongside per-segment ARIMA/Prophet
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 06-01-PLAN.md — Prophet changepoint_year parameter extension, integration test scaffold
@@ -147,5 +147,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 3. ML Ensemble and Validation | 3/3 | Complete   | 2026-03-22 |
 | 4. Interactive Dashboard | 3/3 | Complete   | 2026-03-22 |
 | 5. Reports, Paper, and Portfolio | 4/4 | Complete   | 2026-03-23 |
-| 6. Pipeline Integration Wiring | 1/2 | In Progress|  |
+| 6. Pipeline Integration Wiring | 2/2 | Complete   | 2026-03-23 |
 | 7. Dashboard Attribution Polish | 0/TBD | Not started | - |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 06-01-PLAN.md — Prophet changepoint_year extension + integration test scaffold
-last_updated: "2026-03-23T12:02:21.872Z"
+stopped_at: "Completed 06-02-PLAN.md — Pipeline integration wiring: LSEG scalar, structural break detection, stationarity, OLS"
+last_updated: "2026-03-23T12:07:37.889Z"
 last_activity: "2026-03-23 — Completed plan 05-04: methodology paper, README, fan chart hero image, MIT license, 12 tests"
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 22
-  completed_plans: 21
+  completed_plans: 22
   percent: 100
 ---
 
@@ -71,6 +71,7 @@ Progress: [##########] 100%
 | Phase 05-reports-paper-and-portfolio P03 | 18 | 2 tasks | 12 files |
 | Phase 05-reports-paper-and-portfolio P04 | 12 | 1 tasks | 5 files |
 | Phase 06-pipeline-integration-wiring P01 | 8 | 2 tasks | 2 files |
+| Phase 06-pipeline-integration-wiring PP02 | 3 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -139,6 +140,9 @@ Recent decisions affecting current work:
 - [Phase 05-04]: Dashboard requires restart (scripts/run_dashboard.py) to show real pipeline data — data loaded at module startup, not on demand; expected behavior
 - [Phase 06-pipeline-integration-wiring]: changepoint_year: int = 2022 default on both fit_prophet_segment and run_prophet_cv — preserves all 222 existing tests without modification
 - [Phase 06-pipeline-integration-wiring]: Test classes 1-4 xfail — test pipeline functions that don't exist until Plan 06-02; TestProphetChangepoint (class 5) passes immediately
+- [Phase 06-pipeline-integration-wiring]: Stationarity and OLS logging only — no algorithmic override of pmdarima AICc-based order selection
+- [Phase 06-pipeline-integration-wiring]: OLS residuals not written to residuals_statistical.parquet — logged to stdout only for ASSUMPTIONS.md traceability
+- [Phase 06-pipeline-integration-wiring]: LSEG scalar applied post-PCA: lseg_ai.parquet is a single-year cross-section (year=2026), cannot be added as time-series column
 
 ### Pending Todos
 
@@ -151,6 +155,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T12:02:21.870Z
-Stopped at: Completed 06-01-PLAN.md — Prophet changepoint_year extension + integration test scaffold
+Last session: 2026-03-23T12:07:37.887Z
+Stopped at: Completed 06-02-PLAN.md — Pipeline integration wiring: LSEG scalar, structural break detection, stationarity, OLS
 Resume file: None
