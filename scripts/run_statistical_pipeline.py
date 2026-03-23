@@ -24,11 +24,16 @@ Prerequisites
 Design notes
 ------------
 - Real data: World Bank global indicators + OECD MSTI R&D expenditure
+- LSEG scalar: lseg_ai.parquet is a single-year company snapshot; loaded
+  as a per-segment revenue-share weight applied to PCA composite scores
 - PCA composite: 3 indicators per segment, fitted on training window only
   (70% of observations) to prevent leakage — see build_pca_composite()
-- Structural break: Prophet changepoint at 2022-01-01 captures the GenAI surge
-  visible in the real data (high-tech exports, ICT R&D, patent filings all show
-  inflection in 2022-2023)
+- Structural break: CUSUM + Chow tests detect the break year from data;
+  detected break_year is passed to Prophet changepoint (default 2022)
+- Stationarity: assess_stationarity (ADF+KPSS) called per-segment before
+  ARIMA order selection; results logged for ASSUMPTIONS.md traceability
+- OLS complementary model: fit_top_down_ols_with_upgrade runs per-segment
+  as a GDP-share regression diagnostic; logged but not written to Parquet
 - ARIMA order selected via AICc (parsimony for N<30)
 - Winner determined by mean CV RMSE across 3 expanding-window folds
 - Residuals are year-indexed (int) — required for Phase 3 feature joins
@@ -71,7 +76,10 @@ from src.models.statistical.prophet_model import (
     save_all_residuals,
 )
 from src.diagnostics.model_eval import compare_models
-from src.processing.features import build_pca_composite
+from src.processing.features import build_pca_composite, assess_stationarity
+from src.diagnostics.structural_breaks import run_cusum, run_chow
+from src.models.statistical.regression import fit_top_down_ols_with_upgrade
+import statsmodels.api as sm
 from config.settings import DATA_PROCESSED
 
 # ---------------------------------------------------------------------------
@@ -175,7 +183,107 @@ def _load_real_data() -> pd.DataFrame:
     return combined
 
 
-def _build_segment_series(combined: pd.DataFrame, segment: str) -> pd.DataFrame:
+def _load_lseg_scalar() -> dict:
+    """
+    Load lseg_ai.parquet and derive a revenue-share scalar per AI segment.
+
+    lseg_ai.parquet is a single-year company-universe snapshot (year=2026).
+    It cannot be added as a time-series column to the 2010-2024 indicator
+    matrix; instead, it contributes a per-segment scalar weight representing
+    relative company-universe revenue size.
+
+    Returns
+    -------
+    dict[str, float]
+        Mapping of segment name to revenue share in [0, 1]. Returns empty
+        dict if the parquet file is missing (pipeline runs without LSEG).
+    """
+    lseg_path = DATA_PROCESSED / "lseg_ai.parquet"
+    if not lseg_path.exists():
+        print("  LSEG: lseg_ai.parquet not found — running without LSEG scalar")
+        return {}
+
+    lseg = pd.read_parquet(lseg_path)
+
+    # Aggregate total revenue per segment (convert raw units to billions USD)
+    rev_by_seg = (
+        lseg.groupby("industry_segment")["Revenue"]
+        .sum()
+        .astype(float)
+        / 1e9
+    )
+
+    total = rev_by_seg.sum()
+    if total <= 0:
+        print("  LSEG: total revenue is zero — returning empty scalar dict")
+        return {}
+
+    scalar_dict = (rev_by_seg / total).to_dict()
+    for seg, val in scalar_dict.items():
+        print(f"  LSEG scalar: {seg} = {val:.4f} (revenue share of total)")
+    return scalar_dict
+
+
+def _run_break_detection(combined_series: pd.Series) -> int:
+    """
+    Detect the structural break year from CUSUM and Chow tests.
+
+    Runs CUSUM test (non-parametric, detects shift anywhere in series) and
+    Chow test at year 2022 (parametric, tests sharp level change). Returns
+    the detected break year as an int for use as Prophet changepoint.
+
+    Falls back to 2022 if:
+    - Chow test is not significant (p >= 0.05)
+    - CUSUM test is not significant (p >= 0.05)
+    - break_idx guard fails (too close to series endpoints)
+
+    Parameters
+    ----------
+    combined_series : pd.Series
+        Annual time series indexed by integer year.
+
+    Returns
+    -------
+    int
+        Detected break year (e.g., 2022). Always returns 2022 as default.
+    """
+    cusum = run_cusum(combined_series)
+
+    years = combined_series.index.tolist()
+    break_candidate = 2022
+    if break_candidate in years:
+        break_idx = years.index(break_candidate)
+    else:
+        break_idx = len(years) // 2  # fallback to midpoint
+
+    # Guard: Chow requires at least 3 obs in each sub-period (Pitfall 3)
+    if break_idx < 3 or break_idx > len(years) - 3:
+        print(f"  Break detection: break_idx={break_idx} too close to endpoints — "
+              f"skipping Chow, using default 2022")
+        return 2022
+
+    chow = run_chow(combined_series, break_idx=break_idx)
+    print(f"  CUSUM: p={cusum['p_value']:.4f}, "
+          f"Chow: F={chow['F_stat']:.3f} p={chow['p_value']:.4f}")
+
+    if chow["p_value"] < 0.05:
+        detected = int(chow["break_year"])
+        print(f"  Break detected at {detected} (Chow p<0.05)")
+    elif cusum["p_value"] < 0.05:
+        detected = 2022
+        print(f"  Break confirmed by CUSUM (p={cusum['p_value']:.4f}), using 2022")
+    else:
+        detected = 2022
+        print(f"  No significant break detected; using default changepoint 2022")
+
+    return detected
+
+
+def _build_segment_series(
+    combined: pd.DataFrame,
+    segment: str,
+    lseg_scalar: dict | None = None,
+) -> pd.DataFrame:
     """
     Build a year-indexed composite indicator series for a single AI segment.
 
@@ -183,18 +291,26 @@ def _build_segment_series(combined: pd.DataFrame, segment: str) -> pd.DataFrame:
     produce a single normalized value per year. The PCA is fitted on the first
     70% of observations to prevent data leakage.
 
+    If lseg_scalar is provided and contains the segment key, applies the LSEG
+    revenue-share weight as a gentle amplification factor on the PCA scores:
+    scores *= (1.0 + lseg_scalar[segment]). This is a post-PCA scalar — it
+    does not modify the PCA fitting or the training/test split.
+
     Parameters
     ----------
     combined : pd.DataFrame
         Output of _load_real_data() — global indicator matrix.
     segment : str
         AI segment ID, one of: ai_hardware, ai_infrastructure, ai_software, ai_adoption.
+    lseg_scalar : dict[str, float] or None
+        Optional LSEG revenue-share scalar per segment. Pass None (default)
+        to skip LSEG adjustment (backward-compatible).
 
     Returns
     -------
     pd.DataFrame
         Long-format DataFrame with columns: year, value_real_2020, industry_segment.
-        value_real_2020 contains the PCA composite score.
+        value_real_2020 contains the PCA composite score (LSEG-scaled if applicable).
     """
     feature_cols = [c for c in _SEGMENT_FEATURES[segment] if c in combined.columns]
     matrix = combined[feature_cols].values.astype(float)
@@ -203,6 +319,13 @@ def _build_segment_series(combined: pd.DataFrame, segment: str) -> pd.DataFrame:
     print(f"    PCA for {segment}: {len(feature_cols)} features, "
           f"explained variance={explained:.3f}, "
           f"range=[{scores.min():.2f}, {scores.max():.2f}]")
+
+    # Apply LSEG revenue weight if available for this segment
+    if lseg_scalar is not None and segment in lseg_scalar:
+        weight = lseg_scalar[segment]
+        scores = scores * (1.0 + weight)  # gentle amplification, not replacement
+        print(f"    LSEG scalar for {segment}: {weight:.4f} (revenue weight applied)")
+
     return pd.DataFrame({
         "year": combined["year"].values,
         "value_real_2020": scores,
@@ -262,10 +385,15 @@ def run_pipeline(n_splits: int = 3, use_real_data: bool = True) -> None:
     """
     End-to-end statistical pipeline:
     1. Load real processed indicator data (or synthetic for testing).
-    2. Per segment: build PCA composite series.
-    3. Per segment: run ARIMA and Prophet CV, compare, extract winner residuals.
-    4. Persist residuals to data/processed/residuals_statistical.parquet.
-    5. Print summary table.
+    2. Load LSEG scalar (real data mode only) — per-segment revenue-share weight.
+    3. Run structural break detection (real data mode only) — derives break_year.
+    4. Per segment: build PCA composite series (with optional LSEG scaling).
+    5. Per segment: assess stationarity (ADF+KPSS) before ARIMA order selection.
+    6. Per segment: run ARIMA and Prophet CV (Prophet uses detected break_year).
+    7. Per segment: compare models, extract winner residuals.
+    8. Per segment: run OLS complementary model (GDP-share), log diagnostics.
+    9. Persist residuals to data/processed/residuals_statistical.parquet.
+    10. Print summary table.
 
     Parameters
     ----------
@@ -284,17 +412,39 @@ def run_pipeline(n_splits: int = 3, use_real_data: bool = True) -> None:
         combined = _load_real_data()
         print(f"  Combined shape: {combined.shape}, years: {combined['year'].min()}-{combined['year'].max()}\n")
 
-        # Build per-segment composite series from real data
+        # --- LSEG scalar loading (real data only) ---
+        print("Loading LSEG revenue scalar...")
+        lseg_scalar = _load_lseg_scalar()
+        print(f"  LSEG segments covered: {list(lseg_scalar.keys())}\n")
+
+        # --- Build per-segment composite series from real data (with LSEG scaling) ---
         frames = []
         for seg in SEGMENTS:
-            seg_df = _build_segment_series(combined, seg)
+            seg_df = _build_segment_series(combined, seg, lseg_scalar=lseg_scalar)
             frames.append(seg_df)
         df = pd.concat(frames, ignore_index=True)
         print(f"  Total rows: {len(df)}, segments: {sorted(df['industry_segment'].unique())}\n")
+
+        # --- Structural break detection on ai_software series (richest LSEG coverage) ---
+        print("Running structural break detection on ai_software series...")
+        agg_series = (
+            df[df["industry_segment"] == "ai_software"]
+            .groupby("year")["value_real_2020"]
+            .sum()
+            .sort_index()
+        )
+        agg_series.index = pd.Index(agg_series.index.astype(int), name="year")
+        break_year = _run_break_detection(agg_series)
+        print(f"  Using break_year={break_year} as Prophet changepoint\n")
+
     else:
         print("Generating synthetic AI-segment data (2010-2024, seed=42) [TEST MODE]...")
         df = _generate_synthetic_data(seed=42)
         print(f"  Total rows: {len(df)}, segments: {sorted(df['industry_segment'].unique())}\n")
+        # Synthetic mode: use defaults (no LSEG, no break detection)
+        lseg_scalar = None
+        break_year = 2022
+        combined = None  # not available in synthetic mode
 
     segment_residuals: dict[str, tuple[pd.Series, str]] = {}
     summary_rows = []
@@ -311,15 +461,23 @@ def run_pipeline(n_splits: int = 3, use_real_data: bool = True) -> None:
         )
         series.index = pd.Index(series.index.astype(int), name="year")
 
+        # --- Stationarity assessment (both real and synthetic paths) ---
+        if len(series) < 20:
+            print(f"  Stationarity note: N={len(series)} < 20, results may be unreliable")
+        stationarity = assess_stationarity(series.values)
+        print(f"  Stationarity: ADF p={stationarity['adf_pval']:.4f}, "
+              f"KPSS p={stationarity['kpss_pval']:.4f}, "
+              f"recommended d={stationarity['recommendation_d']}")
+
         # --- ARIMA: order selection + CV ---
         print(f"  ARIMA: selecting order via AICc...")
         order = select_arima_order(series)
         print(f"  ARIMA: order = {order}")
         arima_cv = run_arima_cv(series, order, n_splits=n_splits)
 
-        # --- Prophet: CV ---
-        print(f"  Prophet: running CV...")
-        prophet_cv = run_prophet_cv(df, seg, n_splits=n_splits)
+        # --- Prophet: CV (using detected break_year) ---
+        print(f"  Prophet: running CV (changepoint_year={break_year})...")
+        prophet_cv = run_prophet_cv(df, seg, n_splits=n_splits, changepoint_year=break_year)
 
         # --- Compare models ---
         comparison = compare_models(arima_cv, prophet_cv, seg)
@@ -334,7 +492,7 @@ def run_pipeline(n_splits: int = 3, use_real_data: bool = True) -> None:
             residuals = get_arima_residuals(arima_results, series.index)
             model_type = "ARIMA"
         else:
-            prophet_model = fit_prophet_segment(df, seg)
+            prophet_model = fit_prophet_segment(df, seg, changepoint_year=break_year)
             # Prepare ds/y format DataFrame for get_prophet_residuals
             df_segment = (
                 df[df["industry_segment"] == seg]
@@ -348,6 +506,30 @@ def run_pipeline(n_splits: int = 3, use_real_data: bool = True) -> None:
             df_segment["ds"] = pd.to_datetime(df_segment["ds"].astype(str) + "-01-01")
             residuals = get_prophet_residuals(prophet_model, df_segment)
             model_type = "Prophet"
+
+        # --- OLS complementary model (both real and synthetic paths) ---
+        # Serves as a GDP-share regression diagnostic for ASSUMPTIONS.md traceability.
+        # Diagnostics are logged only — OLS residuals are NOT written to the Parquet output.
+        try:
+            if use_real_data and combined is not None and "gdp_real_2020_usd" in combined.columns:
+                # Real data mode: use GDP as X, aligned to segment series index
+                gdp_series = pd.Series(
+                    combined["gdp_real_2020_usd"].values,
+                    index=combined["year"].astype(int).values,
+                )
+                common_idx = series.index.intersection(gdp_series.index)
+                y_ols = series.loc[common_idx].values
+                x_ols = gdp_series.loc[common_idx].values
+            else:
+                # Synthetic mode: use time trend as X proxy
+                y_ols = series.values
+                x_ols = np.arange(len(series), dtype=float)
+            X_ols = sm.add_constant(x_ols)
+            _, ols_model_type, ols_diagnostics = fit_top_down_ols_with_upgrade(y_ols, X_ols)
+            print(f"  OLS complementary: {ols_model_type}, "
+                  f"R²={ols_diagnostics['r2']:.4f}, R²_adj={ols_diagnostics['r2_adj']:.4f}")
+        except Exception as e:
+            print(f"  OLS complementary: skipped ({type(e).__name__}: {e})")
 
         segment_residuals[seg] = (residuals, model_type)
         summary_rows.append({
