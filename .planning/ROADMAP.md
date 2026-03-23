@@ -17,6 +17,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: ML Ensemble and Validation** - Train the ML refinement layer, build the ensemble, and produce forecast artifacts (completed 2026-03-22)
 - [x] **Phase 4: Interactive Dashboard** - Build the Dash dashboard that reads pre-computed forecast artifacts (completed 2026-03-22)
 - [x] **Phase 5: Reports, Paper, and Portfolio** - Generate PDF reports, write the methodology paper, and finalize the GitHub portfolio (completed 2026-03-23)
+- [ ] **Phase 6: Pipeline Integration Wiring** - Wire LSEG data, structural break detection, and orphaned statistical functions into the production pipeline (gap closure)
+- [ ] **Phase 7: Dashboard Attribution Polish** - Replace hardcoded attribution strings with config-driven SOURCE_ATTRIBUTION dict (gap closure)
 
 ## Phase Details
 
@@ -107,6 +109,28 @@ Plans:
 - [x] 05-03-PLAN.md — PDF report generation (executive brief + full analytical report)
 - [x] 05-04-PLAN.md — LinkedIn methodology paper, GitHub README, dashboard screenshot
 
+### Phase 6: Pipeline Integration Wiring
+**Goal**: All built-but-orphaned statistical functions are wired into the production pipeline, LSEG company data contributes to the PCA composite, and structural break detection runs automatically before model selection
+**Depends on**: Phase 5
+**Requirements**: DATA-05, MODL-01, MODL-08
+**Gap Closure**: Closes integration gaps from v1.0 audit
+**Success Criteria** (what must be TRUE):
+  1. `run_statistical_pipeline.py` loads `lseg_ai.parquet` and includes LSEG-derived indicators in the PCA composite
+  2. `run_cusum` and `run_chow` are called in the pipeline and their detected break year configures Prophet's changepoint (not hardcoded 2022)
+  3. `assess_stationarity` is called before ARIMA order selection and its results are logged
+  4. `fit_top_down_ols_with_upgrade` produces a GDP-share regression as a complementary model alongside per-segment ARIMA/Prophet
+**Plans**: TBD
+
+### Phase 7: Dashboard Attribution Polish
+**Goal**: Dashboard source attribution strings are read from config/industries/ai.yaml SOURCE_ATTRIBUTION dict, not hardcoded
+**Depends on**: Phase 6
+**Requirements**: DATA-07
+**Gap Closure**: Closes dashboard attribution gap from v1.0 audit
+**Success Criteria** (what must be TRUE):
+  1. All four dashboard tab files import and use `SOURCE_ATTRIBUTION` from `app.py` instead of hardcoded strings
+  2. Changing a source string in `ai.yaml` propagates to the dashboard without code changes
+**Plans**: TBD
+
 ## Progress
 
 **Execution Order:**
@@ -119,3 +143,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 3. ML Ensemble and Validation | 3/3 | Complete   | 2026-03-22 |
 | 4. Interactive Dashboard | 3/3 | Complete   | 2026-03-22 |
 | 5. Reports, Paper, and Portfolio | 4/4 | Complete   | 2026-03-23 |
+| 6. Pipeline Integration Wiring | 0/TBD | Not started | - |
+| 7. Dashboard Attribution Polish | 0/TBD | Not started | - |
