@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AI Industry Valuation Report{% endblock %}</title>
+    <style>
+        /* === Page setup === */
+        @page {
+            size: A4;
+            margin: 2.5cm 2cm 2cm 2cm;
+
+            @top-center {
+                content: "AI Industry Valuation Report";
+                font-family: "Helvetica Neue", Arial, sans-serif;
+                font-size: 9pt;
+                color: #777777;
+                border-bottom: 0.5pt solid #dddddd;
+                padding-bottom: 3pt;
+            }
+
+            @bottom-right {
+                content: "Page " counter(page) " / " counter(pages);
+                font-family: "Helvetica Neue", Arial, sans-serif;
+                font-size: 9pt;
+                color: #999999;
+            }
+        }
+
+        @page :first {
+            @top-center { content: ""; border-bottom: none; }
+        }
+
+        /* === Typography === */
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Helvetica Neue", Arial, sans-serif;
+            font-size: 11pt;
+            line-height: 1.55;
+            color: #333333;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            font-size: 24pt;
+            color: #1a1a2e;
+            margin-top: 0;
+            margin-bottom: 12pt;
+            line-height: 1.2;
+        }
+
+        h2 {
+            font-size: 18pt;
+            color: #1a1a2e;
+            margin-top: 24pt;
+            margin-bottom: 8pt;
+            border-bottom: 1.5pt solid #0066cc;
+            padding-bottom: 4pt;
+        }
+
+        h3 {
+            font-size: 13pt;
+            color: #1a1a2e;
+            margin-top: 16pt;
+            margin-bottom: 6pt;
+        }
+
+        h4 {
+            font-size: 11pt;
+            color: #333333;
+            margin-top: 12pt;
+            margin-bottom: 4pt;
+            font-style: italic;
+        }
+
+        p {
+            margin-top: 0;
+            margin-bottom: 8pt;
+        }
+
+        a {
+            color: #0066cc;
+            text-decoration: none;
+        }
+
+        /* === Accent / callout elements === */
+        .accent {
+            color: #0066cc;
+        }
+
+        .highlight-box {
+            background: #f0f4ff;
+            border-left: 4pt solid #0066cc;
+            padding: 10pt 14pt;
+            margin: 12pt 0;
+            border-radius: 2pt;
+        }
+
+        .kpi-row {
+            display: flex;
+            gap: 16pt;
+            margin: 16pt 0;
+        }
+
+        .kpi-card {
+            flex: 1;
+            background: #f8f9fc;
+            border: 1pt solid #dce3f0;
+            border-radius: 4pt;
+            padding: 12pt;
+            text-align: center;
+        }
+
+        .kpi-value {
+            font-size: 22pt;
+            font-weight: bold;
+            color: #1a1a2e;
+            line-height: 1.1;
+        }
+
+        .kpi-label {
+            font-size: 9pt;
+            color: #666666;
+            margin-top: 4pt;
+        }
+
+        .kpi-sub {
+            font-size: 10pt;
+            color: #444444;
+            margin-top: 2pt;
+        }
+
+        /* === Images === */
+        img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .chart-container {
+            margin: 12pt 0;
+        }
+
+        .chart-caption {
+            font-size: 9pt;
+            color: #666666;
+            text-align: center;
+            margin-top: 4pt;
+            font-style: italic;
+        }
+
+        /* === Tables === */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12pt 0;
+            font-size: 10pt;
+        }
+
+        th {
+            background: #1a1a2e;
+            color: #ffffff;
+            padding: 7pt 10pt;
+            text-align: left;
+            font-weight: bold;
+            font-size: 9pt;
+        }
+
+        td {
+            padding: 6pt 10pt;
+            border-bottom: 0.5pt solid #e0e0e0;
+        }
+
+        tr:nth-child(even) td {
+            background: #f8f9fc;
+        }
+
+        tr:last-child td {
+            border-bottom: 1pt solid #1a1a2e;
+        }
+
+        .td-right {
+            text-align: right;
+        }
+
+        .td-center {
+            text-align: center;
+        }
+
+        /* === Page breaks === */
+        .section-break {
+            page-break-before: always;
+        }
+
+        .no-break {
+            page-break-inside: avoid;
+        }
+
+        /* === Cover page === */
+        .cover-page {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 240mm;
+            padding: 40pt 0;
+        }
+
+        .cover-pretitle {
+            font-size: 11pt;
+            color: #0066cc;
+            letter-spacing: 1pt;
+            text-transform: uppercase;
+            margin-bottom: 12pt;
+        }
+
+        .cover-title {
+            font-size: 30pt;
+            color: #1a1a2e;
+            font-weight: bold;
+            line-height: 1.15;
+            margin-bottom: 16pt;
+        }
+
+        .cover-subtitle {
+            font-size: 18pt;
+            color: #444444;
+            margin-bottom: 32pt;
+        }
+
+        .cover-rule {
+            border: none;
+            border-top: 2pt solid #0066cc;
+            width: 60pt;
+            margin: 0 0 32pt 0;
+        }
+
+        .cover-meta {
+            font-size: 10pt;
+            color: #666666;
+            line-height: 1.8;
+        }
+
+        .cover-meta strong {
+            color: #333333;
+        }
+
+        /* === Footer / disclaimer === */
+        .disclaimer {
+            font-size: 8.5pt;
+            color: #888888;
+            margin-top: 20pt;
+            padding-top: 8pt;
+            border-top: 0.5pt solid #dddddd;
+            line-height: 1.4;
+        }
+
+        /* === Code / monospace === */
+        code {
+            font-family: "Courier New", Courier, monospace;
+            font-size: 9pt;
+            background: #f4f4f4;
+            padding: 1pt 3pt;
+            border-radius: 2pt;
+        }
+
+        .formula-block {
+            background: #f4f6fb;
+            border: 0.5pt solid #dce3f0;
+            border-radius: 4pt;
+            padding: 10pt 14pt;
+            margin: 10pt 0;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 10pt;
+            line-height: 1.6;
+        }
+
+        /* === Lists === */
+        ul, ol {
+            margin: 6pt 0 8pt 0;
+            padding-left: 18pt;
+        }
+
+        li {
+            margin-bottom: 3pt;
+        }
+    </style>
+</head>
+<body>
+    {% block content %}{% endblock %}
+</body>
+</html>

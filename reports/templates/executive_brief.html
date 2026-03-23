@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}AI Industry Valuation — Executive Brief{% endblock %}
+
+{% block content %}
+
+<!-- ================================================================== -->
+<!-- COVER PAGE                                                          -->
+<!-- ================================================================== -->
+<div class="cover-page">
+    <p class="cover-pretitle">AI Industry Analysis</p>
+    <h1 class="cover-title">AI Industry Valuation<br>&amp; Growth Forecast</h1>
+    <p class="cover-subtitle">Executive Brief</p>
+    <hr class="cover-rule">
+    <div class="cover-meta">
+        <strong>Data Vintage:</strong> {{ vintage }}<br>
+        <strong>Generated:</strong> {{ generation_date }}<br>
+        <strong>Segments Covered:</strong> AI Hardware, AI Infrastructure, AI Software &amp; Platforms, AI Adoption<br>
+        <strong>Horizon:</strong> 2010 – 2030 (historical + 6-year forecast)<br>
+        <strong>Methodology:</strong> Hybrid econometric–ML ensemble with 80% and 95% confidence intervals
+    </div>
+</div>
+
+
+<!-- ================================================================== -->
+<!-- SECTION 1: KEY FINDINGS                                            -->
+<!-- ================================================================== -->
+<div class="section-break">
+    <h2>Key Findings</h2>
+
+    <div class="kpi-row no-break">
+        <div class="kpi-card">
+            <div class="kpi-value">${{ "%.0f"|format(headline_metrics.total_2024) }}B</div>
+            <div class="kpi-label">Global AI Market (2024)</div>
+            <div class="kpi-sub">USD Billions (2020 constant)</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value">${{ "%.0f"|format(headline_metrics.total_2030) }}B</div>
+            <div class="kpi-label">Forecast 2030 (point estimate)</div>
+            <div class="kpi-sub">${{ "%.0f"|format(headline_metrics.ci80_lower_2030) }}B – ${{ "%.0f"|format(headline_metrics.ci80_upper_2030) }}B (80% CI)</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value">{{ "%.1f"|format(headline_metrics.global_cagr_pct) }}%</div>
+            <div class="kpi-label">CAGR 2024 – 2030</div>
+            <div class="kpi-sub">Compound Annual Growth Rate</div>
+        </div>
+    </div>
+
+    <div class="highlight-box">
+        <strong>Executive Summary.</strong> This report presents a data-driven valuation and 6-year growth forecast
+        for the global artificial intelligence industry across four distinct value-chain segments: AI Hardware
+        (chips and specialized silicon), AI Infrastructure (cloud compute and data centres), AI Software &amp;
+        Platforms (foundation models and AI SaaS), and AI Adoption (enterprise deployment spend). The analysis
+        combines econometric time-series modeling (ARIMA and Prophet) with machine-learning residual correction
+        (LightGBM) and explicit structural-break modeling at the 2022 GenAI inflection point. Forecast confidence
+        intervals reflect model uncertainty from expanding-window cross-validation across all four segments.
+    </div>
+
+    <h3>Global AI Market Forecast Fan Chart</h3>
+    <div class="chart-container">
+        {% if fan_chart_all %}
+        <img src="{{ fan_chart_all }}" alt="Global AI Market Forecast Fan Chart" />
+        {% else %}
+        <p><em>Fan chart not available.</em></p>
+        {% endif %}
+        <p class="chart-caption">Figure 1. Global AI market forecast (sum of all 4 segments), USD billions constant 2020.
+        Shaded bands show 80% and 95% confidence intervals. Dashed vertical line marks forecast start.</p>
+    </div>
+
+    <h3>95% Confidence Interval at 2030</h3>
+    <p>The 95% confidence interval for the global AI market in 2030 ranges from
+    <strong>${{ "%.0f"|format(headline_metrics.ci95_lower_2030) }}B to ${{ "%.0f"|format(headline_metrics.ci95_upper_2030) }}B</strong>.
+    This range captures both conservative (below-trend adoption) and optimistic (accelerated GenAI integration)
+    scenarios. Market participants should treat the point forecast of ${{ "%.0f"|format(headline_metrics.total_2030) }}B
+    as the central tendency, not a bound.</p>
+</div>
+
+
+<!-- ================================================================== -->
+<!-- SECTION 2: SEGMENT BREAKDOWN                                       -->
+<!-- ================================================================== -->
+<div class="section-break">
+    <h2>Segment Breakdown</h2>
+
+    <p>The global AI market is modeled as the sum of four independent value-chain segments.
+    Each segment has distinct growth dynamics, data inputs, and uncertainty profiles.
+    Note that segment boundaries allow for known overlaps (e.g., GPU revenue counted in
+    both Hardware and Infrastructure) — see Data Sources for documentation of overlap ranges.</p>
+
+    <table class="no-break">
+        <thead>
+            <tr>
+                <th>Segment</th>
+                <th class="td-right">2024 (USD B)</th>
+                <th class="td-right">2030 Forecast (USD B)</th>
+                <th class="td-right">80% CI at 2030</th>
+                <th class="td-right">CAGR 2024–30</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for seg in segments %}
+            {% set m = per_segment_metrics[seg] %}
+            <tr>
+                <td><strong>{{ m.display_name }}</strong></td>
+                <td class="td-right">${{ "%.1f"|format(m.val_2024) }}B</td>
+                <td class="td-right">${{ "%.1f"|format(m.val_2030) }}B</td>
+                <td class="td-right">${{ "%.0f"|format(m.ci80_lower_2030) }}B – ${{ "%.0f"|format(m.ci80_upper_2030) }}B</td>
+                <td class="td-right">{{ "%.1f"|format(m.cagr_pct) }}%</td>
+            </tr>
+            {% endfor %}
+            <tr style="font-weight: bold; background: #eef2fb;">
+                <td><strong>Global Total</strong></td>
+                <td class="td-right"><strong>${{ "%.1f"|format(headline_metrics.total_2024) }}B</strong></td>
+                <td class="td-right"><strong>${{ "%.1f"|format(headline_metrics.total_2030) }}B</strong></td>
+                <td class="td-right">${{ "%.0f"|format(headline_metrics.ci80_lower_2030) }}B – ${{ "%.0f"|format(headline_metrics.ci80_upper_2030) }}B</td>
+                <td class="td-right"><strong>{{ "%.1f"|format(headline_metrics.global_cagr_pct) }}%</strong></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Per-segment fan charts -->
+    {% for seg in segments %}
+    {% set m = per_segment_metrics[seg] %}
+    <h3>{{ m.display_name }}</h3>
+    <div class="chart-container no-break">
+        {% if fan_chart_uris[seg] %}
+        <img src="{{ fan_chart_uris[seg] }}" alt="{{ m.display_name }} Fan Chart" />
+        {% endif %}
+        <p class="chart-caption">{{ m.display_name }}: 2024 market size ${{ "%.1f"|format(m.val_2024) }}B,
+        2030 forecast ${{ "%.1f"|format(m.val_2030) }}B (CAGR {{ "%.1f"|format(m.cagr_pct) }}%).</p>
+    </div>
+    {% endfor %}
+</div>
+
+
+<!-- ================================================================== -->
+<!-- SECTION 3: DATA SOURCES & METHODOLOGY                              -->
+<!-- ================================================================== -->
+<div class="section-break">
+    <h2>Data Sources &amp; Methodology</h2>
+
+    <h3>Data Sources</h3>
+    <p>Market size estimates are derived from three independent institutional data sources covering
+    macro indicators, R&amp;D expenditure, and public company financials. No single source provides
+    a direct "AI market size" measure — the methodology uses proxy indicators (PCA composite index)
+    scaled to a ${{ "%.0f"|format(anchor_total_usd) }}B industry consensus anchor at {{ anchor_year }}.</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Source</th>
+                <th>Data Provided</th>
+                <th>Use in Model</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>{{ source_attribution.world_bank }}</strong></td>
+                <td>GDP, R&amp;D as % of GDP, ICT service exports, high-tech exports, researchers per million</td>
+                <td>Macroeconomic regressors; PCA composite indicators</td>
+            </tr>
+            <tr>
+                <td><strong>{{ source_attribution.oecd }}</strong></td>
+                <td>Business enterprise R&amp;D in ICT sector (MSTI B_ICTS), main science &amp; technology indicators</td>
+                <td>AI-adjacent R&amp;D intensity proxy; PCA composite input</td>
+            </tr>
+            <tr>
+                <td><strong>{{ source_attribution.lseg }}</strong></td>
+                <td>Revenue of TRBC-classified AI companies (semiconductors, cloud services, AI software)</td>
+                <td>Direct market size anchor; PCA composite for AI software segment</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Methodology Overview</h3>
+    <p>The forecasting methodology combines two modeling approaches blended via inverse-RMSE ensemble weighting:</p>
+    <ul>
+        <li><strong>Bottom-up proxy composite:</strong> PCA first principal component of 3–4 standardized
+        proxy indicators per segment, fit on training data only (no look-ahead). Scaled to USD using value
+        chain multipliers anchored at the {{ anchor_year }} consensus market estimate.</li>
+        <li><strong>Statistical time series baseline:</strong> Per-segment model competition between ARIMA
+        (pmdarima auto_arima with AICc) and Prophet (with explicit 2022 GenAI changepoint). Winner selected
+        by expanding-window cross-validation MAPE.</li>
+        <li><strong>ML residual correction:</strong> LightGBM trained on statistical model residuals using
+        macro features, correcting for structured patterns the baseline cannot capture.</li>
+    </ul>
+    <p>Confidence intervals are constructed from the ensemble's temporal cross-validation residual
+    distribution, providing empirically-grounded uncertainty bounds rather than parametric assumptions.</p>
+</div>
+
+
+<!-- ================================================================== -->
+<!-- SECTION 4: DISCLAIMER                                              -->
+<!-- ================================================================== -->
+<div class="section-break">
+    <h2>Disclaimer &amp; Notes</h2>
+
+    <div class="highlight-box">
+        This report was generated from real-time API data (World Bank, OECD, LSEG) and hybrid
+        econometric–ML models. Market size estimates represent model outputs and should be interpreted
+        as indicative ranges, not definitive measurements. Confidence intervals reflect model uncertainty;
+        additional uncertainty from data quality, structural breaks beyond {{ vintage }}, and unknown
+        macro shocks is not captured in the CI bands.
+    </div>
+
+    <h3>Known Limitations</h3>
+    <ul>
+        <li><strong>Private company exclusion:</strong> Pre-IPO AI companies (e.g., OpenAI, Anthropic, Mistral)
+        are not in the LSEG TRBC universe. Market size may be understated by 20–40% in software/adoption segments.</li>
+        <li><strong>Geographic coverage:</strong> 19 economies covering ~85% of global AI activity.
+        Emerging AI ecosystems (UAE, Saudi Arabia, Vietnam, Brazil) are not covered.</li>
+        <li><strong>Segment overlap:</strong> GPU revenue may be double-counted across Hardware and
+        Infrastructure segments. See <code>config/industries/ai.yaml</code> for documented overlap ranges.</li>
+        <li><strong>Forecast horizon:</strong> Forecasts beyond 2027 carry materially higher uncertainty.
+        Point estimates for 2028–2030 should be interpreted alongside the 95% CI band.</li>
+    </ul>
+
+    <h3>Reproducibility</h3>
+    <p>This report is fully reproducible. To regenerate from raw API data:</p>
+    <ol>
+        <li>Run <code>uv run python scripts/run_statistical_pipeline.py</code> (requires LSEG Workspace session)</li>
+        <li>Run <code>uv run python scripts/run_ensemble_pipeline.py</code></li>
+        <li>Run <code>uv run python scripts/run_reports.py</code></li>
+    </ol>
+
+    <div class="disclaimer">
+        <strong>Data vintage:</strong> {{ vintage }} &nbsp;|&nbsp;
+        <strong>Generated:</strong> {{ generation_date }} &nbsp;|&nbsp;
+        This document contains forward-looking estimates based on historical data and statistical models.
+        Past patterns do not guarantee future results. All dollar figures are in USD billions, constant 2020 prices.
+    </div>
+</div>
+
+{% endblock %}

@@ -23,9 +23,10 @@ lseg-data.config.json
 # Jupyter
 .ipynb_checkpoints/
 
-# Reports (generated)
-reports/*.pdf
-reports/*.html
+# Reports (generated HTML templates — not committed)
+reports/templates/*.html
+# PDF reports — committed as build artifacts (PRES-04)
+# reports/*.pdf
 
 # Models (serialized — too large for git)
 models/**/*.joblib

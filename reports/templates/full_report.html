@@ -1,0 +1,482 @@
+{% extends "base.html" %}
+
+{% block title %}AI Industry Valuation — Full Analytical Report{% endblock %}
+
+{% block content %}
+
+<!-- ================================================================== -->
+<!-- COVER PAGE                                                          -->
+<!-- ================================================================== -->
+<div class="cover-page">
+    <p class="cover-pretitle">AI Industry Analysis — Technical Review Edition</p>
+    <h1 class="cover-title">AI Industry Valuation<br>&amp; Growth Forecast</h1>
+    <p class="cover-subtitle">Full Analytical Report</p>
+    <hr class="cover-rule">
+    <div class="cover-meta">
+        <strong>Data Vintage:</strong> {{ vintage }}<br>
+        <strong>Generated:</strong> {{ generation_date }}<br>
+        <strong>Segments Covered:</strong> AI Hardware, AI Infrastructure, AI Software &amp; Platforms, AI Adoption<br>
+        <strong>Horizon:</strong> 2010 – 2030 (historical + 6-year forecast)<br>
+        <strong>Methodology:</strong> Hybrid ARIMA/Prophet + LightGBM ensemble with inverse-RMSE weighting<br>
+        <strong>CI Construction:</strong> Empirical from expanding-window temporal cross-validation<br>
+        <strong>Report Type:</strong> Full analytical report — includes methodology, diagnostics, SHAP, and mathematical appendix
+    </div>
+</div>
+
+
+<!-- ================================================================== -->
+<!-- SECTION 1: KEY FINDINGS                                            -->
+<!-- ================================================================== -->
+<div class="section-break">
+    <h2>Key Findings</h2>
+
+    <div class="kpi-row no-break">
+        <div class="kpi-card">
+            <div class="kpi-value">${{ "%.0f"|format(headline_metrics.total_2024) }}B</div>
+            <div class="kpi-label">Global AI Market (2024)</div>
+            <div class="kpi-sub">USD Billions (2020 constant)</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value">${{ "%.0f"|format(headline_metrics.total_2030) }}B</div>
+            <div class="kpi-label">Forecast 2030 (point estimate)</div>
+            <div class="kpi-sub">${{ "%.0f"|format(headline_metrics.ci80_lower_2030) }}B – ${{ "%.0f"|format(headline_metrics.ci80_upper_2030) }}B (80% CI)</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-value">{{ "%.1f"|format(headline_metrics.global_cagr_pct) }}%</div>
+            <div class="kpi-label">CAGR 2024 – 2030</div>
+            <div class="kpi-sub">Compound Annual Growth Rate</div>
+        </div>
+    </div>
+
+    <div class="highlight-box">
+        <strong>Executive Summary.</strong> This full analytical report presents the complete methodology,
+        model diagnostics, and statistical underpinnings of the AI industry valuation and forecast.
+        Market size estimates cover four value-chain segments using a hybrid econometric–ML ensemble.
+        The statistical baseline (ARIMA/Prophet competition per segment) is corrected by a LightGBM
+        residual model trained on macro features. Confidence intervals are empirically constructed from
+        expanding-window cross-validation. All computations use real institutional data from World Bank,
+        OECD, and LSEG Workspace APIs.
+    </div>
+
+    <h3>Global AI Market Forecast Fan Chart</h3>
+    <div class="chart-container">
+        {% if fan_chart_all %}
+        <img src="{{ fan_chart_all }}" alt="Global AI Market Forecast Fan Chart" />
+        {% else %}
+        <p><em>Fan chart not available.</em></p>
+        {% endif %}
+        <p class="chart-caption">Figure 1. Global AI market forecast (sum of all 4 segments), USD billions constant 2020.
+        Shaded bands show 80% and 95% confidence intervals from temporal CV residuals.</p>
+    </div>
+</div>
+
+
+<!-- ================================================================== -->
+<!-- SECTION 2: SEGMENT BREAKDOWN                                       -->
+<!-- ================================================================== -->
+<div class="section-break">
+    <h2>Segment Breakdown</h2>
+
+    <table class="no-break">
+        <thead>
+            <tr>
+                <th>Segment</th>
+                <th class="td-right">2024 (USD B)</th>
+                <th class="td-right">2030 Forecast</th>
+                <th class="td-right">80% CI at 2030</th>
+                <th class="td-right">95% CI at 2030</th>
+                <th class="td-right">CAGR</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for seg in segments %}
+            {% set m = per_segment_metrics[seg] %}
+            <tr>
+                <td><strong>{{ m.display_name }}</strong></td>
+                <td class="td-right">${{ "%.1f"|format(m.val_2024) }}B</td>
+                <td class="td-right">${{ "%.1f"|format(m.val_2030) }}B</td>
+                <td class="td-right">${{ "%.0f"|format(m.ci80_lower_2030) }}–${{ "%.0f"|format(m.ci80_upper_2030) }}B</td>
+                <td class="td-right">${{ "%.0f"|format(m.ci95_lower_2030) }}–${{ "%.0f"|format(m.ci95_upper_2030) }}B</td>
+                <td class="td-right">{{ "%.1f"|format(m.cagr_pct) }}%</td>
+            </tr>
+            {% endfor %}
+            <tr style="font-weight: bold; background: #eef2fb;">
+                <td><strong>Global Total</strong></td>
+                <td class="td-right"><strong>${{ "%.1f"|format(headline_metrics.total_2024) }}B</strong></td>
+                <td class="td-right"><strong>${{ "%.1f"|format(headline_metrics.total_2030) }}B</strong></td>
+                <td class="td-right">${{ "%.0f"|format(headline_metrics.ci80_lower_2030) }}–${{ "%.0f"|format(headline_metrics.ci80_upper_2030) }}B</td>
+                <td class="td-right">${{ "%.0f"|format(headline_metrics.ci95_lower_2030) }}–${{ "%.0f"|format(headline_metrics.ci95_upper_2030) }}B</td>
+                <td class="td-right"><strong>{{ "%.1f"|format(headline_metrics.global_cagr_pct) }}%</strong></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Per-segment fan charts -->
+    {% for seg in segments %}
+    {% set m = per_segment_metrics[seg] %}
+    <h3>{{ m.display_name }}</h3>
+    <div class="chart-container no-break">
+        {% if fan_chart_uris[seg] %}
+        <img src="{{ fan_chart_uris[seg] }}" alt="{{ m.display_name }} Fan Chart" />
+        {% endif %}
+        <p class="chart-caption">{{ m.display_name }}: 2024 market ${{ "%.1f"|format(m.val_2024) }}B,
+        2030 forecast ${{ "%.1f"|format(m.val_2030) }}B (CAGR {{ "%.1f"|format(m.cagr_pct) }}%,
+        95% CI ${{ "%.0f"|format(m.ci95_lower_2030) }}B–${{ "%.0f"|format(m.ci95_upper_2030) }}B).</p>
+    </div>
+    {% endfor %}
+</div>
+
+
+<!-- ================================================================== -->
+<!-- SECTION 3: DATA SOURCES & METHODOLOGY                              -->
+<!-- ================================================================== -->
+<div class="section-break">
+    <h2>Data Sources</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Source</th>
+                <th>Data Provided</th>
+                <th>Use in Model</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>{{ source_attribution.world_bank }}</strong></td>
+                <td>GDP, R&amp;D as % of GDP, ICT service exports, high-tech exports, researchers per million population. 16 economies, 2010–{{ vintage }}.</td>
+                <td>Macroeconomic regressors for GDP-share regression; PCA composite proxy inputs for all segments</td>
+            </tr>
+            <tr>
+                <td><strong>{{ source_attribution.oecd }}</strong></td>
+                <td>MSTI main science &amp; technology indicators — Business Enterprise R&amp;D in ICT sector (B_ICTS), R&amp;D by sector of performance. Multiple economies.</td>
+                <td>AI-adjacent R&amp;D intensity proxy (replaces deprecated PATS_IPC AI patent dataset). PCA composite for hardware and infrastructure segments.</td>
+            </tr>
+            <tr>
+                <td><strong>{{ source_attribution.lseg }}</strong></td>
+                <td>Revenue, R&amp;D expense, gross margin for TRBC-classified AI companies: semiconductors (57201010, 57201030), electronic equipment (57201020), internet software (45101010). 4,215 instruments.</td>
+                <td>Direct market size anchor for USD calibration; direct PCA input for AI software segment</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+
+<!-- ================================================================== -->
+<!-- SECTION 4: METHODOLOGY DEEP DIVE                                   -->
+<!-- ================================================================== -->
+<div class="section-break">
+    <h2>Methodology Deep Dive</h2>
+
+    <h3>Hybrid Model Architecture</h3>
+    <p>The forecast pipeline uses a three-layer hybrid architecture:</p>
+
+    <ol>
+        <li><strong>PCA Composite Index (Bottom-up layer):</strong> For each segment, 3–4 standardized proxy
+        indicators (from World Bank, OECD, LSEG) are combined using Principal Component Analysis. The first
+        principal component is the AI market activity index. Standardization is performed on training data
+        only inside each CV fold to prevent look-ahead bias.</li>
+
+        <li><strong>Statistical Time-Series Baseline (Statistical layer):</strong> ARIMA (pmdarima auto_arima
+        with AICc criterion) and Prophet (with explicit 2022 GenAI changepoint at scale 0.1) compete per
+        segment using expanding-window temporal cross-validation. Winner is selected by out-of-sample MAPE.
+        The winning model generates a forecast and residuals for 2010–{{ vintage }}.</li>
+
+        <li><strong>LightGBM Residual Correction (ML layer):</strong> A LightGBM model is trained on the
+        statistical residuals using macro features (GDP growth, ICT exports, R&amp;D intensity). The correction
+        is additive: <code>ensemble = stat_prediction + lgbm_weight × correction</code>.</li>
+    </ol>
+
+    <h3>Ensemble Weighting Formula</h3>
+    <p>The statistical and ML layers are blended using inverse-RMSE weights from cross-validation:</p>
+    <div class="formula-block">
+        w_stat = (1/RMSE_stat) / (1/RMSE_stat + 1/RMSE_lgbm)<br>
+        w_lgbm = (1/RMSE_lgbm) / (1/RMSE_stat + 1/RMSE_lgbm)<br>
+        ensemble_forecast = w_stat × stat_forecast + w_lgbm × lgbm_correction
+    </div>
+    <p>An epsilon guard (1×10⁻¹⁰) prevents division-by-zero for near-perfect in-sample fits.</p>
+
+    <h3>Value Chain Multiplier Calibration</h3>
+    <p>The PCA composite is a dimensionless index (zero-centered PCA scores). Conversion to USD uses:</p>
+    <div class="formula-block">
+        multiplier_i = anchor_usd_i / index_i_at_{{ anchor_year }}<br>
+        anchor_usd_i = ${{ "%.0f"|format(anchor_total_usd) }}B × segment_share_i
+    </div>
+    <p>The ${{ "%.0f"|format(anchor_total_usd) }}B anchor ({{ anchor_year }}) is the median of three independent consensus estimates:
+    McKinsey Global Institute ($185–200B), Statista ($207B), and Grand View Research ($196B). All within ±5%.</p>
+
+    <h3>Structural Break Modeling (2022 GenAI Surge)</h3>
+    <p>A three-step structural break analysis is applied per segment:</p>
+    <ol>
+        <li><strong>CUSUM detection:</strong> Constant-only OLS residuals tested via CUSUM test (p &lt; 0.05 threshold)</li>
+        <li><strong>Chow confirmation:</strong> F-statistic confirms statistical significance at the detected break year</li>
+        <li><strong>Markov Switching:</strong> Two-regime model with shared slope but regime-specific intercepts
+        captures the gradual transition from pre-GenAI to post-GenAI growth trajectory</li>
+    </ol>
+    <p>Minimum 20 observations required for Markov EM convergence. Fallback to dummy-variable OLS for shorter series.</p>
+
+    <h3>Confidence Interval Construction</h3>
+    <p>CIs are empirically constructed from the distribution of temporal CV forecast errors, not from
+    parametric assumptions. This provides honest uncertainty bounds that capture actual out-of-sample
+    performance across folds rather than asymptotic distributional assumptions that may not hold on
+    15-year annual panels.</p>
+</div>
+
+
+<!-- ================================================================== -->
+<!-- SECTION 5: MODEL DIAGNOSTICS                                       -->
+<!-- ================================================================== -->
+<div class="section-break">
+    <h2>Model Diagnostics</h2>
+
+    {% if segment_rmse %}
+    <h3>Per-Segment RMSE (Cross-Validation)</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Segment</th>
+                <th class="td-right">RMSE</th>
+                <th class="td-center">Model Type</th>
+                <th class="td-right">Residuals (n)</th>
+                <th class="td-right">Residual Std</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for seg in segments %}
+            {% set m = per_segment_metrics[seg] %}
+            <tr>
+                <td>{{ m.display_name }}</td>
+                <td class="td-right">{{ "%.4f"|format(segment_rmse[seg]) }}</td>
+                <td class="td-center"><code>{{ segment_model_types[seg] }}</code></td>
+                <td class="td-right">{{ residual_statistics[seg].n }}</td>
+                <td class="td-right">{{ "%.4f"|format(residual_statistics[seg].std) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <h3>Backtest Residual Charts</h3>
+    <p>Residuals shown are from the statistical baseline model (ARIMA or Prophet winner per segment).
+    Blue bars = positive residuals (model underpredicted); red bars = negative (model overpredicted).
+    Ideally, residuals are small and random — no systematic pattern. Large residuals at 2022–2023
+    reflect the GenAI structural break.</p>
+
+    {% for seg in segments %}
+    {% set m = per_segment_metrics[seg] %}
+    <div class="chart-container no-break">
+        {% if backtest_chart_uris and backtest_chart_uris[seg] %}
+        <img src="{{ backtest_chart_uris[seg] }}" alt="{{ m.display_name }} Backtest Residuals" />
+        {% else %}
+        <p><em>Backtest chart not available for {{ m.display_name }}.</em></p>
+        {% endif %}
+        <p class="chart-caption">Figure. {{ m.display_name }} — statistical model residuals by year.
+        {% if segment_rmse %}RMSE = {{ "%.4f"|format(segment_rmse[seg]) }}{% endif %}</p>
+    </div>
+    {% endfor %}
+</div>
+
+
+<!-- ================================================================== -->
+<!-- SECTION 6: SHAP FEATURE ATTRIBUTION                               -->
+<!-- ================================================================== -->
+<div class="section-break">
+    <h2>SHAP Feature Attribution</h2>
+
+    <p>SHAP (SHapley Additive exPlanations) values are computed for the LightGBM residual correction
+    model, revealing which macro features drive the ML correction term for each segment. Features with
+    large positive SHAP values push the correction upward (increasing forecast); negative SHAP values
+    push the correction downward.</p>
+
+    <div class="chart-container">
+        {% if shap_uri %}
+        <img src="{{ shap_uri }}" alt="SHAP Feature Importance Summary Plot" />
+        {% else %}
+        <p><em>SHAP summary plot not available. Run the ensemble pipeline to regenerate.</em></p>
+        {% endif %}
+        <p class="chart-caption">Figure. SHAP beeswarm summary plot for LightGBM residual correction model.
+        Each point is a (segment, year) observation. Color indicates feature value (red = high, blue = low).
+        Feature importance ranked by mean |SHAP| value.</p>
+    </div>
+
+    <h3>Interpretation Notes</h3>
+    <ul>
+        <li><strong>ICT export indicators</strong> (high-tech exports, ICT service exports) typically dominate
+        the SHAP ranking — they correlate most directly with AI market activity across all segments.</li>
+        <li><strong>R&amp;D intensity</strong> (R&amp;D as % of GDP, ICT BERD) shows stronger attribution
+        for Hardware and Software segments where innovation intensity is highest.</li>
+        <li><strong>GDP-level features</strong> (GDP growth, total GDP) act as macro baseline anchors,
+        providing regime context for the statistical baseline corrections.</li>
+        <li>The ML correction term is <em>additive</em> on top of the statistical forecast — a large SHAP
+        value indicates a segment/year where the statistical model's errors are systematically explained
+        by a macro feature the time-series model cannot capture.</li>
+    </ul>
+</div>
+
+
+<!-- ================================================================== -->
+<!-- SECTION 7: ASSUMPTIONS & SENSITIVITY                               -->
+<!-- ================================================================== -->
+<div class="section-break">
+    <h2>Assumptions &amp; Sensitivity</h2>
+
+    <p>The following is a practitioner summary of key modeling assumptions. Full derivations,
+    sensitivity analyses, and fallback rules are documented in <code>docs/ASSUMPTIONS.md</code>.</p>
+
+    {% if assumptions_tldr %}
+    <div class="highlight-box">
+        {{ assumptions_tldr | replace('\n\n', '</p><p>') | replace('\n', '<br>') | safe }}
+    </div>
+    {% else %}
+    <ul>
+        <li><strong>Annual data from 2010 onward</strong> — ~15 observations per segment. AICc and max_p=2/max_q=2
+        parsimony constraints compensate for small-N overfitting risk.</li>
+        <li><strong>Structural break at 2022</strong> — GenAI surge modeled as a level shift (Markov switching
+        intercept). If the break represents a durable slope change, forecasts will underestimate 2028–2030 growth.</li>
+        <li><strong>Independent segment modeling</strong> — cross-segment spillovers (GPU demand driving cloud
+        capacity) are not captured. True aggregate uncertainty is higher than the sum of individual segment CIs.</li>
+        <li><strong>PCA composite as AI activity index</strong> — if the first principal component captures
+        general economic development rather than AI-specific activity, estimates carry systematic level bias.</li>
+        <li><strong>TRBC universe = public companies only</strong> — private AI companies (OpenAI, Anthropic)
+        are excluded. Software/adoption segments may be understated by 20–40%.</li>
+        <li><strong>${{ "%.0f"|format(anchor_total_usd) }}B anchor at {{ anchor_year }}</strong> — a 10% anchor error propagates
+        linearly to all USD estimates. CIs partially absorb anchor uncertainty but not systematic anchor bias.</li>
+        <li><strong>OLS baseline with diagnostic-driven upgrades</strong> — upgraded to WLS (Breusch-Pagan
+        p&lt;0.05) or GLSAR (Ljung-Box p&lt;0.05) when assumptions are violated.</li>
+        <li><strong>All preprocessing fit on training data only</strong> — StandardScaler mean/std computed
+        per CV fold to prevent distributional leakage from future observations.</li>
+    </ul>
+    {% endif %}
+</div>
+
+
+<!-- ================================================================== -->
+<!-- SECTION 8: MATHEMATICAL APPENDIX                                   -->
+<!-- ================================================================== -->
+<div class="section-break">
+    <h2>Mathematical Appendix</h2>
+
+    <h3>AICc Small-Sample Correction</h3>
+    <p>Standard AIC is modified by Akaike's small-sample correction (AICc) for annual panels where n &lt; 30:</p>
+    <div class="formula-block">
+        AIC  = −2ℓ + 2k<br>
+        AICc = AIC + 2k(k+1) / (n − k − 1)
+    </div>
+    <p>where k is the number of estimated parameters and n is the number of observations. With n=15 and
+    ARIMA(2,1,2) (k=6), the AICc penalty is 21 points larger than AIC — effectively ruling out higher-order
+    models unless the fit improvement is substantial.</p>
+
+    <table class="no-break">
+        <thead>
+            <tr>
+                <th>n</th>
+                <th class="td-right">ARIMA(1,1,1) k=4</th>
+                <th class="td-right">ARIMA(2,1,2) k=6</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>15</td>
+                <td class="td-right">+4.00</td>
+                <td class="td-right">+21.00</td>
+            </tr>
+            <tr>
+                <td>20</td>
+                <td class="td-right">+2.67</td>
+                <td class="td-right">+9.33</td>
+            </tr>
+            <tr>
+                <td>50</td>
+                <td class="td-right">+0.83</td>
+                <td class="td-right">+1.94</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Inverse-RMSE Ensemble Weights</h3>
+    <p>Ensemble weights blend the statistical and ML model predictions:</p>
+    <div class="formula-block">
+        w_i = (1/RMSE_i + ε) / Σ_j (1/RMSE_j + ε),   ε = 1×10⁻¹⁰
+    </div>
+    <p>The epsilon guard assigns near-maximum weight to any model with near-zero RMSE (perfect in-sample fit),
+    while preventing division-by-zero. Weights are recomputed per segment from the corresponding CV RMSE values.</p>
+
+    <h3>Additive Ensemble Blend</h3>
+    <p>The final ensemble forecast is constructed additively:</p>
+    <div class="formula-block">
+        ensemble(t) = w_stat × stat_pred(t) + w_lgbm × lgbm_correction(t)
+    </div>
+    <p>where <code>lgbm_correction</code> is the LightGBM model's predicted value for the statistical
+    residual at time t, not a full independent forecast. This architecture preserves the statistical
+    model's extrapolation properties while correcting for structured macro-driven errors.</p>
+
+    <h3>Confidence Interval Construction</h3>
+    <p>Confidence intervals are derived empirically from temporal CV residuals. For each hold-out fold,
+    forecast errors e(t) are collected. The CI at level α is:</p>
+    <div class="formula-block">
+        CI_α(t) = [forecast(t) − q_{(1+α)/2} × σ_e,  forecast(t) + q_{(1+α)/2} × σ_e]
+    </div>
+    <p>where σ_e is the cross-validation residual standard deviation and q is the corresponding
+    normal quantile. Separate LightGBM models are trained for lower and upper CI bounds to allow
+    asymmetric interval widths reflecting nonlinear macro-feature interactions.</p>
+
+    <h3>Chow Structural Break Test</h3>
+    <p>For a break at observation t*, the Chow F-statistic is:</p>
+    <div class="formula-block">
+        F = [(SSR_full − SSR_pre − SSR_post) / k] / [(SSR_pre + SSR_post) / (n − 2k)]
+    </div>
+    <p>where SSR_full, SSR_pre, SSR_post are sums of squared residuals from OLS on the full, pre-break,
+    and post-break samples respectively, k=2 (constant + trend). Under H₀ (no break), F ~ F(k, n-2k).
+    Rejection at p &lt; 0.05 confirms a statistically significant break at t*.</p>
+
+    <h3>PCA Composite Construction</h3>
+    <p>For segment i, let X be the (n × p) matrix of p standardized proxy indicators over n years.</p>
+    <div class="formula-block">
+        X̃_ij = (X_ij − X̄_j^{train}) / σ_j^{train}    [standardize on training fold only]<br>
+        X̃ᵀX̃ = VΛVᵀ                                    [eigendecomposition]<br>
+        z_i = X̃_i · v₁                                  [first PC score = AI activity index]
+    </div>
+    <p>Explained variance ratio EVR₁ = λ₁ / Σλ_j is logged per CV fold. EVR₁ &gt; 0.5 is required for
+    the PCA composite to carry sufficient information for meaningful market size estimation.</p>
+</div>
+
+
+<!-- ================================================================== -->
+<!-- SECTION 9: DISCLAIMER                                              -->
+<!-- ================================================================== -->
+<div class="section-break">
+    <h2>Disclaimer &amp; Notes</h2>
+
+    <div class="highlight-box">
+        This report was generated from real-time API data and hybrid econometric–ML models. All market
+        size estimates are model outputs based on proxy indicators — direct measurement of "AI market
+        revenue" from statistical agencies is not available. Confidence intervals reflect model uncertainty
+        only; additional uncertainty from data quality, post-{{ vintage }} structural breaks, and unknown
+        macro shocks is not captured in the CI bands.
+    </div>
+
+    <h3>Known Limitations</h3>
+    <ul>
+        <li><strong>Private company exclusion:</strong> Pre-IPO AI companies are not in the LSEG TRBC universe.
+        Market size may be understated by 20–40% in software/adoption segments (PitchBook/CB Insights estimates).</li>
+        <li><strong>Proxy measurement error:</strong> The PCA composite uses ICT-sector proxies as AI activity
+        indicators. If the first PC captures general economic development rather than AI-specific dynamics,
+        all estimates carry a systematic level bias.</li>
+        <li><strong>Geographic coverage:</strong> 19 economies covering approximately 85% of global AI activity.
+        Emerging AI ecosystems are not covered, introducing a 5–15% understatement growing to 10–20% by 2030.</li>
+        <li><strong>Segment overlap:</strong> GPU revenue may be double-counted across Hardware and Infrastructure.
+        Per-segment estimates should be interpreted with the documented overlap ranges in <code>config/industries/ai.yaml</code>.</li>
+        <li><strong>Forecast horizon:</strong> Forecasts beyond 2027 carry materially higher uncertainty.
+        95% CI bands at 2030 span a wide range — this is the honest model output, not a limitation to minimize.</li>
+    </ul>
+
+    <div class="disclaimer">
+        <strong>Data vintage:</strong> {{ vintage }} &nbsp;|&nbsp;
+        <strong>Generated:</strong> {{ generation_date }} &nbsp;|&nbsp;
+        This document contains forward-looking estimates based on historical data and statistical models.
+        Past patterns do not guarantee future results. All dollar figures are in USD billions, constant 2020 prices.
+        Source code available at: github.com/[repo] &nbsp;|&nbsp; Reproducible with: <code>uv run python scripts/run_reports.py</code>
+    </div>
+</div>
+
+{% endblock %}
