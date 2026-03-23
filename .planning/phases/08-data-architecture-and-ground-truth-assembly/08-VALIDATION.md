@@ -38,7 +38,7 @@ created: 2026-03-23
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 08-01-01 | 01 | 1 | DATA-08 | unit | `uv run pytest tests/test_market_boundary.py -x` | ❌ W0 | ⬜ pending |
+| 08-01-01 | 01 | 1 | DATA-08 | unit | `uv run pytest tests/test_config.py::TestMarketBoundary tests/test_config.py::TestScopeMapping -x` | inline (08-01 T2) | ⬜ pending |
 | 08-02-01 | 02 | 1 | DATA-09 | unit | `uv run pytest tests/test_market_anchors.py -x` | ❌ W0 | ⬜ pending |
 | 08-03-01 | 03 | 1 | DATA-10 | unit | `uv run pytest tests/test_edgar.py -x` | ❌ W0 | ⬜ pending |
 | 08-04-01 | 04 | 2 | DATA-11 | unit | `uv run pytest tests/test_reconciliation.py -x` | ❌ W0 | ⬜ pending |
@@ -49,7 +49,7 @@ created: 2026-03-23
 
 ## Wave 0 Requirements
 
-- [ ] `tests/test_market_boundary.py` — stubs for DATA-08 (scope definition validation, YAML config parsing)
+- [x] `tests/test_config.py::TestMarketBoundary` — created inline by 08-01 Task 2 (no Wave 0 stub needed)
 - [ ] `tests/test_market_anchors.py` — stubs for DATA-09 (YAML registry loading, Parquet compilation, vintage tracking)
 - [ ] `tests/test_edgar.py` — stubs for DATA-10 (EDGAR XBRL extraction, bundled flag, company selection)
 - [ ] `tests/test_reconciliation.py` — stubs for DATA-11 (scope normalization, percentile computation, gap interpolation)
