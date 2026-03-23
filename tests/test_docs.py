@@ -163,3 +163,75 @@ class TestArchitectureDoc:
     def test_architecture_has_design_decisions(self):
         content = self._content()
         assert "design" in content.lower() or "decision" in content.lower()
+
+
+class TestMethodologyPaper:
+    """PRES-05: docs/methodology_paper.md exists with required content."""
+
+    @staticmethod
+    def _content() -> str:
+        path = Path(__file__).parent.parent / "docs" / "methodology_paper.md"
+        assert path.exists(), "docs/methodology_paper.md must exist"
+        return path.read_text()
+
+    def test_paper_exists(self):
+        content = self._content()
+        assert len(content) > 500, "Methodology paper too short"
+
+    def test_paper_has_github_reference(self):
+        content = self._content()
+        assert "github" in content.lower(), "Paper must reference GitHub repo"
+
+    def test_paper_mentions_hybrid_model(self):
+        content = self._content()
+        assert "hybrid" in content.lower() or "ensemble" in content.lower()
+
+    def test_paper_has_key_findings(self):
+        content = self._content()
+        assert "billion" in content.lower() or "trillion" in content.lower(), \
+            "Paper must include key findings with real dollar figures"
+
+    def test_paper_mentions_data_sources(self):
+        content = self._content()
+        assert "World Bank" in content
+        assert "OECD" in content
+
+
+class TestReadme:
+    """ARCH-03: README.md exists with required sections."""
+
+    @staticmethod
+    def _content() -> str:
+        path = Path(__file__).parent.parent / "README.md"
+        assert path.exists(), "README.md must exist"
+        return path.read_text()
+
+    def test_readme_exists(self):
+        content = self._content()
+        assert len(content) > 500
+
+    def test_readme_has_screenshot(self):
+        content = self._content()
+        assert "dashboard_screenshot" in content, "README must reference dashboard screenshot"
+
+    def test_screenshot_exists(self):
+        path = Path(__file__).parent.parent / "assets" / "dashboard_screenshot.png"
+        assert path.exists(), "assets/dashboard_screenshot.png must exist"
+
+    def test_readme_has_required_sections(self):
+        content = self._content()
+        required = ["Quick Start", "Architecture", "Data Sources", "Methodology"]
+        for section in required:
+            assert section.lower() in content.lower(), f"README missing section: {section}"
+
+    def test_readme_has_reproduction_commands(self):
+        content = self._content()
+        assert "uv run" in content, "README must include uv run commands"
+
+    def test_readme_has_badges(self):
+        content = self._content()
+        assert "python" in content.lower() and ("badge" in content.lower() or "img.shields.io" in content.lower() or "![" in content)
+
+    def test_readme_has_license(self):
+        content = self._content()
+        assert "license" in content.lower()
