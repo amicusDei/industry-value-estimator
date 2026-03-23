@@ -19,7 +19,10 @@ from src.dashboard.app import (
     SEGMENT_DISPLAY,
     VALUE_CHAIN_MULTIPLIERS,
     VALUE_CHAIN_DERIVATION,
+    SOURCE_ATTRIBUTION,
 )
+
+_ATTRIBUTION_TEXT = "Sources: " + ", ".join(SOURCE_ATTRIBUTION.values())
 from src.dashboard.charts.fan_chart import make_fan_chart
 from src.dashboard.charts.styles import (
     COLOR_DEEP_BLUE,
@@ -223,7 +226,7 @@ def build_overview_layout(segment: str, usd_col: str, mode: str = "normal") -> h
             ),
         ),
         html.P(
-            "Sources: World Bank Open Data, OECD.Stat, LSEG Workspace",
+            _ATTRIBUTION_TEXT,
             style=ATTRIBUTION_STYLE,
         ),
     ], style=_CARD_STYLE)
@@ -271,7 +274,7 @@ def build_overview_layout(segment: str, usd_col: str, mode: str = "normal") -> h
             ),
         ),
         html.P(
-            "Sources: World Bank Open Data, OECD.Stat, LSEG Workspace",
+            _ATTRIBUTION_TEXT,
             style=ATTRIBUTION_STYLE,
         ),
     ], style=_CARD_STYLE)

@@ -90,3 +90,43 @@ def test_source_attribution():
         assert key in SOURCE_ATTRIBUTION, f"Missing attribution key: {key}"
         assert isinstance(SOURCE_ATTRIBUTION[key], str), f"Attribution for {key} should be string"
         assert len(SOURCE_ATTRIBUTION[key]) > 0, f"Attribution for {key} is empty"
+
+
+def test_tab_attribution_from_config():
+    """DATA-07: Tab files use SOURCE_ATTRIBUTION from config, not hardcoded strings."""
+    from src.dashboard.app import SOURCE_ATTRIBUTION
+    from src.dashboard.tabs import overview, segments, diagnostics, drivers
+
+    # Build the expected attribution text from config
+    expected_prefix = "Sources: " + ", ".join(SOURCE_ATTRIBUTION.values())
+
+    # Verify each tab module exposes the config-driven attribution constant
+    for mod_name, mod in [
+        ("overview", overview),
+        ("segments", segments),
+        ("diagnostics", diagnostics),
+        ("drivers", drivers),
+    ]:
+        assert hasattr(mod, "_ATTRIBUTION_TEXT"), (
+            f"{mod_name} missing _ATTRIBUTION_TEXT — attribution not config-driven"
+        )
+        assert mod._ATTRIBUTION_TEXT.startswith(expected_prefix), (
+            f"{mod_name}._ATTRIBUTION_TEXT does not start with config-derived prefix.\n"
+            f"  Expected prefix: {expected_prefix!r}\n"
+            f"  Got: {mod._ATTRIBUTION_TEXT!r}"
+        )
+
+    # Verify none of the tab source files contain the old hardcoded string literally
+    import inspect
+    hardcoded = "World Bank Open Data, OECD.Stat, LSEG Workspace"
+    for mod_name, mod in [
+        ("overview", overview),
+        ("segments", segments),
+        ("diagnostics", diagnostics),
+        ("drivers", drivers),
+    ]:
+        source = inspect.getsource(mod)
+        # The hardcoded literal must NOT appear anywhere in the module source
+        assert hardcoded not in source, (
+            f"{mod_name} still contains hardcoded attribution string: {hardcoded!r}"
+        )

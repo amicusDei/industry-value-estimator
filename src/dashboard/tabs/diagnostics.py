@@ -9,7 +9,9 @@ from __future__ import annotations
 import dash_bootstrap_components as dbc
 from dash import dcc, html
 
-from src.dashboard.app import DIAGNOSTICS, RESIDUALS_DF, SEGMENTS, SEGMENT_DISPLAY
+from src.dashboard.app import DIAGNOSTICS, RESIDUALS_DF, SEGMENTS, SEGMENT_DISPLAY, SOURCE_ATTRIBUTION
+
+_ATTRIBUTION_TEXT = "Sources: " + ", ".join(SOURCE_ATTRIBUTION.values())
 from src.dashboard.charts.backtest import make_backtest_chart
 from src.dashboard.charts.styles import COLOR_DEEP_BLUE, ATTRIBUTION_STYLE
 
@@ -303,8 +305,7 @@ def build_diagnostics_layout(segment: str, usd_col: str, mode: str = "normal") -
         }),
         scorecard_table,
         html.P(
-            "Sources: World Bank Open Data, OECD.Stat, LSEG Workspace "
-            "\u00b7 Residuals from statistical baseline model",
+            _ATTRIBUTION_TEXT + " \u00b7 Residuals from statistical baseline model",
             style=ATTRIBUTION_STYLE,
         ),
     ], style=_CARD_STYLE)
@@ -341,8 +342,7 @@ def build_diagnostics_layout(segment: str, usd_col: str, mode: str = "normal") -
             ),
         ),
         html.P(
-            "Sources: World Bank Open Data, OECD.Stat, LSEG Workspace "
-            "\u00b7 Backtesting via expanding-window temporal cross-validation",
+            _ATTRIBUTION_TEXT + " \u00b7 Backtesting via expanding-window temporal cross-validation",
             style=ATTRIBUTION_STYLE,
         ),
     ], style={**_CARD_STYLE, "marginBottom": "0"})

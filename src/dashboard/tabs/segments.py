@@ -8,7 +8,9 @@ from __future__ import annotations
 import dash_bootstrap_components as dbc
 from dash import dcc, html
 
-from src.dashboard.app import FORECASTS_DF, SEGMENTS, SEGMENT_DISPLAY
+from src.dashboard.app import FORECASTS_DF, SEGMENTS, SEGMENT_DISPLAY, SOURCE_ATTRIBUTION
+
+_ATTRIBUTION_TEXT = "Sources: " + ", ".join(SOURCE_ATTRIBUTION.values())
 from src.dashboard.charts.fan_chart import make_fan_chart
 from src.dashboard.charts.styles import COLOR_DEEP_BLUE, ATTRIBUTION_STYLE
 
@@ -184,7 +186,7 @@ def build_segments_layout(segment: str, usd_col: str, mode: str = "normal") -> h
                             ),
                         ),
                         html.P(
-                            "Sources: World Bank Open Data, OECD.Stat, LSEG Workspace",
+                            _ATTRIBUTION_TEXT,
                             style=ATTRIBUTION_STYLE,
                         ),
                     ], style=_CARD_STYLE),
@@ -215,7 +217,7 @@ def build_segments_layout(segment: str, usd_col: str, mode: str = "normal") -> h
                     ),
                 ),
                 html.P(
-                    "Sources: World Bank Open Data, OECD.Stat, LSEG Workspace",
+                    _ATTRIBUTION_TEXT,
                     style=ATTRIBUTION_STYLE,
                 ),
             ], style={

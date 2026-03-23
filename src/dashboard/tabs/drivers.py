@@ -7,7 +7,10 @@ from __future__ import annotations
 
 from dash import html
 
+from src.dashboard.app import SOURCE_ATTRIBUTION
 from src.dashboard.charts.styles import COLOR_DEEP_BLUE, ATTRIBUTION_STYLE
+
+_ATTRIBUTION_TEXT = "Sources: " + ", ".join(SOURCE_ATTRIBUTION.values())
 
 _CARD_STYLE = {
     "backgroundColor": "#FFFFFF",
@@ -106,7 +109,7 @@ def build_drivers_layout(segment: str, usd_col: str, mode: str = "normal") -> ht
             },
         ),
         html.P(
-            "Sources: World Bank Open Data, OECD.Stat, LSEG Workspace",
+            _ATTRIBUTION_TEXT,
             style=ATTRIBUTION_STYLE,
         ),
     ], style=_CARD_STYLE)
