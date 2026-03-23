@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-02-PLAN.md (docstrings + ARCHITECTURE.md)
-last_updated: "2026-03-22T15:34:38.771Z"
+stopped_at: Completed 05-01-PLAN.md (real data pipeline)
+last_updated: "2026-03-23T09:30:53.410Z"
 last_activity: "2026-03-17 — Completed plan 01-01: project scaffold, AI industry config, pandera schemas, 26 tests"
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 20
-  completed_plans: 17
+  completed_plans: 18
   percent: 4
 ---
 
@@ -67,6 +67,7 @@ Progress: [░░░░░░░░░░] 4%
 | Phase 04-interactive-dashboard P02 | 2 | 2 tasks | 10 files |
 | Phase 04-interactive-dashboard P03 | 90 | 1 tasks | 6 files |
 | Phase 05-reports-paper-and-portfolio P02 | 10 | 4 tasks | 35 files |
+| Phase 05-reports-paper-and-portfolio P01 | 45 | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -124,6 +125,9 @@ Recent decisions affecting current work:
 - [Phase 05-02]: NumPy-style docstrings chosen for all src/ modules to match existing arima.py convention
 - [Phase 05-02]: docs/ARCHITECTURE.md created with Mermaid flowchart covering full data pipeline
 - [Phase 05-02]: AST-based TestDocstringCoverage enforces docstring invariant automatically on every future PR
+- [Phase 05-01]: OECD PATS_IPC replaced by MSTI B_ICTS (ICT-sector BERD) as AI patent proxy — stats.oecd.org deprecated, PATS_IPC not available in new sdmx.oecd.org API
+- [Phase 05-01]: Per-economy deflation fix: apply_deflation builds (economy, year) lookup map to avoid Series ambiguity with duplicate year indices across 16 economies
+- [Phase 05-01]: PCA composite per segment with 3-indicator subset — hardware (exports+patents+ICT-BERD), infra (GDP+ICT-svc+BERD), software (ICT-svc+RD%+GERD), adoption (RD%+researchers+GDP)
 
 ### Pending Todos
 
@@ -136,6 +140,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T15:34:38.769Z
-Stopped at: Completed 05-02-PLAN.md (docstrings + ARCHITECTURE.md)
+Last session: 2026-03-23T09:30:53.408Z
+Stopped at: Completed 05-01-PLAN.md (real data pipeline)
 Resume file: None

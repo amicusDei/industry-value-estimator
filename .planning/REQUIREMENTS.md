@@ -35,7 +35,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **PRES-01**: Interactive Dash dashboard with time series charts and forecast fan charts
 - [x] **PRES-02**: SHAP driver attribution visualization in dashboard
 - [x] **PRES-03**: Model diagnostics display (RMSE, MAPE, R², residual plots, backtesting results)
-- [ ] **PRES-04**: Exportable PDF report with analysis and projections
+- [x] **PRES-04**: Exportable PDF report with analysis and projections
 - [ ] **PRES-05**: Methodology paper suitable for LinkedIn publication
 
 ### Architecture & Documentation
@@ -104,7 +104,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PRES-01 | Phase 4 | Complete |
 | PRES-02 | Phase 4 | Complete |
 | PRES-03 | Phase 4 | Complete |
-| PRES-04 | Phase 5 | Pending |
+| PRES-04 | Phase 5 | Complete |
 | PRES-05 | Phase 5 | Pending |
 | ARCH-01 | Phase 1 | Complete |
 | ARCH-02 | Phase 5 | Complete |
