@@ -1,9 +1,10 @@
 """
 Statistical baseline pipeline runner.
 
-Generates representative synthetic AI-segment data, fits ARIMA and Prophet
-per segment using expanding-window CV, selects the winning model by RMSE,
-extracts residuals, and persists them to:
+Loads real processed Parquet data (World Bank, OECD MSTI), builds a PCA
+composite indicator per AI segment, fits ARIMA and Prophet per segment
+using expanding-window CV, selects the winning model by RMSE, extracts
+residuals, and persists them to:
 
     data/processed/residuals_statistical.parquet
 
@@ -13,14 +14,22 @@ This file is the Phase 3 ML training input. Run it with:
 
     uv run python scripts/run_statistical_pipeline.py
 
+Prerequisites
+-----------
+- Run ingestion pipeline first to produce:
+    * data/processed/world_bank_ai.parquet
+    * data/processed/oecd_msti_ai.parquet
+    * data/processed/lseg_ai.parquet
+
 Design notes
 ------------
-- Synthetic data covers 2010-2024 (15 years) per segment with:
-    * Realistic upward trend (segment-specific growth rates)
-    * Structural break at 2022 simulating the GenAI surge
-    * Reproducible noise via numpy seed=42
+- Real data: World Bank global indicators + OECD MSTI R&D expenditure
+- PCA composite: 3 indicators per segment, fitted on training window only
+  (70% of observations) to prevent leakage — see build_pca_composite()
+- Structural break: Prophet changepoint at 2022-01-01 captures the GenAI surge
+  visible in the real data (high-tech exports, ICT R&D, patent filings all show
+  inflection in 2022-2023)
 - ARIMA order selected via AICc (parsimony for N<30)
-- Prophet uses explicit changepoint at 2022-01-01
 - Winner determined by mean CV RMSE across 3 expanding-window folds
 - Residuals are year-indexed (int) — required for Phase 3 feature joins
 """
@@ -62,6 +71,7 @@ from src.models.statistical.prophet_model import (
     save_all_residuals,
 )
 from src.diagnostics.model_eval import compare_models
+from src.processing.features import build_pca_composite
 from config.settings import DATA_PROCESSED
 
 # ---------------------------------------------------------------------------
@@ -80,7 +90,129 @@ _SEGMENT_PARAMS = {
 
 
 # ---------------------------------------------------------------------------
-# Synthetic data generator
+# Per-segment feature subsets for PCA composite construction.
+# Each segment captures a different facet of AI industry activity.
+# ai_hardware: compute/silicon intensity → high-tech exports + patents + ICT R&D
+# ai_infrastructure: cloud/platform scale → GDP + ICT services + total BERD
+# ai_software: software/platform R&D → ICT services + R&D intensity + GERD
+# ai_adoption: enterprise deployment → R&D intensity + human capital + GDP
+# ---------------------------------------------------------------------------
+_SEGMENT_FEATURES = {
+    "ai_hardware":       ["hightech_exports_real_2020_usd", "patent_applications_residents", "B_ICTS"],
+    "ai_infrastructure": ["gdp_real_2020_usd", "ict_service_exports_real_2020_usd", "B"],
+    "ai_software":       ["ict_service_exports_real_2020_usd", "rd_pct_gdp", "G"],
+    "ai_adoption":       ["rd_pct_gdp", "researchers_per_million", "gdp_real_2020_usd"],
+}
+
+
+# ---------------------------------------------------------------------------
+# Real data loader — reads and merges World Bank + OECD MSTI processed Parquets
+# ---------------------------------------------------------------------------
+
+def _load_real_data() -> pd.DataFrame:
+    """
+    Load and merge real processed indicator data from World Bank and OECD MSTI.
+
+    Builds a global composite indicator matrix with one row per year (2010-2024)
+    and columns for each proxy indicator used in segment PCA construction.
+
+    World Bank data is globally aggregated (sum for monetary, mean for ratios).
+    OECD MSTI data is aggregated across all economies per year for R&D indicators.
+
+    Returns
+    -------
+    pd.DataFrame
+        Wide DataFrame indexed by year with columns:
+        gdp_real_2020_usd, hightech_exports_real_2020_usd,
+        ict_service_exports_real_2020_usd, rd_pct_gdp,
+        patent_applications_residents, researchers_per_million,
+        B (BERD), B_ICTS (ICT BERD), G (GERD)
+    """
+    wb_path = DATA_PROCESSED / "world_bank_ai.parquet"
+    msti_path = DATA_PROCESSED / "oecd_msti_ai.parquet"
+
+    if not wb_path.exists() or not msti_path.exists():
+        raise FileNotFoundError(
+            "Real processed data not found. Run the ingestion pipeline first:\n"
+            "  uv run python -c \"from src.ingestion.pipeline import run_full_pipeline; "
+            "run_full_pipeline('ai', include_lseg=True)\""
+        )
+
+    wb = pd.read_parquet(wb_path)
+    msti = pd.read_parquet(msti_path)
+
+    # World Bank: aggregate globally per year
+    wb_global = wb.groupby("year").agg({
+        "gdp_real_2020_usd": "sum",
+        "hightech_exports_real_2020_usd": "sum",
+        "ict_service_exports_real_2020_usd": "sum",
+        "rd_pct_gdp": "mean",
+        "patent_applications_residents": "sum",
+        "researchers_per_million": "mean",
+    }).reset_index().sort_values("year")
+
+    # OECD MSTI: B_ICTS, B (total BERD), G (GERD) per year aggregated globally
+    msti_pivot = (
+        msti[msti["MEASURE"].isin(["B_ICTS", "B", "G"])]
+        .groupby(["year", "MEASURE"])["value"]
+        .sum()
+        .unstack("MEASURE")
+        .reset_index()
+        .sort_values("year")
+    )
+    msti_pivot.columns.name = None
+
+    # Merge on year and filter to 2010-2024
+    combined = (
+        wb_global.merge(msti_pivot, on="year", how="outer")
+        .sort_values("year")
+        .query("year >= 2010 and year <= 2024")
+        .ffill()
+        .bfill()
+        .reset_index(drop=True)
+    )
+
+    return combined
+
+
+def _build_segment_series(combined: pd.DataFrame, segment: str) -> pd.DataFrame:
+    """
+    Build a year-indexed composite indicator series for a single AI segment.
+
+    Uses PCA (first principal component) on the segment's indicator subset to
+    produce a single normalized value per year. The PCA is fitted on the first
+    70% of observations to prevent data leakage.
+
+    Parameters
+    ----------
+    combined : pd.DataFrame
+        Output of _load_real_data() — global indicator matrix.
+    segment : str
+        AI segment ID, one of: ai_hardware, ai_infrastructure, ai_software, ai_adoption.
+
+    Returns
+    -------
+    pd.DataFrame
+        Long-format DataFrame with columns: year, value_real_2020, industry_segment.
+        value_real_2020 contains the PCA composite score.
+    """
+    feature_cols = [c for c in _SEGMENT_FEATURES[segment] if c in combined.columns]
+    matrix = combined[feature_cols].values.astype(float)
+    train_end = max(3, int(len(matrix) * 0.7))  # minimum 3 training obs
+    scores, explained, _ = build_pca_composite(matrix, train_end_idx=train_end)
+    print(f"    PCA for {segment}: {len(feature_cols)} features, "
+          f"explained variance={explained:.3f}, "
+          f"range=[{scores.min():.2f}, {scores.max():.2f}]")
+    return pd.DataFrame({
+        "year": combined["year"].values,
+        "value_real_2020": scores,
+        "industry_segment": segment,
+    })
+
+
+# ---------------------------------------------------------------------------
+# Synthetic data generator — PRESERVED FOR UNIT TESTING ONLY
+# Do NOT use in production runs. Use _load_real_data() instead.
 # ---------------------------------------------------------------------------
 
 def _generate_synthetic_data(seed: int = 42) -> pd.DataFrame:
@@ -126,21 +258,43 @@ def _generate_synthetic_data(seed: int = 42) -> pd.DataFrame:
 # Main pipeline
 # ---------------------------------------------------------------------------
 
-def run_pipeline(n_splits: int = 3) -> None:
+def run_pipeline(n_splits: int = 3, use_real_data: bool = True) -> None:
     """
     End-to-end statistical pipeline:
-    1. Generate synthetic data for all 4 AI segments.
-    2. Per segment: run ARIMA and Prophet CV, compare, extract winner residuals.
-    3. Persist residuals to data/processed/residuals_statistical.parquet.
-    4. Print summary table.
+    1. Load real processed indicator data (or synthetic for testing).
+    2. Per segment: build PCA composite series.
+    3. Per segment: run ARIMA and Prophet CV, compare, extract winner residuals.
+    4. Persist residuals to data/processed/residuals_statistical.parquet.
+    5. Print summary table.
+
+    Parameters
+    ----------
+    n_splits : int
+        Number of expanding-window CV folds (default 3).
+    use_real_data : bool
+        If True (default), loads real processed Parquet data.
+        If False, uses synthetic data (for unit testing only).
     """
     # Ensure output directory exists
     DATA_PROCESSED.mkdir(parents=True, exist_ok=True)
     output_path = str(DATA_PROCESSED / "residuals_statistical.parquet")
 
-    print("Generating synthetic AI-segment data (2010-2024, seed=42)...")
-    df = _generate_synthetic_data(seed=42)
-    print(f"  Total rows: {len(df)}, segments: {sorted(df['industry_segment'].unique())}\n")
+    if use_real_data:
+        print("Loading real processed indicator data from data/processed/...")
+        combined = _load_real_data()
+        print(f"  Combined shape: {combined.shape}, years: {combined['year'].min()}-{combined['year'].max()}\n")
+
+        # Build per-segment composite series from real data
+        frames = []
+        for seg in SEGMENTS:
+            seg_df = _build_segment_series(combined, seg)
+            frames.append(seg_df)
+        df = pd.concat(frames, ignore_index=True)
+        print(f"  Total rows: {len(df)}, segments: {sorted(df['industry_segment'].unique())}\n")
+    else:
+        print("Generating synthetic AI-segment data (2010-2024, seed=42) [TEST MODE]...")
+        df = _generate_synthetic_data(seed=42)
+        print(f"  Total rows: {len(df)}, segments: {sorted(df['industry_segment'].unique())}\n")
 
     segment_residuals: dict[str, tuple[pd.Series, str]] = {}
     summary_rows = []

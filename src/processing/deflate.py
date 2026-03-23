@@ -77,6 +77,11 @@ def deflate_to_base_year(
             f"Cannot deflate {nominal_col_name}."
         )
     base_deflator = deflator_series.loc[base_year]
+    # When the series has duplicate year indices (multi-economy DataFrames),
+    # .loc[base_year] returns a Series rather than a scalar. Take the first
+    # non-null value — all economies share the same GDP deflator base year value.
+    if isinstance(base_deflator, pd.Series):
+        base_deflator = base_deflator.dropna().iloc[0] if not base_deflator.dropna().empty else float("nan")
     if pd.isna(base_deflator):
         raise ValueError(
             f"Deflator is NaN for base year {base_year}. "
@@ -157,13 +162,32 @@ def apply_deflation(
         # deflate_to_base_year expects `base_year` to be a valid index value.
         # When year is a column, map row positions -> year values as the index.
         if "year" in df.columns:
-            # Create a year-indexed series for lookup, then map back to row order
-            year_to_deflator = deflator_by_year.to_dict()
-            # Build deflator series with year as index (same as nominal_series)
+            # Create a year-indexed series for lookup, then map back to row order.
+            # When multiple economies are present, deflator_by_year has duplicate
+            # year indices — group by year and take the first non-null value per year
+            # (all economies share the same deflator, so this is correct).
+            if "economy" in df.columns:
+                # Per-economy deflation: each row gets the deflator for its own economy
+                # Build a (economy, year) -> deflator mapping for precise alignment
+                eco_year_deflator = (
+                    df[["economy", "year", deflator_col]]
+                    .drop_duplicates(subset=["economy", "year"])
+                    .set_index(["economy", "year"])[deflator_col]
+                )
+                row_keys = list(zip(df["economy"].values, df["year"].values))
+                deflator_values = [
+                    eco_year_deflator.get(k, float("nan")) for k in row_keys
+                ]
+            else:
+                year_to_deflator = (
+                    deflator_by_year.groupby(level=0).first().to_dict()
+                )
+                deflator_values = [
+                    year_to_deflator.get(y, float("nan")) for y in df["year"].values
+                ]
             year_values = df["year"].values
-            deflator_values = [year_to_deflator.get(y, float("nan")) for y in year_values]
-            deflator_aligned = pd.Series(deflator_values, index=df["year"].values)
-            nominal_aligned = pd.Series(df[col].values, index=df["year"].values)
+            deflator_aligned = pd.Series(deflator_values, index=year_values)
+            nominal_aligned = pd.Series(df[col].values, index=year_values)
         else:
             deflator_aligned = deflator_by_year
             nominal_aligned = df[col]

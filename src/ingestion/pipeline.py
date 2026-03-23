@@ -168,10 +168,14 @@ def run_full_pipeline(
     if include_lseg:
         try:
             from src.ingestion.lseg import (
+                open_lseg_session,
+                close_lseg_session,
                 fetch_lseg_companies,
                 fetch_company_financials,
                 save_raw_lseg,
             )
+            # Open Desktop Session before fetching — requires LSEG Workspace running
+            open_lseg_session()
             companies = fetch_lseg_companies(config)
             financials = fetch_company_financials(companies, config)
             save_raw_lseg(financials, industry_id)
@@ -183,7 +187,13 @@ def run_full_pipeline(
                 industry_id=industry_id,
             )
             processed_paths["lseg"] = lseg_path
+            close_lseg_session()
         except Exception as e:
             print(f"LSEG ingestion failed: {e}")
+            # Attempt graceful session close even on failure
+            try:
+                close_lseg_session()
+            except Exception:
+                pass
 
     return processed_paths
