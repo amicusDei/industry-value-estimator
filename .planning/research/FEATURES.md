@@ -1,8 +1,16 @@
 # Feature Research
 
-**Domain:** AI Industry Economic Valuation and Forecasting Tool
-**Researched:** 2026-03-17
+**Domain:** AI Industry Valuation Model Rework + Basic Dashboard Tier (v1.1)
+**Researched:** 2026-03-23
 **Confidence:** MEDIUM-HIGH
+
+---
+
+## Context: What Is Already Built
+
+v1.0 delivered: data pipeline (World Bank, OECD, LSEG), ARIMA/Prophet + LightGBM ensemble, PCA composite index, quantile regression CIs, 4-tab Dash dashboard (Normal/Expert), SHAP drivers, PDF reports. The core problem is that the PCA composite approach produced flat/unrealistic forecasts because proxy econometric indicators (patent filings, R&D spend) do not measure AI revenue — they correlate with it loosely at best. v1.1 is a ground-up rework of the model to anchor on real AI market data.
+
+This research file covers ONLY the new features needed for v1.1. Existing features are already built and not re-evaluated here.
 
 ---
 
@@ -10,133 +18,128 @@
 
 ### Table Stakes (Users Expect These)
 
-Features that anyone evaluating this tool — employer, recruiter, collaborator, or analyst — expects to see. Missing these makes the project feel unfinished or academically naive.
+Features any analyst or portfolio reviewer expects from a credible AI valuation tool. Missing these makes the output feel like a student exercise rather than real analysis.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Data ingestion from public APIs (World Bank, OECD) | Any credible economic model must show where its data comes from. Using well-known authoritative sources is the baseline for defensibility. | MEDIUM | World Bank and OECD both have free REST APIs. wbdata and pandasdmx libraries handle this in Python. Need to handle rate limits, schema drift, and missing years. |
-| Data cleaning and normalization pipeline | Raw public data has gaps, unit inconsistencies, and different base years. Users expect a documented pipeline, not raw CSVs fed straight into models. | MEDIUM | pandas is standard; must handle currency normalization (constant vs. current USD), missing value imputation, and frequency alignment (annual/quarterly). |
-| Baseline statistical model (time series or regression) | Econometric credibility requires at least one interpretable statistical model. Economists expect ARIMA, OLS, or similar before ML is layered on. | MEDIUM | statsmodels for OLS/ARIMA. This is also the interpretability anchor — the model someone can reason about without a ML background. |
-| Market size point estimate with units | The product's stated output. A number — "AI market worth $X in 2026" — with clear units (USD billions, constant year). | LOW | Trivial to compute once models exist. Complexity is in the model, not the output. |
-| Growth forecast with confidence intervals | "AI worth $X by 2030" with a range. Confidence intervals are not optional — presenting a point forecast only is considered bad statistical practice. | MEDIUM | Statsmodels and Prophet both emit CIs natively. Must decide: 80% CI, 90% CI, or 95% CI — document the choice. |
-| Interactive dashboard with charts | Plotly/Dash is the specified stack. Users expect to interact with outputs — zoom, filter by year, toggle scenarios. A static plot is insufficient. | MEDIUM | Dash is well-suited. Core charts: time series of historical data, forecast fan chart with CI bands, market segment breakdown. |
-| Data source attribution in UI and reports | Every chart must show its data source. Omitting attribution undermines credibility and violates norms for publicly published economic analysis. | LOW | Simple footer/annotation on charts. Critical for LinkedIn publication and portfolio credibility. |
-| Exportable PDF report | Stated in PROJECT.md requirements. Users of forecasting tools expect a shareable artifact, not just a web page. | MEDIUM | PDF export in open-source Dash requires WeasyPrint or ReportLab + a separate render step. Dash Enterprise has native PDF, but open-source requires workaround. Flag as an implementation risk. |
-| Documented assumptions | Every model makes assumptions (growth drivers, data completeness, model form). Documenting them is table stakes for any published economic analysis — without this, the work cannot be critiqued or reproduced. | LOW | Markdown or docstring documentation. High value, low cost. |
-| README with setup instructions | Portfolio requirement. Anyone landing on the GitHub repo expects to understand what the project does and how to run it within 60 seconds. | LOW | Standard README: project description, data sources, installation, how to run dashboard. |
+| Published analyst estimate anchoring | PitchBook, IDC, Gartner, Goldman Sachs all publish AI market size estimates. A model that ignores these and produces its own number from scratch is immediately suspect. Analysts expect "how does this compare to IDC $X?" | MEDIUM | Collect 6-10 published estimates for the same year (Gartner $1.5T total AI spend, IDC $307B enterprise AI solutions 2025, Grand View Research segment figures). Use these as ground truth anchors, not inputs. The model should explain how it arrives at a number in the same ballpark or justify divergence. HIGH confidence basis: Gartner/IDC official releases. |
+| Segment breakdown (infrastructure / software / services) | Market sizing tools (IDC, Grand View, Mordor Intelligence) always segment the market. Analysts expect sub-totals, not just a total figure. The standard analyst segmentation is: hardware/chips, cloud/infrastructure, software/platforms, services/consulting. | MEDIUM | Grand View Research shows services at 36.3% share, software at 34.2% in 2025. Hardware led AI infrastructure at 68% of that sub-market. Build segment model that sums to total — this also makes backtesting tractable because you can validate segments independently. MEDIUM confidence (commercial research sources). |
+| Revenue multiples display for comparable companies | PitchBook publishes quarterly AI Public Comp Sheet with EV/Revenue multiples. AI pure-plays traded at 33x EV/TTM Revenue in Q4 2025 vs 7x for conglomerates. Any valuation tool should contextualize its market size estimates against these multiples to pass the "sniff test." | LOW | Display a reference table of current trading multiples for AI pure-plays, semiconductors, conglomerates alongside the market size estimate. Data sourced from public earnings + PitchBook quarterly reports. Adds credibility with zero modeling complexity. HIGH confidence: PitchBook Q4 2025 AI Valuation Guide. |
+| Working MAPE / R² diagnostics | Diagnostics tab already exists but shows placeholder metrics because v1.0 had no real actuals to compare against. Any published forecasting tool shows in-sample fit. Backtesting on held-out years (e.g., train pre-2022, evaluate 2022-2024 against published market size data) makes MAPE and R² real and meaningful. | HIGH | Requires assembling a "ground truth" time series of AI market size by year from published sources (IDC, Gartner, Grand View). This is the hardest part — the data doesn't exist in one place. Need to reconcile different methodologies across firms. Once assembled, backtesting is standard time-series cross-validation. MEDIUM confidence: validated approach from ML literature. |
+| Realistic forecast trajectory | The v1.0 model produced flat forecasts because proxy indicators don't grow at AI's pace. An AI-specific model should reflect consensus growth rates. Gartner forecasts AI spending at $1.5T in 2025; IDC projects AI infrastructure reaching $758B by 2029. The model's 2025-2030 trajectory must be defensible against these published forecasts. | MEDIUM | "Realistic" here means: growth rate consistent with consensus (roughly 25-40% CAGR for AI overall), not identical to any one source. Document where the model diverges and why. |
+| Data vintage and methodology transparency | CB Insights explicitly surfaces "last updated" timestamps on all market estimates. Analysts expect to know when data was last refreshed and which estimation method was applied for each segment. | LOW | Already partially implemented (Parquet cache metadata). Extend to show vintage per data source per segment in the UI. LOW complexity, HIGH credibility payoff. |
 
 ---
 
 ### Differentiators (Competitive Advantage)
 
-Features that distinguish this project from generic "market sizing" notebooks on GitHub — and from the rough "valued by thumb" estimates the project explicitly aims to replace.
+Features that separate this tool from both (a) generic open-source forecasting notebooks and (b) opaque commercial reports. These directly address the "valued by thumb" problem stated in PROJECT.md.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Hybrid statistical + ML ensemble | Most public forecasting projects choose one paradigm. A model that runs statsmodels ARIMA as the interpretable baseline and XGBoost/gradient boosting as the ML refinement, then reconciles outputs, is methodologically more sophisticated than either alone. | HIGH | Requires model reconciliation logic. The ensemble approach — and how the two outputs are weighted — must itself be documented as a methodology decision. |
-| SHAP-based driver attribution | Showing *which variables* drive the AI market forecast (patent filings? GPU shipments? VC investment?) differentiates from black-box forecasts. SHAP values make ML predictions explainable to non-ML audiences. | MEDIUM | shap library integrates with sklearn-compatible models. Produces feature importance charts directly embeddable in the dashboard. Directly addresses the "valued by thumb" critique by showing the drivers. |
-| Scenario / sensitivity analysis | Conservative / base / optimistic scenarios, or slider-based sensitivity on key assumptions (e.g., "what if AI investment grows 10% slower?"). This is standard in professional forecasting tools but rare in portfolio projects. | HIGH | Requires parameterized model inputs and Dash callbacks for interactive sliders. Adds significant dashboard complexity but dramatically increases the analytical value of outputs. |
-| Bottom-up and top-down cross-validation | Running both a top-down estimate (from macro GDP/tech share) and a bottom-up estimate (from company revenue rollup, patent counts, etc.) and showing convergence — or explaining divergence — is what professional market research firms do. Showing both builds credibility. | HIGH | Requires sourcing bottom-up component data (e.g., public company filings, CB Insights-style aggregates from free sources). Adds data pipeline complexity. |
-| Methodology paper / LinkedIn writeup | Publishing a structured methodology paper — not just code — elevates the project from a "data science exercise" to "economic research." This is explicitly in scope and is a genuine differentiator for the portfolio. | MEDIUM | Content work, not engineering. Requires explaining model choices in lay terms. Maps directly to the stated audience: employers and LinkedIn connections. |
-| Model diagnostics and fit metrics | Displaying in-sample model fit (RMSE, MAPE, R²), residual plots, and backtesting results. Professional forecasting tools always show how well the model fits historical data. Omitting this leaves readers unable to assess forecast quality. | MEDIUM | Backtesting framework: train on pre-2020 data, evaluate on 2020-2024. Display metrics in dashboard alongside forecasts. |
-| Data freshness tracking and update log | Showing when the underlying data was last fetched and whether it is current. Professional tools surface data vintage to users. | LOW | Simple metadata file updated by data fetch scripts. Small effort, professional signal. |
-| Extensible industry architecture | The codebase is designed from the start to add a second industry without rewriting the pipeline. This architectural decision, if documented and visible in the code structure, demonstrates software engineering maturity beyond "data science notebook." | HIGH | Requires abstraction layer: an `IndustryModel` base class or config-driven pipeline. Most valuable as a code-quality differentiator for engineering-focused employers. |
+| AI revenue attribution for mixed-tech public companies | Microsoft, Alphabet, Amazon, Salesforce, IBM generate substantial AI revenue but do not report it as a separate segment. Analysts use cloud growth as an AI demand proxy (Azure +39% YoY Q4 2025; Google Cloud +48% Q4 2025). A principled attribution model — "X% of Azure revenue is AI-driven" — is more rigorous than just using cloud revenue as a stand-in. | HIGH | Methodology: (1) collect public earnings disclosures for companies with partial AI segment data (Microsoft Copilot revenue, Google AI Overviews ad impact); (2) apply analyst-consensus attribution ratios from sell-side research; (3) cross-check against company "AI contribution" commentary in earnings calls. PitchBook Q4 2025 shows conglomerates trade at 7x vs 33x for pure-plays — the valuation gap itself is evidence of attribution opacity. This is the most analytically interesting feature in v1.1. HIGH confidence: valuation multiple data from PitchBook official reports; attribution methodology from McKinsey/Deloitte AI ROI research. |
+| Private company valuation using revenue multiples + proxy data | OpenAI, Anthropic, Databricks are not publicly traded but are major AI market participants. Ignoring them understates the market. Standard approach: apply EV/Revenue multiples from comparable public companies to disclosed or estimated private company ARR. Precedent transactions anchor the range (Anthropic raised at ~36x revenue in 2025). | HIGH | Build a "private company registry" — a small YAML or CSV with company name, estimated ARR, funding round data, implied valuation, data source, and confidence flag. Apply comparable-company multiple ranges (15x-35x for AI pure-plays per Equidam/Aventis Advisors research). Show uncertainty explicitly: "OpenAI implied at $157B using 31x EV/Revenue on estimated $5B ARR." MEDIUM confidence (revenue estimates for private companies are inherently LOW confidence; the methodology is well-established). |
+| Analyst consensus layer — "wisdom of crowds" market sizing | CB Insights uses a "wisdom of crowds" Industry Analyst Consensus (IAC) approach — averaging 12,050+ market estimates across analysts to produce a consensus view. Showing both the model's output AND an analyst consensus range (from collected published estimates) makes the tool self-validating: "our model produces $X, analyst consensus center is $Y, divergence is Z%." | MEDIUM | Collect ~10 published estimates per major AI market segment with vintage date and analyst firm. Compute simple mean/median/range. Display alongside model output as a sanity check panel. This is how Bloomberg and FactSet display sell-side consensus vs. actual — familiar framing for any analyst. MEDIUM confidence: methodology documented by CB Insights officially. |
+| Backtesting framework with walk-forward validation | Train on pre-2022 data, evaluate on 2022-2024 against published market size actuals. This is standard in financial forecasting (not just AI) — models that cannot beat a naive benchmark are not useful. Walk-forward validation (expanding window retraining) is more rigorous than a single train/test split. | HIGH | Requires: (1) assembling historical published market sizes as "actuals"; (2) implementing walk-forward split logic; (3) computing MAPE, MAE, directional accuracy. MAPE benchmarks: <10% excellent, 10-20% acceptable for market sizing (much harder than product demand forecasting). The existing diagnostics tab is the right home for these results. MEDIUM confidence: forecasting evaluation methodology from PMC/TDS literature. |
+| Basic dashboard tier (one-screen market intelligence view) | Executive dashboards work when 3-5 KPIs are shown at large size with trend indicators — no scrolling, no deep navigation required. The Basic tier should answer "what is the AI market worth, how fast is it growing, and what are the top segments?" in a single screen. PitchBook's quarterly AI Comp Sheet is a relevant design reference: headline numbers, a comparison table, and a chart — nothing more. | MEDIUM | Design principle: Z-pattern reading order, 3 hero numbers (total market cap, YoY growth rate, 2030 forecast), 1 segment breakdown bar chart, 1 growth trajectory fan chart. Color: one highlight for "AI-specific" figures vs. grey for context. No SHAP, no diagnostics, no methodology — those live in Normal/Expert. This tier is for the 5-second "is this number credible?" check. HIGH confidence: UXPin/DataCamp dashboard design research + PitchBook UI patterns. |
 
 ---
 
 ### Anti-Features (Commonly Requested, Often Problematic)
 
-Features that seem reasonable but would harm the project given its constraints, audience, and scope.
-
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Real-time data streaming | Feels more impressive and "production-grade" | Adds infrastructure complexity (Kafka, websockets, or API polling loops) that distracts from the economic modeling work. Also unnecessary — macro economic data updates quarterly or annually, not in real time. Out of scope per PROJECT.md. | Scheduled batch fetch (e.g., a Python script that refreshes data weekly). Document the cadence and show the last-updated timestamp in the dashboard. |
-| User authentication and multi-user support | Makes the tool feel like a real product | This is a personal portfolio tool. Adding auth (Flask-Login, OAuth) adds weeks of work with zero analytical value. Out of scope per PROJECT.md. | Document that the tool is a single-user local/deployed personal tool. If deployed publicly, a simple HTTP basic auth env var is sufficient. |
-| Coverage of multiple industries simultaneously (v1) | Shows generalizability | Dilutes focus. The AI industry is the most defensible and interesting case given the "valued by thumb" problem. Getting the AI model right is more valuable than getting five industries done superficially. Out of scope per PROJECT.md. | Build with extensibility in mind (see "Extensible industry architecture" above), but don't add the second industry until the first is validated. |
-| Proprietary or paid data sources | Richer data, better models | No paid data in v1 per PROJECT.md constraints. Adding paid sources also creates reproducibility problems — readers cannot run the model themselves. | Squeeze maximum signal from public sources (World Bank, OECD, Eurostat, SEC EDGAR for public company filings, USPTO patent data, USPTO for AI patent trends). Document sourcing decisions explicitly. |
-| Mobile-responsive app | Broader audience | Dashboard complexity increases significantly. Plotly/Dash is primarily designed for desktop browser use. Optimizing for mobile is significant UX work with minimal portfolio payoff for this audience. Out of scope per PROJECT.md. | Ensure the Dash layout is readable on a 1280px+ desktop browser. Note the limitation in README. |
-| Automated natural language report generation (LLM integration) | Trendy, sounds impressive | Introduces a dependency on an external API (OpenAI, etc.) and shifts focus from econometric rigor to prompt engineering. Reviewers may perceive it as obscuring the actual analysis. | Write the methodology paper manually — this demonstrates writing ability and domain understanding, which is a portfolio positive. |
-| Live web deployment with CI/CD | Makes the project "production" | Adds DevOps scope that is orthogonal to the economic modeling work. A publicly deployed URL can also incur costs and maintenance burden. | Provide a Docker Compose file or clear local run instructions. A GitHub Actions workflow for linting/tests is sufficient CI for a portfolio project. |
+| Single "true" AI market size number without uncertainty | Feels clean and authoritative | Gartner ($1.5T total AI spend), IDC ($307B enterprise AI solutions), and Grand View ($244B AI software) are all "correct" — they measure different things. Presenting one number without scope definition is intellectually dishonest and will be immediately questioned by any analyst. | Present the number with explicit scope definition ("AI software + services, ex-hardware") and show how that scope choice relates to published alternatives. Uncertainty is a feature, not a weakness. |
+| Automated ingestion of earnings call transcripts via LLM | Sounds like a sophisticated way to extract AI revenue mentions | Introduces OpenAI/Anthropic API dependency, LLM hallucination risk on financial data, and significant engineering complexity. For a portfolio project, manually curated company revenue attribution is more credible because you can verify each data point. | Hand-curate a focused set of 15-20 key AI companies with clearly documented attribution methodology. Quality over automation. |
+| Interactive scenario sliders for revenue attribution assumptions | Flexible and analyst-friendly | Out of scope for v1.1 per PROJECT.md (SCEN-01 deferred to v2). Adds dashboard state management complexity to an already complex rework. | Lock the attribution methodology in v1.1 with documented assumptions. Add sliders in v2 once the base model is validated. |
+| Coverage of AI sub-sectors as separate models (NLP, CV, robotics) | More granular = more useful | Granular sub-segment data is not available from public sources at the level needed for individual statistical models. Forces either fabrication or very wide CIs that undermine credibility. | Model at the established analyst segmentation level (infrastructure, software, services) where published data exists. Sub-sector commentary can appear in the report narrative without requiring a separate model. |
+| Real-time private company valuation from live funding data | Demonstrates data pipeline sophistication | Private company valuations change discontinuously on funding events, not continuously. A "live" number would require Crunchbase Pro or PitchBook API (paid). And freshness creates a false sense of precision for inherently uncertain estimates. | Quarterly-refreshed private company registry with explicit data vintage. Show confidence intervals on all private company valuations. Batch update is honest and sufficient. |
+| Downloading raw underlying data via the dashboard | Transparency and reproducibility | The LSEG data is subscription-only — exposing it for download would violate licensing terms. | Publish the data pipeline code so users can replicate the fetch with their own credentials. For public sources (World Bank, OECD), direct data download links in the UI are fine. |
 
 ---
 
 ## Feature Dependencies
 
 ```
-[Data Ingestion Pipeline]
-    └──required by──> [Data Cleaning and Normalization]
-                          └──required by──> [Statistical Baseline Model]
-                          └──required by──> [ML Refinement Model]
-                                                └──enables──> [SHAP Driver Attribution]
+[Published Analyst Estimates (ground truth corpus)]
+    └──required by──> [Analyst Consensus Layer]
+    └──required by──> [Backtesting Framework]
+    └──required by──> [Working MAPE/R² Diagnostics]
+    └──required by──> [Realistic Forecast Trajectory]
 
-[Statistical Baseline Model] ──required by──> [Hybrid Ensemble]
-[ML Refinement Model] ──required by──> [Hybrid Ensemble]
+[Public Company Earnings Data]
+    └──required by──> [AI Revenue Attribution (Mixed-Tech Companies)]
+    └──required by──> [Revenue Multiples Reference Table]
 
-[Hybrid Ensemble] ──required by──> [Market Size Point Estimate]
-[Hybrid Ensemble] ──required by──> [Growth Forecast with CIs]
-[Hybrid Ensemble] ──required by──> [Model Diagnostics and Fit Metrics]
+[AI Revenue Attribution (Mixed-Tech)]
+    └──contributes to──> [Segment Breakdown Model]
+                             └──required by──> [Basic Dashboard Segment Chart]
+                             └──required by──> [Analyst Consensus Layer (segment level)]
 
-[Market Size Point Estimate] ──required by──> [Dashboard Charts]
-[Growth Forecast with CIs] ──required by──> [Dashboard Charts]
-[SHAP Driver Attribution] ──enhances──> [Dashboard Charts]
+[Private Company Revenue Estimates]
+    └──required by──> [Private Company Valuation Registry]
+                          └──contributes to──> [Total Market Size Estimate]
 
-[Dashboard Charts] ──required by──> [Exportable PDF Report]
-[Documented Assumptions] ──required by──> [Methodology Paper]
-[Model Diagnostics and Fit Metrics] ──required by──> [Methodology Paper]
+[Total Market Size Estimate (new model)]
+    └──required by──> [Basic Dashboard (hero numbers)]
+    └──required by──> [Updated Normal/Expert Views]
+    └──required by──> [Backtesting Framework]
 
-[Extensible Industry Architecture] ──enables──> [Second Industry (v2+)]
+[Backtesting Framework]
+    └──produces──> [Working MAPE/R² Diagnostics]
+                       └──feeds into──> [Diagnostics Tab (existing)]
 
-[Scenario Analysis] ──conflicts with scope of──> [v1 Launch] (defer to v1.x)
-[Bottom-up Cross-validation] ──conflicts with scope of──> [v1 Launch] (defer to v1.x)
+[Basic Dashboard Tier]
+    └──enhances──> [Normal Mode] (Basic is the entry point; Normal adds depth)
+    └──no conflict with──> [Expert Mode] (orthogonal tiers)
+
+[Analyst Consensus Layer]
+    └──enhances──> [Basic Dashboard (context panel)]
+    └──enhances──> [Normal Mode (validation section)]
 ```
 
 ### Dependency Notes
 
-- **Data Ingestion is the root dependency:** Nothing else is possible until the pipeline fetches, cleans, and normalizes data from World Bank/OECD. This is phase 1 work that blocks everything downstream.
-- **Statistical model before ML model:** The hybrid approach requires a baseline to compare against. Running ARIMA/OLS first also provides interpretability that ML alone cannot.
-- **SHAP requires a trained ML model:** SHAP explanations depend on a fitted gradient boosting or similar model. Cannot be added before the ML layer exists.
-- **Dashboard requires finalized model outputs:** Building the dashboard on provisional model outputs wastes effort. The dashboard should be scaffolded early but finalized after the modeling pipeline stabilizes.
-- **PDF export depends on dashboard layout:** PDF generation captures the rendered dashboard. The dashboard layout must be stable before investing in the PDF export mechanism.
-- **Scenario analysis enhances but does not block the dashboard:** Scenarios are sliders on top of a working model. They can be added incrementally after the base dashboard is functional.
+- **Ground truth corpus is the critical path:** Everything in v1.1 depends on assembling a defensible historical time series of AI market sizes from published sources. This is research work, not engineering work, and must happen first.
+- **Revenue attribution before segment model:** The total market size is a sum of segments; each segment's estimate is informed by the company-level revenue attribution work. Doing attribution first means the segment model is bottom-up, not top-down.
+- **Backtesting requires the new model:** Cannot backtest the v1.0 PCA composite model against AI market actuals — the model types are incompatible. The new anchored model must be built before backtesting is meaningful.
+- **Basic dashboard tier requires final model outputs:** The Basic tier should show real numbers, not placeholders. Build it last in the dashboard phase, after the model is stable and validated.
+- **Private company valuations are additive but not blocking:** The total market estimate can be produced without private company valuations and then refined when that component is added. Avoids a long-pole dependency.
 
 ---
 
 ## MVP Definition
 
-### Launch With (v1)
+This is v1.1 scope, not a greenfield MVP. "Launch" means the milestone is complete and the model is credible.
 
-The minimum that demonstrates the core thesis: defensible, data-driven AI industry valuations using econometric rigor and ML.
+### Launch With (v1.1)
 
-- [ ] Data ingestion from World Bank and OECD APIs — without real data there is nothing to model
-- [ ] Data cleaning and normalization pipeline — raw data is unusable without this
-- [ ] Statistical baseline model (ARIMA or OLS regression) — the interpretable econometric foundation
-- [ ] ML refinement model (gradient boosting) — the layer that improves on the statistical baseline
-- [ ] Market size point estimate with units and vintage date — the headline output
-- [ ] Growth forecast to 2030 with confidence intervals — the forecast output
-- [ ] Model diagnostics and fit metrics — necessary to assess forecast quality; omitting is statistically irresponsible
-- [ ] Documented assumptions (inline or separate doc) — required for any publishable analysis
-- [ ] Interactive dashboard with time series and forecast charts — the primary user interface per PROJECT.md
-- [ ] Exportable PDF report — required per PROJECT.md; flag early if open-source PDF export is blocked
-- [ ] README with setup and data source documentation — portfolio minimum
-- [ ] Data source attribution in all outputs — non-negotiable for published analysis
+The minimum that makes the model credible and the Basic tier useful.
+
+- [ ] Published analyst estimate corpus (10+ estimates, documented, vintage-tagged) — without this nothing is anchored
+- [ ] New market size model anchored on real AI revenue data — replaces PCA composite
+- [ ] AI revenue attribution for 10-15 key mixed-tech public companies — core analytical work
+- [ ] Segment breakdown (infrastructure / software / services) summing to total — necessary for credibility and segment-level backtesting
+- [ ] Private company valuation registry (15-20 major private AI companies, comparable multiple methodology) — adds significant market coverage
+- [ ] Walk-forward backtesting with MAPE and R² against historical actuals — makes diagnostics real
+- [ ] Basic dashboard tier (3 hero numbers + segment chart + growth fan chart) — new user-facing tier
+- [ ] Updated Normal/Expert modes to reflect new model outputs — existing modes need recalibration
+- [ ] Revenue multiples reference table (pure-play vs. semiconductor vs. conglomerate) — context for valuation numbers
+- [ ] Analyst consensus panel showing model output vs. published estimate range — self-validating display
 
 ### Add After Validation (v1.x)
 
-Add these once the v1 pipeline is working end-to-end and model outputs are validated against historical data.
+Add once v1.1 is live and model outputs have been reviewed.
 
-- [ ] SHAP-based driver attribution in dashboard — trigger: v1 model is trained and stable; adds explanatory power
-- [ ] Scenario / sensitivity analysis with interactive sliders — trigger: base dashboard is complete; high user value
-- [ ] Data freshness tracking and last-updated indicator — trigger: anytime after v1 data pipeline; low effort
-- [ ] Bottom-up cross-validation estimate — trigger: when suitable bottom-up data sources are identified; strengthens credibility
-- [ ] Methodology paper / LinkedIn writeup — trigger: after v1 is fully functional; content work not blocked by code
+- [ ] Scenario sliders on key attribution assumptions — trigger: SCEN-01, deferred to v2 per PROJECT.md
+- [ ] Expanded private company coverage (50+ companies) — trigger: if the 15-20 company registry proves valuable
+- [ ] Sub-sector breakdown (NLP, CV, generative AI) — trigger: only if reliable public data sources are found
 
 ### Future Consideration (v2+)
 
-Defer until the AI industry model is validated and the architecture is proven extensible.
-
-- [ ] Second industry (e.g., cloud computing, biotech) — defer until AI model quality is confirmed and the extensible architecture abstraction is tested
-- [ ] Automated model retraining on data refresh — defer; requires scheduling infrastructure
-- [ ] Comparison view across industries — requires multi-industry data first
+- [ ] Scenario analysis with interactive assumptions — SCEN-01 already flagged in PROJECT.md
+- [ ] Second industry (e.g., cloud computing) — extensibility already built in config/industries/
+- [ ] Automated earnings call ingestion — only if engineering investment is justified by use
 
 ---
 
@@ -144,67 +147,78 @@ Defer until the AI industry model is validated and the architecture is proven ex
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|---------------------|----------|
-| Data ingestion pipeline | HIGH | MEDIUM | P1 |
-| Data cleaning and normalization | HIGH | MEDIUM | P1 |
-| Statistical baseline model | HIGH | MEDIUM | P1 |
-| Market size point estimate | HIGH | LOW | P1 |
-| Growth forecast with CIs | HIGH | MEDIUM | P1 |
-| Model diagnostics and fit metrics | HIGH | MEDIUM | P1 |
-| Documented assumptions | HIGH | LOW | P1 |
-| Interactive dashboard (charts) | HIGH | MEDIUM | P1 |
-| Exportable PDF report | HIGH | MEDIUM | P1 |
-| Data source attribution | HIGH | LOW | P1 |
-| README | MEDIUM | LOW | P1 |
-| ML refinement model | HIGH | MEDIUM | P1 |
-| SHAP driver attribution | HIGH | MEDIUM | P2 |
-| Scenario / sensitivity analysis | HIGH | HIGH | P2 |
-| Methodology paper | HIGH | MEDIUM | P2 |
-| Data freshness tracking | LOW | LOW | P2 |
-| Bottom-up cross-validation | MEDIUM | HIGH | P2 |
-| Extensible industry architecture | MEDIUM | HIGH | P2 |
-| Second industry (v2) | LOW | HIGH | P3 |
-| Automated model retraining | LOW | HIGH | P3 |
+| Published analyst estimate corpus | HIGH | MEDIUM (research effort) | P1 |
+| New anchored market size model | HIGH | HIGH | P1 |
+| AI revenue attribution (public companies) | HIGH | HIGH | P1 |
+| Segment breakdown model | HIGH | MEDIUM | P1 |
+| Walk-forward backtesting + MAPE/R² | HIGH | MEDIUM | P1 |
+| Basic dashboard tier | HIGH | MEDIUM | P1 |
+| Updated Normal/Expert modes | HIGH | MEDIUM | P1 |
+| Private company valuation registry | MEDIUM | MEDIUM | P1 |
+| Analyst consensus panel | HIGH | LOW | P1 |
+| Revenue multiples reference table | MEDIUM | LOW | P2 |
+| Data vintage display per segment | LOW | LOW | P2 |
+| Expanded private company coverage | MEDIUM | MEDIUM | P3 |
+| Sub-sector breakdown | MEDIUM | HIGH | P3 |
+| Scenario sliders | HIGH | HIGH | P3 (v2) |
 
 **Priority key:**
-- P1: Must have for launch
-- P2: Should have; add when core is working
-- P3: Nice to have; future consideration
+- P1: Required for v1.1 milestone completion
+- P2: Should have; add when P1 work is stable
+- P3: Nice to have; defer to v2 or later
 
 ---
 
 ## Competitor Feature Analysis
 
-These are the tools and reports that do similar things — either professional market research firms or open-source econometric tools. This project is not competing with them commercially, but portfolio reviewers will compare against them implicitly.
+These are the tools and reports that do the same thing commercially. Portfolio reviewers will compare implicitly. This is not a competitive product — it is a portfolio project — but the comparison informs what "good" looks like.
 
-| Feature | Professional Reports (Gartner / IDC / Grand View Research) | Open-Source Notebooks (GitHub) | This Project's Approach |
-|---------|------------------------------------------------------------|-------------------------------|-------------------------|
-| Data sourcing | Proprietary surveys + paid databases | Usually a single CSV, often uncited | Public APIs (World Bank, OECD) with explicit attribution |
-| Methodology transparency | Opaque — "proprietary methodology" | Often absent or minimal | Full documentation: every model choice explained |
-| Model type | Rarely disclosed | Usually single method (ARIMA or simple regression) | Hybrid: statistical baseline + ML refinement, both visible |
-| Confidence intervals | Sometimes shown, rarely explained | Often absent | Shown prominently with explanation of what they mean |
-| Interactivity | PDF reports only, no interactivity | Static Jupyter notebooks | Interactive Dash dashboard + PDF export |
-| Scenario analysis | Sometimes present (3-scenario model) | Rarely present | Present in v1.x; parameterized via dashboard sliders |
-| Reproducibility | Not reproducible (proprietary data) | Sometimes reproducible | Fully reproducible from public sources |
-| Driver explanation | Narrative only, no quantification | Absent | SHAP values in v1.x quantify which variables drive the forecast |
-| Code quality | N/A | Varies widely; often notebook-only | Portfolio-quality: modular Python, docstrings, clean structure |
+| Feature | PitchBook / CB Insights | IDC / Gartner Reports | This Project (v1.1) |
+|---------|------------------------|----------------------|---------------------|
+| Market size methodology | Proprietary vendor surveys + filings aggregation. CB Insights: 12,050+ market estimates in corpus, "wisdom of crowds" IAC. | Primary vendor surveys (1,000+ vendors), analyst modeling, secondary research cross-check. | Published estimates as anchors + bottom-up segment reconstruction from public filings + comparable multiple valuation for privates. Fully documented. |
+| Segment classification | Hardware / infrastructure / software / services / verticals | Similar; varies by report scope definition | Hardware / cloud infrastructure / software / services — standard taxonomy, explicitly scoped |
+| Private company coverage | PitchBook: extensive (core product); CB Insights: unicorn tracker, funding data | Limited or excluded from market size | 15-20 key companies, comparable multiple methodology, confidence flags, data vintage |
+| Revenue attribution (conglomerates) | PitchBook tracks "AI pure-play" vs "conglomerate" valuations separately; does not attribute within conglomerate | Usually ignored — treats company as pure-play or excludes | Explicit attribution ratios per company, sourced from earnings + analyst commentary, documented uncertainty |
+| Backtesting / model validation | Not disclosed / opaque | Not disclosed | Walk-forward validation on historical actuals; MAPE, R², directional accuracy — visible in Diagnostics tab |
+| Analyst consensus display | PitchBook shows sell-side consensus EPS / revenue targets | Not shown to end users | Analyst consensus panel in Basic and Normal tiers: "model output vs. published range" |
+| Dashboard tiers | One view; no tiering | PDF only; no interactive dashboard | Three tiers: Basic (5-second overview), Normal (analyst depth), Expert (full methodology) |
+| Reproducibility | Not reproducible (proprietary data) | Not reproducible | Fully reproducible from public + LSEG data; pipeline code published |
+
+---
+
+## Existing Feature Integration Notes
+
+The v1.1 features interact with these already-built components:
+
+- **Data pipeline (Parquet cache):** New model replaces the PCA composite but reuses the same pipeline. LSEG data stays as a driver variable; new anchor data (published estimates, company filings) joins as a separate data layer.
+- **ARIMA/Prophet models:** Retained as statistical baselines. New anchored model adds a calibration layer on top, reconciling model output to real-market anchors.
+- **LightGBM ensemble:** Reused. The key change is the target variable — instead of a PCA composite index, the target becomes the anchored market size estimate.
+- **SHAP drivers:** Already built. Gains credibility when the model is anchored on real data (drivers now explain real revenue variance, not index variance).
+- **Diagnostics tab:** Already built. Walk-forward backtesting populates it with real MAPE/R² values.
+- **Normal/Expert modes:** Already built. Need recalibration of displayed numbers and narrative text; dashboard structure unchanged.
+- **PDF reports:** No changes needed to the PDF generation mechanism; output content updates automatically from model.
 
 ---
 
 ## Sources
 
-- [Grand View Research: AI Market Size Report](https://www.grandviewresearch.com/industry-analysis/artificial-intelligence-ai-market) — MEDIUM confidence (commercial research firm)
-- [Indicio: 8 Best Econometric Forecasting Tools](https://www.indicio.com/resources/blog/econometric-forecasting-software) — MEDIUM confidence
-- [Worldmetrics: Top 10 Economic Modeling Software 2026](https://worldmetrics.org/best/economic-modeling-software/) — LOW confidence (aggregator site)
-- [Statista Methodology Documentation](https://www.statista.com/outlook/methodology) — HIGH confidence (official methodology page)
-- [Corporate Finance Institute: Scenario vs. Sensitivity Analysis](https://corporatefinanceinstitute.com/resources/financial-modeling/scenario-analysis-vs-sensitivity-analysis/) — HIGH confidence
-- [SHAP Documentation](https://shap.readthedocs.io/en/latest/) — HIGH confidence (official docs)
-- [skforecast: Explainability](https://skforecast.org/0.20.1/user_guides/explainability.html) — HIGH confidence (official docs)
-- [Data-Mania: Top-Down Market Sizing Guide](https://www.data-mania.com/blog/top-down-market-sizing-tam-sam-som-guide/) — MEDIUM confidence
-- [Infomineo: Market Sizing Toolkit](https://infomineo.com/services/business-research/your-market-sizing-toolkit-sources-strategies-and-solutions-to-common-challenges/) — MEDIUM confidence
-- [Plotly Community: PDF Export in Dash](https://community.plotly.com/t/exporting-multi-page-dash-app-to-pdf-with-entire-layout/37953) — HIGH confidence (official community forum)
-- [World Bank Open Data](https://data.worldbank.org/) — HIGH confidence (primary source)
-- [OECD Data Explorer](https://data-explorer.oecd.org) — HIGH confidence (primary source)
+- [PitchBook Q4 2025 AI Public Comp Sheet and Valuation Guide](https://pitchbook.com/news/reports/q4-2025-ai-public-comp-sheet-and-valuation-guide) — HIGH confidence (official PitchBook report)
+- [PitchBook Q3 2025 AI Public Comp Sheet](https://pitchbook.com/news/reports/q3-2025-ai-public-comp-sheet-and-valuation-guide) — HIGH confidence
+- [Gartner: Worldwide AI Spending to Total $1.5 Trillion in 2025](https://www.gartner.com/en/newsroom/press-releases/2025-09-17-gartner-says-worldwide-ai-spending-will-total-1-point-5-trillion-in-2025) — HIGH confidence (official press release)
+- [Gartner: Worldwide GenAI Spending $644B in 2025](https://www.gartner.com/en/newsroom/press-releases/2025-03-31-gartner-forecasts-worldwide-genai-spending-to-reach-644-billion-in-2025) — HIGH confidence
+- [IDC: AI Infrastructure Spending to Reach $758Bn by 2029](https://my.idc.com/getdoc.jsp?containerId=prUS53894425) — HIGH confidence (official IDC press release)
+- [CB Insights: Industry Analyst Consensus Methodology](https://www.cbinsights.com/research/team-blog/industry-analyst-market-sizings/) — HIGH confidence (official CB Insights methodology post)
+- [Grand View Research: AI Market Size 2025 Segment Breakdown](https://www.grandviewresearch.com/industry-analysis/artificial-intelligence-ai-market) — MEDIUM confidence (commercial research firm)
+- [AI Startup Valuation Multiples 2025 — Equidam](https://www.equidam.com/ai-startup-valuation-revenue-multiples-2025-challenges-insights-2/) — MEDIUM confidence (boutique advisory, cites deal data)
+- [AI Valuation Multiples 2025 — Aventis Advisors](https://aventis-advisors.com/ai-valuation-multiples/) — MEDIUM confidence
+- [AI Business Valuation 2026 — FE International](https://www.feinternational.com/blog/ai-business-valuation-model-2026) — MEDIUM confidence
+- [Alphabet Q3 2025 Earnings — CNBC](https://www.cnbc.com/2025/10/29/alphabet-google-q3-earnings.html) — HIGH confidence (earnings reporting)
+- [Amazon/Microsoft/Alphabet Cloud Q4 2025 — Motley Fool](https://www.fool.com/investing/2026/02/12/amazon-microsoft-and-alphabet-all-reported-robust/) — MEDIUM confidence (secondary reporting on earnings)
+- [UXPin Dashboard Design Principles 2025](https://www.uxpin.com/studio/blog/dashboard-design-principles/) — MEDIUM confidence (UX guidance)
+- [Forecast Evaluation Best Practices — PMC](https://pmc.ncbi.nlm.nih.gov/articles/PMC9718476/) — HIGH confidence (peer-reviewed)
+- [Walk-forward Backtesting Guide — Towards Data Science](https://towardsdatascience.com/putting-your-forecasting-model-to-the-test-a-guide-to-backtesting-24567d377fb5/) — MEDIUM confidence
+- [PrivCo: Private Company Valuation Methods](https://www.privco.com/insights/Complete-Guide-to-Private-Company-Valuation-Methods-Formulas-and-Practical-Insights) — MEDIUM confidence
 
 ---
-*Feature research for: AI Industry Economic Valuation and Forecasting Tool*
-*Researched: 2026-03-17*
+*Feature research for: AI Industry Valuation Model Rework + Basic Dashboard Tier (v1.1)*
+*Researched: 2026-03-23*

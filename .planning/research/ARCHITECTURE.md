@@ -1,384 +1,499 @@
 # Architecture Research
 
-**Domain:** Economic industry valuation and forecasting (hybrid statistical + ML pipeline)
-**Researched:** 2026-03-17
-**Confidence:** MEDIUM-HIGH
+**Domain:** AI industry valuation model — v1.1 integration patterns
+**Researched:** 2026-03-23
+**Confidence:** HIGH (based on direct codebase inspection + domain patterns)
+
+---
 
 ## Standard Architecture
 
-### System Overview
+### System Overview: v1.0 Existing vs v1.1 Target
 
-The canonical architecture for this type of system is a **layered pipeline** with four distinct tiers: ingestion, processing/modeling, storage, and presentation. Data flows strictly downward — raw sources feed into normalized stores, which feed modeling, which feeds the dashboard and reports. No layer reaches backward.
+The existing pipeline has a clean 4-layer architecture. v1.1 adds a new data sourcing layer (market anchors + company filings) and replaces the value conversion layer. The PCA composite index + value chain multiplier approach is retired; real USD outputs come directly from the anchor-calibrated model.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                         PRESENTATION LAYER                          │
-│  ┌─────────────────────┐   ┌─────────────────────────────────────┐  │
-│  │  Dash/Plotly         │   │  Report Generator (PDF/HTML)        │  │
-│  │  Interactive         │   │  Methodology Paper Export           │  │
-│  │  Dashboard           │   │                                     │  │
-│  └──────────┬──────────┘   └─────────────────┬───────────────────┘  │
-└─────────────┼───────────────────────────────┼───────────────────────┘
-              │ reads                          │ reads
-┌─────────────┼───────────────────────────────┼───────────────────────┐
-│             ▼          INFERENCE LAYER       ▼                       │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │  Forecast Engine                                              │   │
-│  │  - loads trained models from model registry                  │   │
-│  │  - produces point estimates + confidence intervals           │   │
-│  │  - runs scenario analysis (pessimistic/base/optimistic)      │   │
-│  └──────────────────────────┬───────────────────────────────────┘   │
-└──────────────────────────────┼─────────────────────────────────────-┘
-                               │ reads models from
-┌──────────────────────────────┼──────────────────────────────────────┐
-│                 MODELING LAYER                ▼                      │
-│  ┌────────────────────┐  ┌───────────────────────────────────────┐  │
-│  │  Statistical Layer │  │  ML Layer                             │  │
-│  │  - ARIMA/SARIMA    │  │  - Gradient boosting (XGBoost/LGB)    │  │
-│  │  - Prophet         │  │  - LSTM / Transformer (optional)      │  │
-│  │  - OLS regression  │  │  - Ensemble combiner                  │  │
-│  │  - VAR             │  │                                       │  │
-│  └────────┬───────────┘  └───────────────┬───────────────────────┘  │
-│           │ residuals feed ML             │                          │
-│           └───────────────────────────────┘                          │
-│           both read from Feature Store                               │
-│                         ┌──────────────────────────────────────┐    │
-│                         │  Feature Store                        │    │
-│                         │  - engineered features (lags, growth  │    │
-│                         │    rates, cross-sector indicators)    │    │
-│                         │  - normalized, industry-tagged        │    │
-│                         └──────────────┬─────────────────────-─┘    │
-└──────────────────────────────────────-─┼───────────────────────────-┘
-                                         │ reads from
-┌────────────────────────────────────────┼────────────────────────────┐
-│                     DATA LAYER         ▼                             │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  Normalized Data Store  (data/processed/)                   │    │
-│  │  - unified schema across sources                            │    │
-│  │  - industry-tagged rows                                     │    │
-│  └────────────────────────────────────┬────────────────────────┘    │
-│                                       │ built by                    │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │  Ingestion & Normalization Pipeline                           │   │
-│  │  - World Bank API connector                                   │   │
-│  │  - OECD connector                                             │   │
-│  │  - Eurostat connector                                         │   │
-│  │  - Web scraper (company filings, market reports)              │   │
-│  │  - Raw data cache (data/raw/ — immutable)                     │   │
-│  └──────────────────────────────────────────────────────────────┘   │
+│  DATA LAYER                                                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌───────────────────────────┐  │
+│  │ World Bank   │  │  OECD MSTI   │  │  LSEG Workspace           │  │
+│  │ (macro proxy)│  │ (proxy)      │  │  (company financials)     │  │
+│  └──────┬───────┘  └──────┬───────┘  └─────────────┬─────────────┘  │
+│         │                 │                         │               │
+│  ┌──────┴─────────────────┴─────────────────────────┴─────────────┐  │
+│  │  NEW: market_anchors.py                                        │  │
+│  │  ┌──────────────────┐  ┌──────────────────┐                   │  │
+│  │  │ Published Market │  │ Private Company  │                   │  │
+│  │  │ Estimates (YAML) │  │ Valuations (YAML)│                   │  │
+│  │  └──────────────────┘  └──────────────────┘                   │  │
+│  └────────────────────────────────────────────────────────────────┘  │
+├─────────────────────────────────────────────────────────────────────┤
+│  PROCESSING LAYER  (largely preserved)                              │
+│  deflate → interpolate → tag → validate → Parquet cache             │
+│  NEW: revenue_attribution.py, dcf_valuation.py (in processing/)     │
+├─────────────────────────────────────────────────────────────────────┤
+│  MODELING LAYER                                                      │
+│  ┌───────────────────────────────────────────────────────────────┐  │
+│  │  REPLACED: PCA composite index as Y variable                  │  │
+│  │  NEW: Anchor-calibrated model                                  │  │
+│  │  - Real USD market estimates as Y variable                    │  │
+│  │  - Macro/proxy indicators as explanatory X variables          │  │
+│  │  - ARIMA/Prophet now trained on USD values                    │  │
+│  │  - LightGBM residual boosting on USD residuals                │  │
+│  └───────────────────────────────────────────────────────────────┘  │
+│  NEW: src/backtesting/                                               │
+│  ┌───────────────────────────────────────────────────────────────┐  │
+│  │  Holdout validation, walk-forward CV, MAPE/R² with actuals   │  │
+│  └───────────────────────────────────────────────────────────────┘  │
+├─────────────────────────────────────────────────────────────────────┤
+│  DASHBOARD LAYER                                                     │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────────┐    │
+│  │  Basic   │  │ Overview │  │ Segments │  │ Drivers/Diag.    │    │
+│  │  (NEW)   │  │(updated) │  │(updated) │  │(fixed actuals)   │    │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────────────┘    │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Component Responsibilities
 
-| Component | Responsibility | Communicates With |
-|-----------|----------------|-------------------|
-| Ingestion connectors | Fetch raw data from public APIs and scraping targets; write to `data/raw/` | None (sources only) |
-| Normalization pipeline | Clean, schema-align, deduplicate, tag by industry; write to `data/processed/` | Reads raw; writes processed |
-| Feature store | Compute derived features: lags, growth rates, rolling averages, cross-sector signals | Reads processed; feeds model layers |
-| Statistical layer | Baseline models — ARIMA, Prophet, OLS, VAR; produces baselines + residuals | Reads feature store; writes results + residuals |
-| ML layer | Refine on residuals from statistical layer; gradient boosting primary, LSTM optional | Reads feature store + statistical residuals; writes model artifacts |
-| Ensemble combiner | Weighted blend of statistical and ML outputs; produces final forecast with CI | Reads both model outputs |
-| Forecast engine (inference) | Load serialized models, run forward projections, produce scenario bands | Reads model registry + feature store |
-| Dashboard (Dash) | Interactive UI — charts, tables, filter controls | Reads forecast outputs |
-| Report generator | Render PDF/HTML with methodology, charts, projections | Reads forecast outputs + templates |
+| Component | v1.0 Status | v1.1 Action | Responsibility |
+|-----------|-------------|-------------|----------------|
+| `src/ingestion/pipeline.py` | EXISTS | Modify | Add market_anchors step; keep error-isolated step pattern |
+| `src/ingestion/world_bank.py` | EXISTS | Preserve | Macro proxy indicators (explanatory X vars, not Y) |
+| `src/ingestion/oecd.py` | EXISTS | Preserve | R&D and patent proxy indicators |
+| `src/ingestion/lseg.py` | EXISTS | Extend | Add AI revenue attribution fields per company |
+| `src/ingestion/market_anchors.py` | NEW | Create | Load published estimates + private company valuations from YAML |
+| `src/processing/normalize.py` | EXISTS | Preserve | Deflation, interpolation, tagging pipeline |
+| `src/processing/validate.py` | EXISTS | Modify | Add MARKET_ANCHOR_SCHEMA and ATTRIBUTION_SCHEMA |
+| `src/processing/revenue_attribution.py` | NEW | Create | Isolate AI revenue share from conglomerate financials |
+| `src/processing/dcf_valuation.py` | NEW | Create | DCF + AI value multiplier estimates for private companies |
+| `src/processing/features.py` | EXISTS | Modify | PCA composite retired as primary; indicators become explanatory X variables |
+| `src/models/statistical/arima.py` | EXISTS | Modify | Retrain on USD market size values (not index scores) |
+| `src/models/statistical/prophet_model.py` | EXISTS | Modify | Same — fit on USD values |
+| `src/models/ml/gradient_boost.py` | EXISTS | Modify | USD residuals as target; feature matrix changes |
+| `src/models/ensemble.py` | EXISTS | Preserve | Inverse-RMSE weighting logic is unit-agnostic |
+| `src/inference/forecast.py` | EXISTS | Modify | Remove value chain multiplier path; output natively in USD |
+| `src/diagnostics/model_eval.py` | EXISTS | Modify | Activate MAPE/R² computation now that actuals exist |
+| `src/backtesting/` | NEW | Create | Holdout framework, walk-forward CV, benchmark comparison |
+| `src/dashboard/app.py` | EXISTS | Modify | Remove multiplier calibration block (lines 53-109); load backtesting Parquet |
+| `src/dashboard/tabs/basic.py` | NEW | Create | Basic tier: total market cap KPIs, CAGR, segment bar chart |
+| `src/dashboard/layout.py` | EXISTS | Modify | Add Basic tier as fifth tab in navigation |
+| `src/dashboard/callbacks.py` | EXISTS | Modify | Add `elif active_tab == "basic"` routing branch |
+| `src/dashboard/charts/backtest.py` | EXISTS | Replace | Rewrite to show actual vs predicted (currently only residuals) |
+| `src/dashboard/tabs/diagnostics.py` | EXISTS | Modify | Wire real MAPE/R² values; update chart to actual vs predicted |
+| `config/industries/ai.yaml` | EXISTS | Extend | Add market_anchors, private_company_valuations, revenue_attribution sections |
 
 ---
 
 ## Recommended Project Structure
 
+New code fits into the existing `src/` package structure with two new top-level packages and three new processing modules.
+
 ```
-industry-value-estimator/
-├── data/
-│   ├── raw/                   # Immutable source dumps — never modify
-│   │   ├── world_bank/
-│   │   ├── oecd/
-│   │   ├── eurostat/
-│   │   └── scraped/
-│   ├── interim/               # Partially transformed data
-│   └── processed/             # Final canonical datasets for modeling
-├── src/
-│   ├── ingestion/             # One module per data source
-│   │   ├── world_bank.py
-│   │   ├── oecd.py
-│   │   ├── eurostat.py
-│   │   └── scraper.py
-│   ├── processing/            # Normalization and schema alignment
-│   │   ├── normalize.py       # Unified schema enforcement
-│   │   ├── validate.py        # Data quality checks
-│   │   └── features.py        # Feature engineering (lags, ratios, etc.)
-│   ├── models/
-│   │   ├── statistical/       # ARIMA, Prophet, OLS, VAR
-│   │   │   ├── arima.py
-│   │   │   ├── prophet_model.py
-│   │   │   └── regression.py
-│   │   ├── ml/                # Gradient boosting, LSTM
-│   │   │   ├── gradient_boost.py
-│   │   │   └── lstm.py        # Optional — add in later phase
-│   │   ├── ensemble.py        # Combine statistical + ML outputs
-│   │   └── evaluate.py        # RMSE, MAPE, CI coverage metrics
-│   ├── inference/             # Load serialized models, produce forecasts
-│   │   ├── forecast.py        # Main forecasting entry point
-│   │   └── scenarios.py       # Pessimistic / base / optimistic bands
-│   ├── reporting/
-│   │   ├── report.py          # PDF/HTML generation
-│   │   └── templates/         # Jinja2 or WeasyPrint templates
-│   └── dashboard/
-│       ├── app.py             # Dash app entry point
-│       ├── layout.py          # Page structure
-│       ├── callbacks.py       # Interactive callback logic
-│       └── components/        # Reusable chart components
-├── models/                    # Serialized trained models (joblib/pickle)
-│   └── ai_industry/           # Industry-namespaced subdirectory
-├── notebooks/                 # Exploratory analysis, methodology drafts
-│   ├── 01_data_exploration.ipynb
-│   ├── 02_baseline_models.ipynb
-│   ├── 03_ml_layer.ipynb
-│   └── 04_evaluation.ipynb
-├── reports/                   # Generated outputs — not committed
-│   └── .gitkeep
-├── config/
-│   ├── settings.py            # All tunable parameters (no hardcoding)
-│   └── industries/
-│       └── ai.yaml            # Per-industry config (sources, proxies, dates)
-├── tests/
-│   ├── test_ingestion.py
-│   ├── test_processing.py
-│   └── test_models.py
-├── docs/                      # Methodology paper drafts, component explanations
-└── pyproject.toml / requirements.txt
+src/
+├── ingestion/
+│   ├── pipeline.py             # MODIFY: add market_anchors step to run_full_pipeline()
+│   ├── world_bank.py           # PRESERVE
+│   ├── oecd.py                 # PRESERVE
+│   ├── lseg.py                 # EXTEND: add AI revenue fields to fetch_company_financials()
+│   └── market_anchors.py       # NEW: loads YAML anchors → Parquet (no API calls)
+│
+├── processing/
+│   ├── normalize.py            # PRESERVE
+│   ├── deflate.py              # PRESERVE
+│   ├── interpolate.py          # PRESERVE
+│   ├── tag.py                  # PRESERVE
+│   ├── validate.py             # MODIFY: add two new pandera schemas
+│   ├── features.py             # MODIFY: build_indicator_matrix preserved; PCA demoted to comparison utility
+│   ├── revenue_attribution.py  # NEW: AI revenue isolation from conglomerate financials
+│   └── dcf_valuation.py        # NEW: DCF + AI multiple for private companies
+│
+├── models/
+│   ├── ensemble.py             # PRESERVE: weighting logic is unit-agnostic
+│   ├── statistical/
+│   │   ├── arima.py            # MODIFY: fit on USD values, not index scores
+│   │   ├── prophet_model.py    # MODIFY: same
+│   │   └── regression.py       # PRESERVE or extend for anchor regression
+│   └── ml/
+│       ├── gradient_boost.py   # MODIFY: feature matrix changes; target still residuals but USD
+│       └── quantile_models.py  # PRESERVE: quantile regression logic is unit-agnostic
+│
+├── inference/
+│   ├── forecast.py             # MODIFY: remove value chain multiplier path
+│   └── shap_analysis.py        # PRESERVE: SHAP works on any LightGBM model
+│
+├── diagnostics/
+│   ├── model_eval.py           # MODIFY: wire compute_mape/compute_r2 to backtest actuals
+│   └── structural_breaks.py    # PRESERVE
+│
+├── backtesting/                # NEW package
+│   ├── __init__.py
+│   ├── holdout.py              # Holdout split + evaluation against known anchor estimates
+│   ├── walk_forward.py         # Walk-forward CV across historical anchor points
+│   └── benchmark_compare.py    # Compare model output vs analyst consensus ranges
+│
+├── dashboard/
+│   ├── app.py                  # MODIFY: remove multiplier block; load backtesting_results.parquet
+│   ├── layout.py               # MODIFY: add Basic tab (5th entry in dcc.Tabs)
+│   ├── callbacks.py            # MODIFY: add elif active_tab == "basic" branch
+│   ├── charts/
+│   │   ├── fan_chart.py        # PRESERVE
+│   │   ├── backtest.py         # REPLACE: actual vs predicted chart (not just residuals)
+│   │   └── styles.py           # PRESERVE
+│   └── tabs/
+│       ├── basic.py            # NEW: Basic tier layout
+│       ├── overview.py         # MODIFY: remove multiplier derivation Expert block
+│       ├── segments.py         # MODIFY: USD values now native, not multiplier-converted
+│       ├── drivers.py          # PRESERVE: SHAP output structure unchanged
+│       └── diagnostics.py      # MODIFY: real MAPE/R²; actual vs predicted chart
+│
+└── reports/                    # PRESERVE (PDF content updates are downstream of this milestone)
 ```
 
 ### Structure Rationale
 
-- **`data/raw/` is immutable:** Every transformation is reproducible from source. This is the single most important rule — never overwrite raw. Enforced by convention and a README inside the folder.
-- **`src/ingestion/` one file per source:** Adding a new data source means adding one file and registering it in a pipeline config. No other files change.
-- **`src/models/statistical/` and `src/models/ml/` separated:** The two-layer hybrid approach needs clear ownership. Statistical models produce residuals that ML models consume. This boundary must be explicit in code.
-- **`config/industries/ai.yaml`:** The extensibility mechanism. Adding a second industry means adding `config/industries/retail.yaml` with its source list, proxy variables, and date range. The ingestion pipeline reads this config and routes accordingly.
-- **`models/` with industry namespacing:** `models/ai_industry/arima_2026.joblib` — no ambiguity when multiple industries exist.
-- **Notebooks for exploration only:** Production logic lives in `src/`. Notebooks call `src/` modules; they do not contain pipeline logic.
+- **`src/backtesting/`** is a new top-level package, not a subfolder of `diagnostics/`, because backtesting is a pipeline-time concern (runs during model training/validation), not a dashboard display concern. Diagnostics consumes backtesting output files.
+- **`src/ingestion/market_anchors.py`** is in ingestion (not processing) because it loads external reference data at the same stage as World Bank/OECD — it is a data source, not a transformation. It reads from YAML config and writes raw Parquet, matching the ingestion layer's responsibility.
+- **`revenue_attribution.py` and `dcf_valuation.py`** belong in processing because they transform raw company financials into model-ready USD values — they are processing steps, not models.
+- `build_pca_composite` is kept in `features.py` as a comparison path for Expert mode methodology transparency, not as the primary modeling path.
 
 ---
 
 ## Architectural Patterns
 
-### Pattern 1: Two-Stage Hybrid Forecasting (Statistical First, ML on Residuals)
+### Pattern 1: Anchor-Calibrated Regression (Replaces PCA + Multiplier)
 
-**What:** Run interpretable statistical models (ARIMA, Prophet) first to capture trend and seasonality. Pass their residuals to an ML model (XGBoost, LightGBM) which learns nonlinear patterns the statistical model missed. Combine outputs via weighted ensemble.
+**What:** Instead of building a dimensionless PCA composite index and multiplying to USD via a single anchor value, the new model uses published market size estimates directly as the dependent variable (Y) and treats macroeconomic/proxy indicators as explanatory variables (X). ARIMA/Prophet fit directly on the USD time series; LightGBM corrects residuals in USD units.
 
-**When to use:** Always for this project. Hybrid consistently outperforms either approach alone on economic time series. The statistical stage also provides explainability required for a methodology paper.
+**When to use:** Any time you have sparse but real ground-truth observations and many correlated proxy indicators.
 
-**Trade-offs:** Adds a dependency between model layers (ML training requires statistical outputs). Sequential execution adds runtime. Benefit: both interpretability and predictive accuracy.
+**Trade-offs:** Fewer observations for model fitting (published estimates typically cover 2017-2025, giving ~8 data points); the model is more transparent and auditable but more dependent on the quality of anchor inputs.
 
-**Example:**
+**Impact on `app.py`:** The value chain multiplier calibration block (approximately lines 53-109 in the current `app.py`) is removed entirely. Module-level globals simplify from `FORECASTS_DF` + `VALUE_CHAIN_MULTIPLIERS` + `VALUE_CHAIN_DERIVATION` to just `FORECASTS_DF` + `BACKTESTING_DF`. The `usd_point` columns that were computed as `index * multiplier` are replaced by the native model output.
 
 ```python
-# src/models/ensemble.py
-def hybrid_forecast(features_df, stat_model, ml_model, alpha=0.6):
-    stat_pred = stat_model.predict(features_df)
-    residuals = features_df["target"] - stat_pred
-    ml_correction = ml_model.predict(features_df.assign(stat_residual=residuals))
-    return alpha * stat_pred + (1 - alpha) * ml_correction
+# v1.0 pattern (RETIRED in v1.1)
+usd_point = point_estimate_real_2020 * VALUE_CHAIN_MULTIPLIERS[seg]
+
+# v1.1 pattern — no conversion needed
+# point_estimate_real_2020 IS already in USD billions
+# Column name preserved for schema backward compatibility
 ```
 
-### Pattern 2: Industry-Config-Driven Ingestion
+### Pattern 2: Revenue Attribution via Segment Disclosure + Analogue Ratios
 
-**What:** Each industry is declared in a YAML config file specifying its data sources, proxy variables (what to use as a proxy for AI industry GDP contribution when direct measurement is unavailable), and modeling date ranges. The ingestion pipeline is generic; industry specifics live entirely in config.
+**What:** For mixed-tech companies (e.g., Alphabet, Microsoft, IBM), AI revenue is isolated using a two-step approach:
+1. **Explicit disclosures:** Companies that report AI segment revenue directly are loaded from LSEG fields configured in `ai.yaml` under `revenue_attribution.explicit_disclosure`.
+2. **Analogue ratios:** For companies without explicit AI disclosure, apply an attribution ratio sourced from analyst estimates, stored as YAML in `revenue_attribution.analogue_ratios`.
 
-**When to use:** From day one, even for a single industry. This is the extensibility mechanism. Building it industry-aware from the start avoids a structural rewrite when expanding.
+**When to use:** Whenever LSEG financial data returns total company revenue for a conglomerate with mixed AI and non-AI business lines.
 
-**Trade-offs:** Adds a config schema to maintain. Indirection makes debugging slightly harder. Benefit: adding industry #2 costs a YAML file, not a code rewrite.
+**Trade-offs:** Attribution ratios for non-disclosing companies introduce estimation error. The design stores ratio, source, and uncertainty band in YAML so Expert mode can surface the methodology. The `revenue_attribution.py` output always includes `attribution_method`, `ratio_source`, and `uncertainty_low/high` fields — not just a single number.
 
-**Example:**
+```python
+# src/processing/revenue_attribution.py
+def estimate_ai_revenue(
+    company_revenue: float,
+    ric: str,
+    attribution_config: dict,
+    year: int,
+) -> dict:
+    """
+    Returns:
+        ai_revenue_usd: float
+        attribution_method: "explicit_disclosure" | "analogue_ratio"
+        ratio: float
+        ratio_source: str
+        uncertainty_low: float
+        uncertainty_high: float
+    """
+```
+
+### Pattern 3: Private Company Valuation via DCF + AI Revenue Multiple
+
+**What:** Private AI companies (OpenAI, Anthropic, xAI, etc.) lack market prices. The model uses a two-track approach:
+1. **Revenue proxy:** Last known funding round valuation divided by prevailing AI revenue multiple (from public comps) gives implied revenue, projected forward with the segment growth rate.
+2. **DCF anchor:** Where cash flow data is available from secondary sources, apply a simple DCF with terminal value based on comparable public company exit multiples.
+
+All private valuation inputs are stored in YAML (not code), so they can be updated without model changes — consistent with the ARCH-01 config-driven extensibility principle.
+
+**Trade-offs:** Private valuations have wide uncertainty bands (typically 30-50%). The `dcf_valuation.py` output always includes `valuation_method`, `data_freshness_date`, and `uncertainty_band_pct` fields. These surface directly in Expert mode.
 
 ```yaml
-# config/industries/ai.yaml
-industry: ai
-display_name: "Artificial Intelligence Industry"
-sources:
-  - world_bank: ["NY.GDP.MKTP.CD", "GB.XPD.RSDV.GD.ZS"]
-  - oecd: ["ANBERD"]
-proxies:
-  - description: "R&D expenditure as share of GDP"
-    variable: "GB.XPD.RSDV.GD.ZS"
-date_range:
-  start: "2000"
-  end: "2024"
+# config/industries/ai.yaml (new section)
+private_company_valuations:
+  - name: "OpenAI"
+    segment: "ai_software"
+    last_known_valuation_usd_billions: 157.0
+    valuation_date: "2024-10-01"
+    valuation_method: "funding_round"
+    revenue_multiple_peer: "ai_software_public_median"
+    uncertainty_band_pct: 40
 ```
 
-### Pattern 3: FTI (Feature / Training / Inference) Separation
+### Pattern 4: Backtesting via Walk-Forward Holdout Against Known Anchors
 
-**What:** Treat feature engineering, model training, and inference as three separately executable pipeline stages. Features are computed once and stored. Training reads stored features. Inference reads stored models and fresh features.
+**What:** The backtesting framework uses known historical market size estimates (from published analyst reports, stored in YAML) as "ground truth." Walk-forward validation: train on data through year T, forecast T+1 to T+3, compare against the known estimate for those years.
 
-**When to use:** From the start. This avoids the common mistake of coupling feature engineering into the training loop, which makes reuse and debugging painful.
+**When to use:** Model validation before any forecast is displayed in the dashboard. The backtesting output writes `backtesting_results.parquet` to `data/processed/`. The diagnostics tab and `model_eval.py` read from this file.
 
-**Trade-offs:** Requires discipline about where feature logic lives (always in `src/processing/features.py`, never inside a model file). Adds boilerplate. Benefit: features are reused across all models; inference at dashboard time is fast.
+**Trade-offs:** The number of holdout points is small (AI market estimates with consensus coverage start around 2017, giving at most ~8 years). MAPE over 5-8 observations is noisy. The framework reports this limitation explicitly in the diagnostics display.
+
+**Pipeline execution order (critical for dependency management):**
+```
+1. Ingest all sources including market_anchors
+2. Process + revenue_attribution + dcf_valuation → processed Parquet files
+3. Build indicator matrix (macro proxies as X vars)
+4. Fit ARIMA/Prophet/LightGBM on anchor USD series
+5. Run backtesting → write backtesting_results.parquet
+6. Run full forecast → write forecasts_ensemble.parquet
+7. Dashboard reads from Parquet cache at startup (no model objects at runtime)
+```
 
 ---
 
 ## Data Flow
 
-### End-to-End Pipeline Flow
+### v1.1 Pipeline Run
 
 ```
-[Public APIs: World Bank, OECD, Eurostat]
-[Web Scraping: company filings, market reports]
+[python scripts/run_pipeline.py]
     |
-    | (HTTP fetch, rate-limited, cached locally)
     v
-data/raw/                        <- immutable source cache
+run_full_pipeline("ai")
     |
-    | (normalize.py: schema alignment, type coercion, dedup)
+    +---> market_anchors.py ------> data/raw/market_anchors/ai_anchors.parquet
+    |                               (published estimates: IDC, Gartner, Goldman)
+    |
+    +---> world_bank.py + oecd.py -> data/raw/ (unchanged)
+    |
+    +---> lseg.py (extended) -----> data/raw/lseg/ (adds AI revenue fields)
+    |
     v
-data/processed/                  <- unified, industry-tagged parquet/CSV
+processing layer
     |
-    | (features.py: lag features, growth rates, rolling windows)
+    +---> revenue_attribution.py --> attaches ai_revenue_usd to company rows
+    |
+    +---> dcf_valuation.py --------> private company USD estimates
+    |
+    +---> normalize / deflate / tag / validate (unchanged)
+    |
     v
-Feature Store (in-memory DataFrame or parquet cache)
+data/processed/
+    ├── world_bank_ai.parquet          (unchanged schema)
+    ├── oecd_msti_ai.parquet           (unchanged schema)
+    ├── lseg_ai.parquet                (extended: + ai_revenue_usd column)
+    ├── market_anchors_ai.parquet      (NEW: year, segment, usd_billions, source)
+    └── private_valuations_ai.parquet  (NEW: company, segment, usd_billions, method)
     |
-    |─────────────────────────────────|
-    v                                 v
-Statistical Models               ML Models
-(ARIMA, Prophet, OLS)            (XGBoost/LightGBM)
-    |                                 |
-    | residuals ─────────────────────>|
-    |                                 |
-    v                                 v
-                  Ensemble Combiner
-                        |
-                        v
-              Forecast outputs (parquet)
-              - point estimates by year
-              - confidence intervals
-              - scenario variants
-                        |
-               |────────|────────────|
-               v                    v
-         Dash Dashboard        Report Generator
-         (interactive)         (PDF/HTML/paper)
+    v
+modeling layer
+    |
+    +---> Fit ARIMA/Prophet on market_anchors_ai USD series (per segment)
+    +---> LightGBM fits on USD residuals using macro indicators as X features
+    +---> backtesting/ --> backtesting_results.parquet  (NEW)
+    +---> inference/forecast.py --> forecasts_ensemble.parquet (USD native, no multiplier)
+    |
+    v
+dashboard reads Parquet cache at startup
 ```
 
-### Key Data Flows
+### Dashboard Tier Data Flow (Runtime)
 
-1. **Raw-to-processed:** Runs as a batch job triggered manually or by schedule. Reads from all source APIs, writes unified schema to `data/processed/`. Idempotent — safe to re-run.
-2. **Processed-to-features:** Feature engineering reads `data/processed/`, computes derived columns, writes feature parquet (or holds in memory for small datasets). Deterministic given the same processed data.
-3. **Training flow:** Reads feature store, trains statistical models, captures residuals, trains ML on residuals, serializes all models to `models/ai_industry/`.
-4. **Inference flow (at dashboard load):** Loads serialized models, reads latest features, runs forward projection through 2030 horizon, returns forecast DataFrame.
-5. **Dashboard callback flow:** User adjusts a filter (e.g., scenario slider) → Dash callback runs `inference/scenarios.py` → returns updated chart data → Plotly re-renders charts.
+```
+[User opens browser]
+    |
+    v
+app.py startup
+    ├── reads forecasts_ensemble.parquet   (USD billions, direct)
+    ├── reads residuals_statistical.parquet
+    ├── reads backtesting_results.parquet  (NEW)
+    └── NO multiplier calibration block    (removed)
+    |
+    v
+layout.py: 5 tabs rendered
+    ├── Basic      -> KPI cards (total market, CAGR, segment share bar)
+    ├── Overview   -> fan chart + segment table (USD native)
+    ├── Segments   -> per-segment fan charts
+    ├── Drivers    -> SHAP (unchanged)
+    └── Diagnostics -> real MAPE/R² table + actual vs predicted chart
+```
+
+### Key Data Contract Change
+
+The single most important schema change in v1.1:
+
+| Column | v1.0 meaning | v1.1 meaning |
+|--------|-------------|-------------|
+| `point_estimate_real_2020` | Dimensionless PCA index score | USD billions (2020 constant) |
+| `usd_point` | `index × VALUE_CHAIN_MULTIPLIERS[seg]` computed in app.py | Alias of `point_estimate_real_2020` (or removed) |
+| `ci80_lower/upper` | Index score CI from quantile regression | USD billions CI from quantile regression |
+
+**Recommendation:** Keep the column name `point_estimate_real_2020` in `forecasts_ensemble.parquet` for schema continuity. The values change from dimensionless index units to USD billions, but existing dashboard code that reads this column continues to work without changes — only the multiplier application block in `app.py` is removed.
 
 ---
 
 ## Integration Points
 
-### External Services
+### Existing Components: Modify vs Replace vs Preserve
 
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| World Bank API | REST (wbgapi Python client or direct HTTP) | Free, no auth; rate-limit to ~100 req/min |
-| OECD API | SDMX REST API | Free; queries can be slow (30s+); cache aggressively |
-| Eurostat | SDMX or eurostat Python package | Free; bulk download often faster than API |
-| Web scraping | requests + BeautifulSoup or playwright for JS-heavy pages | Respect robots.txt; build retry/backoff |
+| Component | Action | Integration Risk | Key Notes |
+|-----------|--------|-----------------|-----------|
+| `src/ingestion/pipeline.py` | Modify | LOW | Add market_anchors step to `steps` list; existing error-isolation pattern applies unchanged |
+| `src/processing/validate.py` | Modify | LOW | Add two new pandera schemas; existing three schemas untouched |
+| `src/processing/features.py` | Modify | MEDIUM | `build_indicator_matrix` is preserved and reused — macro indicators become X variables. `build_pca_composite` becomes a comparison utility, not the primary path |
+| `src/models/statistical/arima.py` | Modify | MEDIUM | Retrain on USD series; API surface unchanged but training data and units change |
+| `src/models/ml/gradient_boost.py` | Modify | MEDIUM | Feature matrix changes (real indicators vs index features); target shifts to USD residuals; hyperparameters need retuning |
+| `src/inference/forecast.py` | Modify | MEDIUM | Remove `reflate_to_nominal` as required step; `clip_ci_bounds` and `build_forecast_dataframe` are preserved |
+| `src/dashboard/app.py` | Modify | HIGH | The multiplier calibration block (current lines 53-109) is the highest-risk deletion. Module-level globals simplify significantly. Load `backtesting_results.parquet` at startup |
+| `src/dashboard/charts/backtest.py` | Replace | LOW | Currently only shows residual bars (no actuals). Complete rewrite needed; `make_backtest_chart` function signature can be preserved |
+| `src/dashboard/tabs/diagnostics.py` | Modify | MEDIUM | `"N/A"` MAPE/R² become real values sourced from backtesting_results; table structure and styling unchanged |
 
-### Internal Boundaries
+### New Internal Boundaries
 
 | Boundary | Communication | Notes |
 |----------|---------------|-------|
-| Ingestion → Processing | File system (data/raw/ to data/processed/) | Decoupled; processing can re-run without re-fetching |
-| Processing → Models | In-memory DataFrame or feature parquet | Keep features in memory for small datasets; parquet cache for larger |
-| Models → Dashboard | Serialized model files + forecast parquet | Dashboard reads pre-computed forecasts; avoids training at runtime |
-| Dashboard → Reports | Shared chart components | Dash callbacks and report renderer both call the same Plotly figure functions |
+| `market_anchors.py` → processing layer | `data/raw/market_anchors/ai_anchors.parquet` | New Parquet file in existing raw layer pattern |
+| `backtesting/` → `diagnostics/model_eval.py` | `data/processed/backtesting_results.parquet` | Written by pipeline, read by dashboard; no circular dependency |
+| `revenue_attribution.py` → modeling | Extended `lseg_ai.parquet` with `ai_revenue_usd` column | Modeling layer reads the column; existing read paths unchanged |
 
----
+### Config Extension Pattern
 
-## Build Order (Phase Dependencies)
+The YAML extension preserves ARCH-01 extensibility. New sections follow the existing list-of-dicts pattern:
 
-The component dependencies dictate this build order:
+```yaml
+# config/industries/ai.yaml (new sections to add)
 
-```
-Phase 1: Data Foundation
-  ingestion/ connectors + normalization pipeline
-  Reason: Everything downstream depends on clean data existing.
+market_anchors:
+  - year: 2023
+    total_usd_billions: 207
+    source: "IDC Worldwide AI Spending Guide 2024"
+    confidence: "consensus"
+  - year: 2022
+    total_usd_billions: 142
+    source: "Goldman Sachs AI Infrastructure Report 2023"
+    confidence: "single_source"
 
-Phase 2: Feature Engineering + Statistical Baseline
-  processing/features.py + models/statistical/
-  Reason: Statistical models are the interpretable baseline and produce
-  residuals needed by ML. Cannot train ML without statistical residuals.
+revenue_attribution:
+  explicit_disclosure:
+    - ric: "MSFT.O"
+      field: "azure_openai_revenue"
+      coverage_years: [2023, 2024, 2025]
+  analogue_ratios:
+    - ric: "GOOGL.O"
+      ai_revenue_ratio: 0.22
+      ratio_source: "Alphabet Q4 2024 10-K analyst decomposition"
+      ratio_uncertainty: 0.08
 
-Phase 3: ML Layer + Ensemble
-  models/ml/ + ensemble.py + evaluate.py
-  Reason: Requires Phase 2 outputs (features + residuals).
-
-Phase 4: Inference + Dashboard
-  inference/ + dashboard/
-  Reason: Requires trained models from Phase 3.
-
-Phase 5: Reports + Methodology Paper
-  reporting/ + docs/
-  Reason: Requires working forecasts; summarizes all prior phases.
+private_company_valuations:
+  - name: "OpenAI"
+    segment: "ai_software"
+    last_known_valuation_usd_billions: 157.0
+    valuation_date: "2024-10-01"
+    valuation_method: "funding_round"
+    revenue_multiple_peer: "ai_software_public_median"
+    uncertainty_band_pct: 40
 ```
 
 ---
 
 ## Anti-Patterns
 
-### Anti-Pattern 1: Hardcoding Industry Logic in Pipeline Code
+### Anti-Pattern 1: Recalibrating the Value Chain Multiplier Instead of Replacing It
 
-**What people do:** Write `if industry == "ai": use_source = "world_bank"` scattered through ingestion and modeling code.
-**Why it's wrong:** Adding a second industry requires hunting through every file for conditionals. Quickly becomes unmaintainable.
-**Do this instead:** All industry-specific parameters live in `config/industries/<industry>.yaml`. Pipeline code reads config and is industry-agnostic.
+**What people do:** Leave the PCA composite + multiplier in place but try to "better calibrate" the anchor to real market data.
 
-### Anti-Pattern 2: Training Models Inside the Dashboard
+**Why it's wrong:** The root problem is not the anchor value — it is that the composite index has no direct causal relationship to AI market size. Better anchoring a structurally flawed model improves numbers that still lack economic interpretability. The diagnostics tab would still show near-meaningless metrics because there are no direct actuals to compare the model against.
 
-**What people do:** Load raw data and re-train models on each dashboard load to show "live" results.
-**Why it's wrong:** Training takes seconds to minutes. Dash callbacks must respond in <1 second or the UX degrades. Also makes the dashboard stateful in ways that are hard to debug.
-**Do this instead:** Train offline, serialize to disk. Dashboard loads pre-computed forecast outputs. Callback filters and re-renders charts; it does not re-train.
+**Do this instead:** Replace PCA composite as the Y variable with real market size estimates. Macro indicators become X variables. The multiplier block in `app.py` is deleted, not recalibrated.
 
-### Anti-Pattern 3: Skipping the Statistical Baseline
+### Anti-Pattern 2: Building New Components as Standalone Scripts Outside the Pipeline
 
-**What people do:** Jump straight to XGBoost or LSTM because they expect better accuracy.
-**Why it's wrong:** ML models on economic time series with small datasets (50–100 data points) overfit easily. Statistical baselines provide interpretable benchmarks. The methodology paper requires explainability. The hybrid approach consistently wins on evaluation metrics.
-**Do this instead:** Build ARIMA/Prophet baseline first, measure its error, then show how ML corrects the residuals. Document the improvement.
+**What people do:** Build `revenue_attribution.py`, `dcf_valuation.py`, and `backtesting/` as standalone scripts called directly from the command line.
 
-### Anti-Pattern 4: Mutating Raw Data
+**Why it's wrong:** The existing `run_full_pipeline()` uses an error-isolated step list. Components that bypass this pattern create maintenance inconsistency and lose the guarantee that partial failures do not abort the pipeline.
 
-**What people do:** Run preprocessing in-place on the files in `data/raw/`.
-**Why it's wrong:** Breaks reproducibility. A bug in preprocessing cannot be recovered without re-fetching from APIs.
-**Do this instead:** Raw data is immutable. Every transformation writes to `data/interim/` or `data/processed/`. Re-running the full pipeline from raw must always be possible.
+**Do this instead:** Add new components as steps in the `steps` list in `run_full_pipeline()`. Each new component returns a `Path` to a written Parquet file, matching the existing pattern.
 
-### Anti-Pattern 5: Monolithic Notebook as Production Code
+### Anti-Pattern 3: Writing Actuals into `residuals_statistical.parquet`
 
-**What people do:** One giant Jupyter notebook containing ingestion, preprocessing, modeling, and visualization.
-**Why it's wrong:** Impossible to test, refactor, or extend. Cannot be imported by the dashboard. Hidden state in kernel makes reproducibility unreliable.
-**Do this instead:** Notebooks are for exploration and documentation only. All logic moves to `src/` modules. Notebooks import from `src/` and demonstrate the pipeline with narrative text.
+**What people do:** Add `actual` and `predicted` columns to the existing `residuals_statistical.parquet` to fix the diagnostics tab quickly.
+
+**Why it's wrong:** `residuals_statistical.parquet` has a defined schema that existing code and tests read. Changing it risks breaking the Diagnostics tab, the backtest chart, and the 233 existing tests that check schema conformance.
+
+**Do this instead:** Write a separate `backtesting_results.parquet` with its own schema (`year`, `segment`, `actual_usd`, `predicted_usd`, `residual_usd`, `model`, `holdout_type`). The diagnostics tab reads from this new file for MAPE/R² display.
+
+### Anti-Pattern 4: Building Basic Tier as a Second Dash App Instance
+
+**What people do:** Create a separate Dash app on a different port to keep the Basic tier "clean" and simple.
+
+**Why it's wrong:** Two Dash instances create deployment complexity with no benefit. The existing layout already handles tier separation via tab navigation.
+
+**Do this instead:** Add `basic` as a fifth tab value in `layout.py`. The Basic tab renders via the existing `render_tab()` callback with a new `elif active_tab == "basic"` branch. Basic tab content (KPI cards only) aggregates from the same `FORECASTS_DF` already loaded at startup — no new data load needed.
+
+---
+
+## Build Order (Dependency-Aware)
+
+The correct build sequence respects data dependencies. New data must exist before models can be retrained on it; models must be retrained before the dashboard can display real diagnostics.
+
+```
+Phase A: Data Foundation
+  1. Extend config/industries/ai.yaml with market_anchors + private valuations + revenue_attribution
+  2. Build src/ingestion/market_anchors.py (load YAML anchors to Parquet)
+  3. Extend src/processing/validate.py with new pandera schemas
+  4. Build src/processing/revenue_attribution.py
+  5. Build src/processing/dcf_valuation.py
+  6. Wire all into src/ingestion/pipeline.py (add steps to run_full_pipeline)
+  7. Run pipeline end-to-end to verify new Parquet files are written
+
+Phase B: Model Rework (requires Phase A Parquet files)
+  8. Modify src/processing/features.py (indicators become X variable matrix)
+  9. Modify src/models/statistical/arima.py + prophet_model.py (fit on USD series)
+  10. Modify src/models/ml/gradient_boost.py (USD residuals, updated feature matrix)
+  11. Build src/backtesting/holdout.py + walk_forward.py + benchmark_compare.py
+  12. Wire backtesting into pipeline run (writes backtesting_results.parquet)
+  13. Modify src/inference/forecast.py (remove multiplier path; USD native output)
+  14. Modify src/diagnostics/model_eval.py (activate MAPE/R² with backtesting actuals)
+
+Phase C: Dashboard (requires Phase B Parquet outputs)
+  15. Modify src/dashboard/app.py (remove multiplier calibration block; load backtesting data)
+  16. Build src/dashboard/tabs/basic.py (Basic tier KPI cards)
+  17. Modify src/dashboard/layout.py (add Basic tab as 5th tab)
+  18. Modify src/dashboard/callbacks.py (route basic tab)
+  19. Replace src/dashboard/charts/backtest.py (actual vs predicted chart)
+  20. Modify src/dashboard/tabs/diagnostics.py (real metrics display)
+  21. Modify src/dashboard/tabs/overview.py (remove multiplier derivation Expert block)
+  22. Modify src/dashboard/tabs/segments.py (USD native, no post-hoc conversion)
+```
+
+**Critical dependency:** Steps 8-14 cannot be validated end-to-end until Phase A is complete and a pipeline run has written `market_anchors_ai.parquet` with real USD anchor observations. Plan to run the pipeline after Phase A before starting Phase B.
 
 ---
 
 ## Scaling Considerations
 
-This is a personal/portfolio project, not a multi-user SaaS. Scale concerns are minimal. The relevant dimension is data volume and model complexity as industries are added.
+This is a personal portfolio tool with a single user. Scale is not a concern. The relevant considerations are data volume and pipeline run time as more anchors are added.
 
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| 1 industry, ~100 data points | Current architecture is sufficient. In-memory DataFrames. SQLite optional. |
-| 3-5 industries, thousands of rows | Add parquet caching for features. Consider DVC for data versioning. Possibly Prefect/Airflow for pipeline orchestration. |
-| 10+ industries, external users | Split dashboard from model serving into separate processes. Add a lightweight API layer (FastAPI) between inference and dashboard. |
-
-### Scaling Priorities
-
-1. **First bottleneck:** API rate limits during ingestion (OECD is slow). Fix: aggressive local caching with freshness TTL — fetch once, re-use for weeks.
-2. **Second bottleneck:** Model retraining time when adding industries. Fix: make training scripts parallelizable per industry (each industry's models train independently).
+| Concern | Current | v1.1 Impact |
+|---------|---------|-------------|
+| Pipeline run time | Minutes (API fetches dominate) | Slightly longer; market_anchors.py loads from YAML (instant); backtesting adds ~30s |
+| Parquet cache size | ~10 MB | Adds ~2 MB for new anchor/backtesting/private valuation files |
+| Dashboard startup time | Under 2s | Unchanged; backtesting Parquet is small |
+| Model training time | Under 30s | Slightly longer due to walk-forward CV |
 
 ---
 
 ## Sources
 
-- [FTI Pipeline Architecture — Hopsworks](https://www.hopsworks.ai/post/mlops-to-ml-systems-with-fti-pipelines) — Feature/Training/Inference separation pattern (MEDIUM confidence — industry standard, widely adopted)
-- [Hybrid Statistical + ML Framework — PMC](https://pmc.ncbi.nlm.nih.gov/articles/PMC12294620/) — Dual-stage ARIMA + deep learning residual correction (HIGH confidence — peer-reviewed)
-- [Bottom-Up Market Sizing Workbook Architecture — Umbrex](https://umbrex.com/resources/market-sizing-playbook/bottom-up-market-sizing-methodology/) — Scenario + sensitivity layer structure (MEDIUM confidence)
-- [Cookiecutter Data Science — DrivenData](https://cookiecutter-data-science.drivendata.org/) — Canonical Python data science folder structure (HIGH confidence — community standard)
-- [Top-Down vs Bottom-Up Forecasting — Forecastio](https://forecastio.ai/blog/top-down-vs-bottom-up-forecasting) — Methodology comparison informing scenario design (MEDIUM confidence)
-- [Econometric + Python Forecasting Tools — MDPI](https://www.mdpi.com/2225-1146/13/4/52) — Hybrid ARIMA + ML pipeline patterns (MEDIUM confidence — peer-reviewed)
+- Direct codebase inspection: `src/` package (75 Python files, inspected 2026-03-23) — HIGH confidence
+- [AI Startup Valuation Multiples 2026, Qubit Capital](https://qubit.capital/blog/ai-startup-valuation-multiples) — revenue multiple ranges for private company comparable analysis (MEDIUM confidence)
+- [AI Business Valuation Model 2026, FE International](https://www.feinternational.com/blog/ai-business-valuation-model-2026) — DCF + revenue multiples framework for AI companies (MEDIUM confidence)
+- [AI Valuation Multiples Q1 2026, Finro](https://www.finrofca.com/news/ai-valuation-multiples-q1-2026-update) — current private market multiple dispersion (MEDIUM confidence)
+- [Backtesting forecasting models, Towards Data Science](https://towardsdatascience.com/putting-your-forecasting-model-to-the-test-a-guide-to-backtesting-24567d377fb5/) — walk-forward holdout validation pattern (HIGH confidence — standard practice)
+- [Backtesting ML models for time series, Machine Learning Mastery](https://machinelearningmastery.com/backtest-machine-learning-models-time-series-forecasting/) — train/validation/holdout split for time series (HIGH confidence)
 
 ---
-*Architecture research for: AI Industry Economic Valuation and Forecasting System*
-*Researched: 2026-03-17*
+
+*Architecture research for: AI Industry Value Estimator v1.1 integration*
+*Researched: 2026-03-23*

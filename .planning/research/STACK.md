@@ -1,8 +1,8 @@
 # Stack Research
 
 **Domain:** Hybrid statistical + ML economic valuation and forecasting system (Python)
-**Researched:** 2026-03-17
-**Confidence:** MEDIUM-HIGH (versions verified via PyPI/official sources; library-specific recommendations from docs + community consensus)
+**Researched:** 2026-03-17 (v1.0) | Updated: 2026-03-23 (v1.1 additions)
+**Confidence:** HIGH (primary sources verified via PyPI and official docs)
 
 ---
 
@@ -81,6 +81,124 @@
 
 ---
 
+## v1.1 Additions — New Capabilities Only
+
+The libraries below are NEW for v1.1. They address the gap between the v1.0 proxy-indicator approach and the ground-up real-data model.
+
+### New Core Technologies (v1.1)
+
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| edgartools | 5.25.1 | SEC EDGAR filing ingestion — 10-K/10-Q XBRL financial statements, income statement line items, per-segment revenue | The only Python-native library that converts raw EDGAR XBRL into typed pandas DataFrames without an API key or rate-limit management. Active weekly releases (5.25.1, March 19, 2026). PyArrow/lxml optimised, caches HTTP responses internally, and enforces SEC's 10 req/s limit automatically. Extracts `us-gaap:Revenues`, `us-gaap:SegmentReportingInformationRevenue` and related XBRL concepts directly — this is the primary source for AI company revenue anchoring. Requires Python 3.10+. |
+| yfinance | 1.2.0 | Market cap, historical prices, analyst price targets, and earnings estimates for public AI companies | Free Yahoo Finance bridge. v1.2.0 (February 16, 2026) adds `analyst_price_target` and a restructured `Ticker` API. Use for anchoring current public-company market caps and cross-checking consensus revenue estimates. Do not use for production financial calculations — treat as a calibration / sanity-check source. |
+| skforecast | 0.21.0 | Walk-forward backtesting, time series cross-validation, MAPE/SMAPE/MAE/R² metric computation against real actuals | Wraps any scikit-learn-compatible estimator — including the existing LightGBM — for walk-forward backtesting with optional automatic refit. Computes MAPE, SMAPE, and custom metrics out-of-the-box. Directly solves the v1.0 "diagnostics tab has no real actuals" problem without restructuring the existing model pipeline. Version 0.21.0 released March 13, 2026. |
+| numpy-financial | 1.0.0 | NPV, IRR, terminal value, WACC discounting for DCF and EV/Revenue multiplier models | The standard Python replacement for Excel financial functions (NPV, IRR, FV, PMT). Stable, minimal API maintained by the NumPy organization. No better alternative for pure financial math primitives. Deliberately simple — bespoke DCF logic (AI revenue multipliers, opacity adjustments) lives in project code; this library handles only the discounting arithmetic. Note: intentionally low release cadence; 1.0.0 is current and stable. |
+
+### New Supporting Libraries (v1.1)
+
+| Library | Version | Purpose | When to Use |
+|---------|---------|---------|-------------|
+| rapidfuzz | 3.x (latest) | Fuzzy company-name matching when joining edgartools EDGAR data against yfinance tickers or LSEG company names | Company names vary across sources ("Alphabet Inc.", "ALPHABET INC", "Google LLC"). Use `process.extractOne` with `token_sort_ratio` for short names and `token_set_ratio` for long legal entity strings. 3-10x faster than fuzzywuzzy, MIT licence, no C extension required. |
+| financetoolkit | 2.0.6 | Product-segment revenue breakdown and analyst consensus estimates via FinancialModelingPrep API | Use when edgartools XBRL segment tagging is insufficient — some companies (e.g., Microsoft) do not tag AI-specific sub-segments in XBRL. `get_revenue_product_segmentation()` and `get_analyst_estimates()` are the two relevant methods. Requires a free FinancialModelingPrep API key stored in `.env`. |
+| pydantic | 2.x (verify if already present) | Validate DCF inputs, market data snapshots, and attribution records at ingestion/model boundary | Prevents silent unit errors (mixing nominal vs. real USD, wrong currency, out-of-range discount rates). Define `MarketDataRecord`, `DCFInputs`, `AIAttributionResult` models. Use `@field_validator` for cross-field logic (e.g., terminal growth rate must be less than WACC). Check with `uv tree | grep pydantic` before adding — likely already in the lock file. |
+
+### Installation (v1.1 additions only)
+
+```bash
+# Verify pydantic is already locked before adding
+uv tree | grep pydantic
+
+# Add new core dependencies
+uv add "edgartools>=5.25.1"
+uv add "yfinance>=1.2.0"
+uv add "skforecast>=0.21.0"
+uv add "numpy-financial>=1.0.0"
+
+# Add supporting dependencies
+uv add rapidfuzz
+uv add financetoolkit
+# requests-cache is already in lock file from v1.0 — no action needed
+
+# Sync
+uv sync
+```
+
+---
+
+## Patterns for v1.1 Feature Areas
+
+**Real market data ingestion (company filings):**
+- Use edgartools to pull `us-gaap:Revenues`, `us-gaap:SegmentReportingInformationRevenue` and related XBRL concepts for the AI company universe (NVIDIA, Microsoft, Alphabet, Amazon, Meta, Baidu, etc.)
+- Store results as Parquet using the existing cache structure under `data/raw/market/`
+- Use rapidfuzz to align company names across edgartools, yfinance, and the existing LSEG dataset
+
+**AI revenue attribution (mixed-tech companies):**
+- For companies with explicit AI segment XBRL tags: extract directly via edgartools
+- For companies without explicit tags (e.g., Microsoft Azure AI is embedded within the broader Azure segment): use financetoolkit segment breakdowns and yfinance analyst estimates as cross-checks to derive an `ai_revenue_fraction`
+- Build an `AIRevenueAttributor` class with pydantic-validated inputs; store `ai_revenue_fraction`, `source`, `confidence`, and `methodology` per company
+
+**DCF / multiplier valuation (private companies):**
+- numpy-financial handles all discounting arithmetic (`npf.npv`, `npf.irr`)
+- Build a custom `PrivateCompanyValuation` dataclass: `revenue_proxy` → `growth_adjusted_revenue` → `EBITDA_margin` → `FCF` → `terminal_value` → `enterprise_value`
+- Run an EV/Revenue multiplier approach in parallel (calibrated against public AI comparables) as a sanity check
+- Represent private company opacity as a parametric uncertainty range and propagate it through the existing LightGBM quantile CI machinery
+
+**Backtesting / diagnostics (real MAPE, R²):**
+- skforecast `backtesting_forecaster` runs walk-forward validation against historical actuals from edgartools and yfinance
+- Replaces the synthetic actuals workaround in the existing Diagnostics tab
+- Prefer SMAPE over MAPE: SMAPE is symmetric and avoids division-by-zero on near-zero actuals in early series years
+- Plug outputs directly into the existing SHAP/LightGBM diagnostics pipeline with no structural changes
+
+**Basic dashboard tier:**
+- No new libraries needed — existing Dash + dash-bootstrap-components handles a new tier
+- Add a `dcc.Store` component holding a `tier` state variable; conditionally render Basic/Normal/Expert layouts from a single callback
+- Basic tier exposes: total AI market cap (current year estimate), YoY growth rate, 2030 expected value, top-5 segment breakdown — all sourced from existing model outputs, surfaced without Expert-mode complexity
+
+---
+
+## Alternatives Considered (v1.1)
+
+| Recommended | Alternative | When to Use Alternative |
+|-------------|-------------|-------------------------|
+| edgartools | sec-api.io Python client | Only if real-time 8-K ingestion at scale is needed and budget exists for the subscription. Free tier is severely limited. edgartools covers everything needed here at zero cost. |
+| edgartools | openedgar (MIT) | openedgar is a bulk archive construction tool, not an interactive query library. Use only if building a multi-decade full-universe research database from scratch. |
+| yfinance 1.2.0 | pandas-datareader | pandas-datareader's Yahoo Finance backend is unmaintained. yfinance is the maintained replacement. |
+| yfinance + edgartools | financetoolkit alone | financetoolkit requires a paid FinancialModelingPrep API key beyond the free tier limit. yfinance + edgartools together cover the same data at zero cost; financetoolkit is additive for segment detail only. |
+| skforecast | custom walk-forward loop | A custom loop is tempting but commonly gets fold-boundary data leakage and refit timing wrong. skforecast's `backtesting_forecaster` is purpose-built and battle-tested for these exact issues. |
+| numpy-financial | scipy.optimize for IRR | scipy works but introduces a heavy dependency for a narrow use case. numpy-financial is purpose-built, minimal, and semantically clearer. |
+| rapidfuzz | fuzzywuzzy / thefuzz | fuzzywuzzy requires python-Levenshtein for competitive speed; rapidfuzz achieves the same result 3-10x faster with no C dependency and an MIT licence. |
+
+---
+
+## What NOT to Add (v1.1)
+
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| autodcf / PyValuation / dcf (PyPI) | Small niche packages with minimal maintenance. DCF logic for this project is bespoke — AI revenue multipliers, private company opacity adjustments, calibrated comparables — and is better implemented directly with numpy-financial primitives than adapted from a generic library. | numpy-financial + custom DCF module |
+| vectorbt / backtesting.py | Built for trading strategy backtesting (event-driven order execution, signal testing). Conceptually mismatched for forecasting-model validation against historical market size actuals. | skforecast |
+| spacy / sentence-transformers | Full NLP pipeline for AI revenue extraction from MD&A free text would require fine-tuning, entity extraction, and PDF parsing — significant engineering effort for marginal accuracy improvement over structured XBRL segment data at this portfolio project scope. Scope risk is high. | edgartools XBRL segment tags + manual attribution ratios where XBRL is unavailable |
+| zipline-reloaded / NautilusTrader | Trading infrastructure. No fit for market-size forecast validation. | skforecast |
+
+---
+
+## Version Compatibility
+
+| Package | Compatible With | Notes |
+|---------|-----------------|-------|
+| pandas 3.0.x | statsmodels 0.14.6+ | statsmodels 0.14.6 specifically fixes a pandas 3.0 import blocker (released Dec 2025). Do not use statsmodels <0.14.6 with pandas 3.0. |
+| pandas 3.0.x | Plotly 6.6.x | Plotly 6.0+ uses Narwhals for DataFrame interop — required for pandas 3.0 compatibility. |
+| pandas 3.0.x | LightGBM 4.6.x | LightGBM 4.6 supports pandas 3.0. Older LightGBM versions may issue deprecation warnings on `.values` access patterns. |
+| Prophet 1.1.x | pandas >=3.0 | Prophet updated to support pandas >=3.0 and numpy >=2.4 per recent changelog. |
+| Plotly 6.x | Jupyter Notebook <7.0 | Plotly 6.0 dropped Notebook <7.0 support. Use JupyterLab 4.x or Notebook 7.x. |
+| WeasyPrint 68.x | Python >=3.10 | WeasyPrint requires Python 3.10+. Python 3.12 (recommended) is fully supported. |
+| scikit-learn 1.8.0 | Python >=3.10 | scikit-learn 1.7+ requires Python 3.10+. |
+| edgartools 5.25.1 | Python 3.10+, lxml, pyarrow | lxml and pyarrow are almost certainly already present via pandas 3.0 and the existing Parquet pipeline. |
+| skforecast 0.21.0 | scikit-learn >=1.2, lightgbm >=4.0 | Existing LightGBM models wrap via `ForecasterRecursive` — no model retraining needed, only plumbing changes. |
+| yfinance 1.2.0 | pandas 2.x / 3.x | Compatible with pandas 3.0. |
+| numpy-financial 1.0.0 | numpy >=1.20 | Stable API; deliberately low release cadence — intentional minimal-scope design. |
+
+---
+
 ## Installation
 
 ```bash
@@ -93,6 +211,10 @@ uv add pandas numpy scipy statsmodels prophet scikit-learn lightgbm shap
 
 # Data collection
 uv add wbgapi eurostat pandasdmx requests requests-cache
+
+# v1.1: Real market data and financial modeling
+uv add "edgartools>=5.25.1" "yfinance>=1.2.0" "skforecast>=0.21.0" "numpy-financial>=1.0.0"
+uv add rapidfuzz financetoolkit
 
 # Visualization and dashboard
 uv add plotly dash
@@ -121,16 +243,15 @@ uv sync
 |----------|-------------|-------------|-------------------------|
 | Package manager | uv | pip + venv | Never for new projects in 2026 — uv is strictly better |
 | Package manager | uv | Poetry | Poetry is valid but slower and less actively developed than uv |
-| Gradient boosting | LightGBM | XGBoost | XGBoost 3.2.0 is slightly more accurate on benchmark tasks but slower. Use XGBoost if you need GPU acceleration or are targeting a Kaggle-style benchmark evaluation |
-| Gradient boosting | LightGBM | scikit-learn HistGradientBoosting | Use HistGBM for quick baselines only — LightGBM is materially faster and has better feature importance tooling |
-| Dashboard | Dash | Streamlit | Streamlit is faster to prototype but less customizable for polished portfolio dashboards. Dash is more pythonic for multi-page apps with complex layouts |
-| Dashboard | Dash | Panel (HoloViz) | Panel is better for very complex multi-tab scientific apps; overkill for this scope |
-| PDF generation | WeasyPrint + Jinja2 | ReportLab | ReportLab gives pixel-perfect control but requires programmatic layout (no HTML/CSS). Use only if WeasyPrint cannot reproduce a required layout |
-| PDF generation | WeasyPrint + Jinja2 | nbconvert | nbconvert is good for notebook-to-PDF but limited for custom-branded professional reports |
-| Time series | Prophet | NeuralProphet | NeuralProphet (neural extension of Prophet) is more powerful but requires more data and more tuning. Use if Prophet residuals are poor after parameter search |
-| Time series | Prophet | skforecast + ARIMA | Use if you need tighter integration with the scikit-learn pipeline API for cross-validation |
-| Data access | pandasdmx | direct OECD REST API | Direct requests work but pandasdmx handles SDMX parsing, rate limiting, and multi-indicator assembly automatically |
-| Linting | ruff | flake8 + black | flake8 + black is the legacy combination; ruff replaces both at 10-100x speed |
+| Gradient boosting | LightGBM | XGBoost | XGBoost 3.2.0 is slightly more accurate on benchmark tasks but slower. Use XGBoost if GPU acceleration is needed. |
+| Gradient boosting | LightGBM | scikit-learn HistGradientBoosting | Use HistGBM for quick baselines only — LightGBM is materially faster with better feature importance tooling. |
+| Dashboard | Dash | Streamlit | Streamlit is faster to prototype but less customizable for polished portfolio dashboards. Dash is more pythonic for multi-page apps with complex layouts. |
+| Dashboard | Dash | Panel (HoloViz) | Panel is better for very complex multi-tab scientific apps; overkill for this scope. |
+| PDF generation | WeasyPrint + Jinja2 | ReportLab | ReportLab gives pixel-perfect control but requires programmatic layout (no HTML/CSS). Use only if WeasyPrint cannot reproduce a required layout. |
+| PDF generation | WeasyPrint + Jinja2 | nbconvert | nbconvert is good for notebook-to-PDF but limited for custom-branded professional reports. |
+| Time series | Prophet | NeuralProphet | NeuralProphet is more powerful but requires more data and more tuning. Use if Prophet residuals are poor after parameter search. |
+| Data access | pandasdmx | direct OECD REST API | Direct requests work but pandasdmx handles SDMX parsing, rate limiting, and multi-indicator assembly automatically. |
+| Linting | ruff | flake8 + black | flake8 + black is the legacy combination; ruff replaces both at 10-100x speed. |
 
 ---
 
@@ -138,15 +259,15 @@ uv sync
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| pandas-datareader for OECD | OECD changed their API in 2023; pandas-datareader's OECD reader no longer works | pandasdmx |
-| pandas-datareader for World Bank | Functional but unmaintained and less ergonomic than wbgapi | wbgapi |
-| fbprophet (old package name) | Renamed to `prophet` at v1.0; fbprophet on PyPI is abandoned | prophet |
-| pandas <3.0 for new projects | Copy-on-Write warnings will fill logs; string dtype inference changed — start with 3.0 clean | pandas 3.0.x |
-| scikit-learn GradientBoostingClassifier/Regressor | The original (non-Histogram) GBM in sklearn is orders of magnitude slower than alternatives; it exists for legacy reasons | LightGBM or scikit-learn HistGradientBoosting |
+| pandas-datareader for OECD | OECD changed their API in 2023; pandas-datareader's OECD reader no longer works. | pandasdmx |
+| pandas-datareader for World Bank | Functional but unmaintained and less ergonomic than wbgapi. | wbgapi |
+| fbprophet (old package name) | Renamed to `prophet` at v1.0; fbprophet on PyPI is abandoned. | prophet |
+| pandas <3.0 for new projects | Copy-on-Write warnings will fill logs; string dtype inference changed. | pandas 3.0.x |
+| scikit-learn GradientBoostingClassifier/Regressor | The original GBM in sklearn is orders of magnitude slower than alternatives. | LightGBM or scikit-learn HistGradientBoosting |
 | TensorFlow / PyTorch for this project | Neural networks require large datasets to outperform gradient boosting on tabular economic data. AI industry data has at most hundreds of annual/quarterly observations — neural nets will overfit. | LightGBM + Prophet |
-| Plotly Express with pandas <3.0 | Plotly 6.x uses Narwhals, which changed the DataFrame bridge; old Plotly + new pandas combinations produce unexpected behavior | Plotly 6.6.x with pandas 3.0.x |
-| FPDF / FPDF2 | Lower-quality CSS rendering than WeasyPrint; tables and charts in economic reports require proper CSS layout | WeasyPrint + Jinja2 |
-| conda for environment management | conda is slower and creates conflicts with modern Python packaging. The community has largely moved to uv/pip ecosystems | uv |
+| Plotly Express with pandas <3.0 | Plotly 6.x uses Narwhals, which changed the DataFrame bridge; old Plotly + new pandas combinations produce unexpected behavior. | Plotly 6.6.x with pandas 3.0.x |
+| FPDF / FPDF2 | Lower-quality CSS rendering than WeasyPrint; tables and charts in economic reports require proper CSS layout. | WeasyPrint + Jinja2 |
+| conda for environment management | conda is slower and creates conflicts with modern Python packaging. The community has largely moved to uv/pip ecosystems. | uv |
 
 ---
 
@@ -167,39 +288,34 @@ uv sync
 
 ---
 
-## Version Compatibility
-
-| Package | Compatible With | Notes |
-|---------|-----------------|-------|
-| pandas 3.0.x | statsmodels 0.14.6+ | statsmodels 0.14.6 specifically fixes a pandas 3.0 import blocker (released Dec 2025). Do not use statsmodels <0.14.6 with pandas 3.0 |
-| pandas 3.0.x | Plotly 6.6.x | Plotly 6.0+ uses Narwhals for DataFrame interop — required for pandas 3.0 compatibility |
-| pandas 3.0.x | LightGBM 4.6.x | LightGBM 4.6 supports pandas 3.0. Older LightGBM versions may issue deprecation warnings on `.values` access patterns |
-| Prophet 1.1.x | pandas >=3.0 | Prophet updated to support pandas >=3.0 and numpy >=2.4 per recent changelog |
-| Plotly 6.x | Jupyter Notebook <7.0 | Plotly 6.0 dropped Notebook <7.0 support. Use JupyterLab 4.x or Notebook 7.x |
-| WeasyPrint 68.x | Python >=3.10 | WeasyPrint requires Python 3.10+. Python 3.12 (recommended) is fully supported |
-| scikit-learn 1.8.0 | Python >=3.10 | scikit-learn 1.7+ requires Python 3.10+ |
-
----
-
 ## Sources
 
+**v1.0 sources:**
 - [pandas release notes — v3.0.0 (January 2026)](https://pandas.pydata.org/docs/whatsnew/v3.0.0.html) — MEDIUM confidence (official docs, version confirmed)
 - [statsmodels PyPI — v0.14.6](https://pypi.org/project/statsmodels/) — HIGH confidence (PyPI official)
 - [scikit-learn release history — v1.8.0](https://scikit-learn.org/stable/whats_new.html) — HIGH confidence (official docs)
 - [LightGBM PyPI — v4.6.0](https://pypi.org/project/lightgbm/) — HIGH confidence (PyPI official)
-- [XGBoost installation guide — v3.2.0](https://xgboost.readthedocs.io/en/stable/install.html) — HIGH confidence (official docs)
 - [Plotly PyPI — v6.6.0](https://pypi.org/project/plotly/) — HIGH confidence (PyPI official)
 - [Dash PyPI — v4.0.x](https://pypi.org/project/dash/) — HIGH confidence (PyPI official)
 - [WeasyPrint PyPI — v68.1](https://pypi.org/project/weasyprint/) — HIGH confidence (PyPI official)
 - [wbgapi World Bank blog introduction](https://blogs.worldbank.org/en/opendata/introducing-wbgapi-new-python-package-accessing-world-bank-data) — MEDIUM confidence (official World Bank source)
-- [eurostat PyPI — Eurostat new dissemination API](https://pypi.org/project/eurostat/) — MEDIUM confidence (PyPI official, decommission note from community sources)
+- [eurostat PyPI — Eurostat new dissemination API](https://pypi.org/project/eurostat/) — MEDIUM confidence (PyPI official)
 - [pandasdmx OECD SDMX support](https://pandasdmx.readthedocs.io/en/v1.0/index.html) — MEDIUM confidence (official docs)
 - [uv project management guide](https://docs.astral.sh/uv/guides/projects/) — HIGH confidence (official Astral docs)
-- [Plotly Dash major release blog — hooks system](https://plotly.com/blog/plotly-dash-major-release/) — MEDIUM confidence (official Plotly blog)
-- [Prophet GitHub — pandas 3.0 / numpy 2.4 support](https://github.com/facebook/prophet) — MEDIUM confidence (GitHub official)
-- [pandas 3.0 CoW migration guide](https://medium.com/@kaushalsinh73/pandas-3-0-copy-on-write-migration-guide-the-surprising-performance-wins-and-the-silent-footguns-f6e76db73551) — LOW confidence (community blog, cross-referenced with official release notes)
+
+**v1.1 sources:**
+- [edgartools PyPI — v5.25.1 (March 19, 2026)](https://pypi.org/project/edgartools/) — HIGH confidence (PyPI official)
+- [edgartools documentation — XBRL, rate limiting, caching](https://edgartools.readthedocs.io/) — HIGH confidence (official docs)
+- [edgartools HTTP client and caching internals](https://deepwiki.com/dgunning/edgartools/7.3-http-client-and-caching) — MEDIUM confidence (technical deep-dive, consistent with official docs)
+- [yfinance PyPI — v1.2.0 (February 16, 2026)](https://pypi.org/project/yfinance/) — HIGH confidence (PyPI official)
+- [skforecast PyPI — v0.21.0 (March 13, 2026)](https://pypi.org/project/skforecast/) — HIGH confidence (PyPI official)
+- [skforecast metrics API reference](https://skforecast.org/0.20.0/api/metrics) — HIGH confidence (official docs)
+- [numpy-financial official documentation — v1.0.0](https://numpy.org/numpy-financial/) — HIGH confidence (NumPy org official)
+- [financetoolkit PyPI — v2.0.6, segment revenue and analyst estimates](https://pypi.org/project/financetoolkit/) — HIGH confidence (PyPI official)
+- [RapidFuzz GitHub — fuzzy string matching](https://github.com/rapidfuzz/RapidFuzz) — HIGH confidence (official GitHub)
+- [2026 Python backtesting landscape survey](https://python.financial/) — MEDIUM confidence (community survey, consistent with framework docs)
 
 ---
 
 *Stack research for: AI Industry Economic Valuation and Forecasting System*
-*Researched: 2026-03-17*
+*v1.0 researched: 2026-03-17 | v1.1 additions researched: 2026-03-23*

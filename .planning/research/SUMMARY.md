@@ -1,17 +1,17 @@
 # Project Research Summary
 
-**Project:** AI Industry Economic Valuation and Forecasting System
-**Domain:** Hybrid statistical + ML economic forecasting pipeline with interactive dashboard
-**Researched:** 2026-03-17
-**Confidence:** MEDIUM-HIGH
+**Project:** AI Industry Economic Valuation and Forecasting System — v1.1 Model Rework
+**Domain:** Hybrid statistical + ML economic valuation and forecasting (Python)
+**Researched:** 2026-03-23
+**Confidence:** HIGH
 
 ## Executive Summary
 
-This is a data-science-meets-econometrics project: a pipeline that ingests public economic data (World Bank, OECD, Eurostat), cleans and normalizes it, runs a two-stage hybrid forecasting model (statistical baseline feeding into a gradient-boosting ML refinement), and exposes results through a Plotly/Dash interactive dashboard with PDF report export. The canonical approach in this domain is a strict layered architecture — raw data flows one-way through normalization, feature engineering, statistical modeling, ML correction, ensemble combination, and finally presentation. Building any layer out of order wastes effort because each tier has hard dependencies on the one below it. The recommended stack is well-defined: Python 3.12, pandas 3.0, statsmodels 0.14.6, Prophet 1.1.x, LightGBM 4.6.0, scikit-learn 1.8.0, SHAP 0.46.x, Plotly 6.6.0, and Dash 4.0.x — with uv as the package manager.
+This project is a ground-up rework of an existing AI industry valuation model (v1.0) that produced unrealistic flat forecasts because it relied on a PCA composite of proxy indicators (R&D spend, patent filings) rather than real AI market data. v1.1 replaces the PCA composite + value chain multiplier with an anchor-calibrated model that uses published analyst estimates (IDC, Gartner, Goldman Sachs) and bottom-up company revenue attribution as the Y variable, retaining macroeconomic indicators as explanatory X variables. The existing 4-layer pipeline infrastructure (ingestion → processing → modeling → dashboard) is preserved; new components are inserted at defined seam points. The stack is Python 3.12 + pandas 3.0 + statsmodels/Prophet/LightGBM ensemble, with Dash 4.0 for the dashboard and edgartools + yfinance for real market data ingestion. All package versions are current-stable as of March 2026 and have verified pandas 3.0 compatibility.
 
-The recommended approach is to build strictly bottom-up: data pipeline first, statistical baseline second, ML layer third, ensemble and inference fourth, dashboard and reporting last. The hybrid two-stage pattern (ARIMA/Prophet for trend and seasonality, gradient boosting on residuals for nonlinear correction) consistently outperforms either approach alone on economic time series data, and the methodology paper mandates interpretability that pure ML cannot provide. The project's core value proposition — producing "defensible" forecasts that replace "valued by thumb" estimates — depends entirely on rigorous validation (temporal train/test splits, calibrated confidence intervals, and structural break analysis). Shortcutting any of these undermines the central claim.
+The central technical challenge is not the modeling itself — the existing ensemble architecture is sound — but the data assembly work that must precede any model retraining. A defensible historical ground truth series for AI market size does not exist in one place; it must be assembled from published analyst reports, company 10-K filings via EDGAR, and analyst consensus estimates, with explicit market boundary definition and value chain layer taxonomy to prevent double-counting. This data assembly is the critical path for v1.1. Only after a clean actuals dataset exists can backtesting produce meaningful MAPE/R² metrics to replace the placeholder diagnostics in the existing dashboard.
 
-The key risks are concentrated in the data pipeline phase. Three pitfalls are non-negotiable to address before writing a single model: (1) market boundary definition must be locked before any API call is made — estimates vary 2-3x based on definitional choices alone; (2) all monetary series must be deflated to a common base year — nominal/real conflation is an immediate credibility killer; (3) API schema validation must be in place — the World Bank and OECD APIs have changed schemas without notice, causing silent data corruption. After the pipeline is sound, the modeling phase must enforce strict temporal validation (no data leakage) and include calibrated uncertainty intervals. Presenting point forecasts without intervals directly contradicts the project's stated purpose.
+The top risks are methodological rather than technical: anchor estimate shopping (choosing the source that fits the model output rather than the definitionally consistent one), AI revenue double-counting across value chain layers (Nvidia GPU revenue → Azure AI Services → OpenAI workloads → Copilot subscriptions all trace to the same underlying economic activity), and presenting single-point private company valuations (range: 3.6x–225x EV/Revenue) without uncertainty ranges. All three are avoidable with upfront design discipline — locking the market boundary in config before data collection, assigning value chain layer taxonomy before attribution, and storing all attribution percentages as parameterized ranges with source and vintage date. The Basic dashboard tier carries its own risk: stripping methodology context from headline numbers to achieve clean presentation produces misleading outputs; every headline number must carry a scope label, vintage date, and uncertainty range.
 
 ---
 
@@ -19,23 +19,25 @@ The key risks are concentrated in the data pipeline phase. Three pitfalls are no
 
 ### Recommended Stack
 
-The stack is fully specified with verified versions. Python 3.12 is the runtime; pandas 3.0 with Copy-on-Write semantics is the data layer. Package management via uv (not pip/conda) provides lockfile reproducibility. The most important version constraint is that statsmodels must be >=0.14.6 to work with pandas 3.0 — earlier versions have an import blocker introduced in December 2025.
+The v1.0 stack is largely correct and requires extension, not replacement. Python 3.12 + pandas 3.0 with Copy-on-Write is the foundation; statsmodels 0.14.6 is mandatory for econometric credibility (the pandas 3.0 compatibility fix is in 0.14.6 specifically — do not use an older version). LightGBM 4.6 + scikit-learn 1.8 pipelines handle the ML layer; Prophet 1.1 handles irregular AI market time series. Dash 4.0 + Plotly 6.6 handle the dashboard — both are now Narwhals-based and pandas 3.0 compatible.
+
+New for v1.1: edgartools 5.25.1 is the primary source for SEC EDGAR XBRL company revenue ingestion (zero cost, auto rate-limits, returns DataFrames directly, active weekly releases). yfinance 1.2.0 provides market cap and analyst estimates as a cross-check source. skforecast 0.21.0 wraps the existing LightGBM for walk-forward backtesting without model restructuring. numpy-financial 1.0.0 handles DCF arithmetic. rapidfuzz aligns company names across sources. pydantic 2.x validates model inputs at ingestion boundaries. uv manages all dependencies with lockfile reproducibility.
 
 **Core technologies:**
-- **Python 3.12**: Runtime — 3.13 ecosystem support is still maturing; 3.12 is the safe production choice
-- **pandas 3.0 + NumPy 2.x**: Data wrangling — CoW is now default; write CoW-safe code from day one
-- **statsmodels 0.14.6**: Econometric baseline models (OLS, ARIMA, SARIMAX, VAR) — mandatory for portfolio credibility; provides p-values and hypothesis tests that scikit-learn intentionally omits
-- **Prophet 1.1.x**: Additive trend/seasonality for sparse, fast-growing, structurally-broken AI market time series — handles missing data and outliers gracefully
-- **LightGBM 4.6.0**: Primary ML layer — outperforms XGBoost on small-to-medium tabular data; sklearn-compatible API
-- **scikit-learn 1.8.0**: Pipeline orchestration, TimeSeriesSplit cross-validation, model evaluation
-- **SHAP 0.46.x**: Feature attribution — required for methodology explainability; produces dashboard-embeddable waterfall plots
-- **Plotly 6.6.0 + Dash 4.0.x**: Dashboard — Plotly 6.0+ uses Narwhals for pandas 3.0 compatibility; Dash 4.0 is current stable
-- **WeasyPrint 68.x + Jinja2 3.1.x + Kaleido 0.2.x**: PDF report generation — WeasyPrint handles modern CSS layout; Kaleido bridges Plotly figures to static PNG for embedding
-- **wbgapi, eurostat, pandasdmx**: Data connectors — World Bank, Eurostat, and OECD official clients respectively; avoid pandas-datareader for these sources
-- **pyarrow 18.x**: Parquet storage for raw and processed data caching between pipeline runs
-- **uv 0.5.x**: Package manager — 10-100x faster than pip; lockfile-based; standard for new 2026 Python projects
+- **Python 3.12 + pandas 3.0 + NumPy 2.x**: Production-stable foundation; CoW-safe from day one
+- **statsmodels 0.14.6**: Econometric baseline models (ARIMA, SARIMAX, VAR) — mandatory for portfolio credibility; 0.14.6 specifically required for pandas 3.0 compatibility
+- **Prophet 1.1**: Additive decomposition for sparse, fast-growing, structurally-broken AI time series
+- **LightGBM 4.6 + scikit-learn 1.8**: Gradient boosting residual correction; sklearn-compatible pipeline API
+- **shap 0.46**: Feature interpretability — required for methodology credibility; explains USD forecast variance
+- **edgartools 5.25.1**: Primary real market data source via SEC EDGAR XBRL; no API key required
+- **yfinance 1.2.0**: Market cap, analyst estimates, and earnings data as calibration cross-check
+- **skforecast 0.21.0**: Walk-forward backtesting wrapper for existing LightGBM; no model restructuring needed
+- **numpy-financial 1.0.0**: DCF discounting arithmetic (NPV, IRR, terminal value)
+- **Dash 4.0 + Plotly 6.6**: Dashboard and interactive charts; Narwhals-based DataFrame bridge
+- **WeasyPrint 68 + Jinja2 + Kaleido**: HTML-to-PDF report generation
+- **uv 0.5**: Package management with lockfile; 10-100x faster than pip
 
-**Do not use:** TensorFlow/PyTorch (dataset too small — will overfit), conda, pandas <3.0, fbprophet (abandoned), scikit-learn's original GradientBoostingClassifier (orders of magnitude slower than LightGBM), pandas-datareader for OECD (OECD API changed in 2023).
+**Do not add:** spacy/sentence-transformers for earnings call NLP (high engineering cost, marginal gain over XBRL), autodcf/PyValuation (minimal maintenance — use numpy-financial + custom DCF), vectorbt/backtesting.py (trading-event focused, wrong abstraction for market-size validation).
 
 See `.planning/research/STACK.md` for full alternatives analysis and version compatibility matrix.
 
@@ -43,33 +45,30 @@ See `.planning/research/STACK.md` for full alternatives analysis and version com
 
 ### Expected Features
 
-The project must demonstrate economic rigor (confidence intervals, documented assumptions, data attribution) alongside ML sophistication (hybrid model, SHAP explainability). The combination — rare in public portfolio projects — is the primary differentiator.
+The v1.0 Dash dashboard (4 tabs: Overview, Segments, Drivers, Diagnostics in Normal/Expert tiers) is already built. v1.1 adds a new data foundation, a reworked model, and one new dashboard tier. Existing dashboard structure is preserved; displayed numbers update automatically once the model produces real USD outputs.
 
-**Must have (table stakes for v1):**
-- Data ingestion from World Bank and OECD APIs — without this, nothing else exists
-- Data cleaning and normalization pipeline including deflation to constant-year USD
-- Statistical baseline model (ARIMA or OLS) — the interpretable econometric foundation
-- ML refinement model (LightGBM gradient boosting) — the layer that improves on the baseline
-- Market size point estimate with units and data vintage date
-- Growth forecast to 2030 with calibrated confidence intervals (80% and 95%) — point forecasts alone are statistically irresponsible
-- Model diagnostics and fit metrics (RMSE, MAPE, R², backtesting) — out-of-sample only
-- Interactive Dash dashboard with time series and forecast fan charts
-- Exportable PDF report (WeasyPrint + Jinja2 + Kaleido)
-- Documented assumptions — required for any publishable analysis
-- Data source attribution in all outputs
-- README with setup and data source documentation
+**Must have (table stakes — v1.1 launch):**
+- Published analyst estimate corpus (10+ estimates, vintage-tagged) — without this nothing is anchored and the model cannot be credibly validated
+- New market size model anchored on real AI revenue (replaces PCA composite)
+- AI revenue attribution for 10-15 mixed-tech public companies — segment model depends on this
+- Segment breakdown (infrastructure / software / services) summing to total
+- Walk-forward backtesting with MAPE and R² against historical actuals — replaces placeholder diagnostics
+- Basic dashboard tier (3 hero KPIs + segment chart + growth fan chart) — executive entry point
+- Updated Normal/Expert modes to reflect new model outputs
+- Analyst consensus panel showing model output vs. published estimate range
 
-**Should have (differentiators, add in v1.x):**
-- SHAP-based driver attribution — shows which variables (R&D spend, patent filings, VC investment) drive the forecast; directly addresses the "valued by thumb" critique
-- Scenario/sensitivity analysis with interactive sliders — conservative/base/optimistic; standard in professional forecasting tools, rare in portfolio projects
-- Bottom-up cross-validation alongside top-down estimate — what professional market research firms do; strengthens methodological credibility
-- Methodology paper / LinkedIn writeup — the content artifact that elevates the project from data exercise to published economic research
-- Data freshness tracking and last-updated indicator — low effort, professional signal
+**Should have (differentiators — add when P1 work is stable):**
+- Private company valuation registry (15-20 companies: OpenAI, Anthropic, Databricks) — comparable multiple methodology, explicit uncertainty
+- Revenue multiples reference table (pure-play 33x vs. conglomerate 7x EV/Revenue per PitchBook Q4 2025)
+- Data vintage display per segment
 
 **Defer (v2+):**
-- Second industry (cloud computing, biotech) — build extensible architecture now, add the industry later once AI model quality is validated
-- Automated model retraining on data refresh — requires scheduling infrastructure orthogonal to modeling work
-- Real-time data streaming — macroeconomic data updates quarterly/annually; streaming is architectural overhead with no analytical value
+- Scenario sliders on attribution assumptions (SCEN-01, already flagged in PROJECT.md)
+- Expanded private company coverage (50+ companies)
+- Sub-sector breakdown (NLP, CV, generative AI) — public data not granular enough at this scope
+- Automated earnings call transcript ingestion via LLM — high engineering cost, marginal accuracy gain over XBRL
+
+**Anti-features to avoid:** Single "true" AI market size number without uncertainty (seven analyst firms, 7x spread in estimates — undefined scope is intellectually dishonest), real-time private company valuations (quarterly batch refresh is honest and sufficient), raw LSEG data download via dashboard (licensing violation).
 
 See `.planning/research/FEATURES.md` for full dependency graph and prioritization matrix.
 
@@ -77,148 +76,162 @@ See `.planning/research/FEATURES.md` for full dependency graph and prioritizatio
 
 ### Architecture Approach
 
-The canonical architecture is a **strictly layered one-way pipeline**: ingestion connectors write to immutable raw storage; normalization reads raw and writes processed; feature engineering reads processed; statistical and ML models both read features (with ML also consuming statistical residuals); the ensemble combiner produces forecast artifacts; the dashboard and report generator both read from pre-computed forecasts. No layer reaches backward or re-trains at runtime. The architectural principle that has the most impact on long-term maintainability is industry-config-driven ingestion — every industry-specific parameter lives in `config/industries/<industry>.yaml`, making the pipeline code industry-agnostic and extension to a second industry a YAML file addition rather than a code rewrite.
+The existing 4-layer architecture (data layer → processing layer → modeling layer → dashboard layer) is preserved. v1.1 inserts two new ingestion modules (`market_anchors.py`, extended `lseg.py`) and two new processing modules (`revenue_attribution.py`, `dcf_valuation.py`), creates a new `src/backtesting/` package, and adds a fifth dashboard tab (`basic.py`). The model layer retargets its Y variable from a dimensionless PCA index to USD billions — the highest-impact change, requiring retraining of all three model components (ARIMA, Prophet, LightGBM) but no structural changes to ensemble weighting logic. The value chain multiplier block in `app.py` (current lines 53-109) is deleted entirely; `point_estimate_real_2020` column names are preserved for schema continuity but values change from index units to USD billions. All new data components communicate via Parquet files in the existing cache pattern, maintaining the pipeline's error-isolated step structure.
 
 **Major components:**
-1. **Ingestion connectors** (`src/ingestion/`) — one file per source (world_bank.py, oecd.py, eurostat.py, scraper.py); fetch and cache raw data; write to immutable `data/raw/`
-2. **Normalization pipeline** (`src/processing/normalize.py`, `validate.py`) — schema alignment, type coercion, deduplication, deflation to base year, industry tagging; writes to `data/processed/`
-3. **Feature store** (`src/processing/features.py`) — lag features, growth rates, rolling averages, cross-sector signals; feeds both model layers
-4. **Statistical layer** (`src/models/statistical/`) — ARIMA, Prophet, OLS, VAR; produces baselines and residuals for ML consumption
-5. **ML layer** (`src/models/ml/gradient_boost.py`) — LightGBM trained on residuals from statistical layer; sklearn pipeline-compatible
-6. **Ensemble combiner** (`src/models/ensemble.py`) — weighted blend of statistical and ML outputs; produces final forecast with confidence intervals
-7. **Inference engine** (`src/inference/`) — loads serialized models, runs forward projections to 2030, produces scenario bands; runs offline and stores artifacts
-8. **Dash dashboard** (`src/dashboard/`) — reads pre-computed forecast artifacts; callbacks adjust visualization, not model parameters
-9. **Report generator** (`src/reporting/`) — Jinja2 templates + WeasyPrint + Kaleido; produces PDF from the same forecast artifacts as the dashboard
+1. `src/ingestion/market_anchors.py` (NEW) — loads published analyst estimates and private company valuations from YAML config to Parquet; no API calls
+2. `src/processing/revenue_attribution.py` (NEW) — isolates AI revenue share from conglomerate financials using explicit disclosures and analogue ratios; every output includes `attribution_method`, `ratio_source`, `uncertainty_low/high`
+3. `src/processing/dcf_valuation.py` (NEW) — DCF + AI revenue multiple valuation for private companies; stores `valuation_method`, `data_freshness_date`, `uncertainty_band_pct` per company
+4. `src/backtesting/` (NEW package: holdout.py, walk_forward.py, benchmark_compare.py) — walk-forward validation against known anchor estimates; writes `backtesting_results.parquet` consumed by diagnostics tab
+5. `src/dashboard/tabs/basic.py` (NEW) — Basic tier: 3 KPI cards + segment bar chart + growth fan chart; reads from existing `FORECASTS_DF`; every headline number carries scope label, vintage date, and uncertainty range
+6. Existing models (ARIMA, Prophet, LightGBM, ensemble) — retrained on USD values; no structural changes to pipeline API
+7. `config/industries/ai.yaml` — extended with `market_anchors`, `revenue_attribution`, and `private_company_valuations` sections; all attribution parameters stored with source and vintage date
 
-**Three patterns to follow from day one:**
-- FTI separation (Feature/Training/Inference as distinct pipeline stages) — prevents feature logic from leaking into model files
-- Industry-config-driven ingestion (YAML per industry) — the extensibility mechanism
-- Pre-compute forecasts; never re-train at dashboard runtime — keeps Dash callbacks sub-second
+**Key data contract change:** `point_estimate_real_2020` column in `forecasts_ensemble.parquet` changes from dimensionless PCA index units to USD billions. Column name preserved for schema continuity; the multiplier application block in `app.py` is deleted, not bridged.
 
-See `.planning/research/ARCHITECTURE.md` for full component diagram, project structure, and anti-patterns.
+**Build order (22 explicit steps):** Phase A (config + new ingestion + processing modules + pipeline wiring) → Phase B (model retraining + backtesting) → Phase C (dashboard updates + Basic tier). Cannot start Phase B until Phase A has produced `market_anchors_ai.parquet` via a full pipeline run.
+
+See `.planning/research/ARCHITECTURE.md` for the full component diagram, project structure, and anti-patterns.
 
 ---
 
 ### Critical Pitfalls
 
-Eight pitfalls identified; the top five are listed here by severity and phase-of-impact. Full details in `.planning/research/PITFALLS.md`.
+Nine new v1.1 pitfalls identified plus three carried over from v1.0. Top five by severity:
 
-1. **Undefined market boundary** — "AI industry" definitions vary 2-3x across research firms (Grand View: $391B vs. Statista: $254B in 2025). Must lock down market definition (segments included/excluded, classification scheme) in a config file *before* any API call. This is a design decision, not a discovery.
+1. **Anchor estimate shopping** — The 2025 AI market estimate range is $254B (narrow software) to $1.76T (Gartner broad). Lock the market boundary definition in config *before* looking at model output, then choose the definitionally consistent anchor. Document in `ASSUMPTIONS.md` with the alternative anchor comparison. This is a design decision, not a calibration step.
 
-2. **Nominal/real conflation** — mixing current-year and constant-year dollar values invalidates all historical comparisons. Mandatory fix: define a base year (e.g., 2020 USD), fetch World Bank GDP deflator series (NY.GDP.DEFL.ZS) alongside every nominal indicator, apply deflation as a pipeline step, and enforce a column naming convention (`revenue_usd_real_2020`). Non-negotiable for any time-series comparison.
+2. **AI revenue double-counting across value chain layers** — Nvidia GPU revenue, Azure AI Services revenue, and Copilot subscriptions all trace to the same economic activity (confirmed by Bloomberg 2026 circular deal analysis). Assign every company a value chain layer (chip / cloud / application / end-market) before data collection. Choose one layer as the primary measure or document explicitly that the total is gross, not value-added.
 
-3. **Data leakage in time series validation** — applying StandardScaler on the full dataset before splitting, or shuffling time series for cross-validation, inflates metrics and makes the methodology paper unpublishable. Use `TimeSeriesSplit` exclusively; fit all preprocessors only on training data.
+3. **Broken pipeline algebra after model rework** — New model outputs USD billions where old model output dimensionless index scores. The stale value chain multiplier path silently corrupts outputs if not fully deleted. Write an interface contract test asserting output units before writing any new model code. Gate v1.0 PCA code behind a `model_version` config flag.
 
-4. **Structural break extrapolation** — the 2022-2024 generative AI investment surge is a structural break in the AI market series. Models trained on pre-2022 data will systematically underestimate; models that extrapolate post-2022 hypergrowth will systematically overestimate. Run Chow test or CUSUM test before model selection; tune Prophet's `changepoint_prior_scale`; build explicit scenario bands.
+4. **Backtesting against analyst consensus is not backtesting** — Comparing forecasts to IDC/Gartner estimates validates model agreement with analysts, not accuracy. Use filed 10-K company revenues as hard validation actuals; label consensus comparisons explicitly as "soft validation." Three-tier taxonomy: hard (filed actuals) / soft (consensus) / directional (proxy indices).
 
-5. **API schema changes causing silent data corruption** — World Bank and OECD APIs have changed field names and response formats without notice. Prevention: write pandera/pydantic schema validation tests that run after every fetch; cache raw API responses with fetch timestamps; treat external data as untrusted input at the ingestion layer.
+5. **False precision in attribution percentages and private company multiples** — Attribution ratios for non-disclosing companies and private company revenue multiples (range: 3.6x–225x) are model parameters with uncertainty, not data points. Store every attribution percentage with source, vintage date, and low/high range. Store every revenue multiple with vintage date. Show sensitivity tables in the methodology paper.
 
-**Additional pitfalls to track:** survivorship bias in company-level data (document as limitation, cross-reference with national accounts); ML overfitting on small data (gradient boosting beats deep learning on <200 row datasets — do not add LSTM unless Prophet residuals are systematically poor); point forecasts without uncertainty (always show 80% and 95% intervals — this is the core value proposition).
+See `.planning/research/PITFALLS.md` for full prevention strategies, warning signs, and recovery costs for all 12 pitfalls.
 
 ---
 
 ## Implications for Roadmap
 
-Research strongly supports a 5-phase build order that mirrors the architectural dependency chain. Each phase delivers a testable artifact before the next phase begins.
+The build order is strictly data-before-model-before-dashboard. The ground truth corpus is the long pole — without it, neither meaningful backtesting nor credible dashboard numbers are possible. Architecture research provides a 22-step dependency-aware build sequence that maps directly to phases.
 
-### Phase 1: Data Foundation and Pipeline
+### Phase 1: Data Architecture and Ground Truth Assembly
 
-**Rationale:** Everything downstream has a hard dependency on clean, validated, inflation-adjusted data. This phase must be completed and verified before any modeling begins. The three most expensive pitfalls to recover from (undefined market boundary, nominal/real conflation, API schema changes) all occur here. Fix them here or pay a HIGH recovery cost later.
+**Rationale:** Everything in v1.1 depends on a defensible historical AI market size series and a locked market boundary definition. This is research and data curation work, not engineering. It must happen before any model code is written or anchor estimate shopping (Pitfall 1) is almost certain to occur. The FEATURES.md dependency tree states explicitly: "Ground truth corpus is the critical path."
 
-**Delivers:** Immutable raw data cache, normalized processed datasets in Parquet, schema validation tests, market boundary definition document, deflation pipeline, data freshness metadata.
+**Delivers:** Locked `market_boundary` definition in config; `ASSUMPTIONS.md` with anchor selection documented before first model run; `market_anchors_ai.parquet` with 8-10 years of published market size estimates; `ai.yaml` extended with `market_anchors` and `revenue_attribution` config sections; deflation pipeline extended to cover all new data sources; column naming convention (`_real_2020`) enforced for new sources.
 
-**Addresses features:** Data ingestion from World Bank/OECD/Eurostat, data cleaning and normalization pipeline, data source attribution, data freshness tracking.
+**Addresses features:** Published analyst estimate anchoring; data vintage display; analyst consensus panel groundwork
 
-**Avoids pitfalls:** Undefined market boundary (lock definition in config before first API call), nominal/real conflation (mandatory deflation step), API schema corruption (pandera validation tests), survivorship bias in company data (document limitation at source).
+**Avoids pitfalls:** Anchor estimate shopping (Pitfall 1); market boundary inconsistency (Pitfall 11); nominal/real conflation (Pitfall 12)
 
-**Stack:** wbgapi, eurostat, pandasdmx, requests-cache, pandas 3.0, pyarrow, python-dotenv, pydantic/pandera.
+**Stack:** edgartools 5.25.1, pyarrow, python-dotenv, requests-cache, pydantic 2.x (schema validation)
 
-**Research flag:** NEEDS RESEARCH — specific World Bank/OECD indicator codes for AI industry proxies (R&D expenditure, patent filings, VC investment) require validation against source APIs before committing to the ingestion config.
-
----
-
-### Phase 2: Statistical Baseline Modeling
-
-**Rationale:** The interpretable statistical layer must be built before the ML layer. It provides (a) the ARIMA/Prophet residuals that the ML model trains on, (b) the explainability anchor for the methodology paper, and (c) the benchmark against which ML improvement is measured. Cannot skip this phase to "save time" — the hybrid architecture requires it as an input.
-
-**Delivers:** Fitted ARIMA, SARIMAX, and/or Prophet models, structural break analysis (Chow test / CUSUM / Prophet changepoint review), in-sample and out-of-sample validation metrics, feature engineering module (`src/processing/features.py`).
-
-**Addresses features:** Statistical baseline model (ARIMA/OLS), model diagnostics and fit metrics, documented assumptions.
-
-**Avoids pitfalls:** Structural break extrapolation (Chow test before model selection, Prophet changepoint tuning), ML overfitting on small data (establish statistical baseline performance before committing to ML complexity).
-
-**Stack:** statsmodels 0.14.6, Prophet 1.1.x, scipy 1.14.x, scikit-learn 1.8.0 TimeSeriesSplit, pandas 3.0.
-
-**Research flag:** STANDARD PATTERNS — ARIMA and Prophet on economic time series are well-documented. Specific changepoint tuning for 2022-2024 AI investment surge may require experimentation.
+**Research flag:** NEEDS phase research — assembling a defensible historical actuals series from heterogeneous analyst sources (IDC, Gartner, Goldman, Grand View) requires source-by-source methodology assessment and definitional comparison before selecting anchors. Not a standard engineering problem; closer to economic research.
 
 ---
 
-### Phase 3: ML Layer, Ensemble, and Validation
+### Phase 2: Ground-Up Model Rework
 
-**Rationale:** ML models consume Phase 2 residuals. The ensemble combiner requires both statistical and ML outputs. Model evaluation and backtesting require the full pipeline to be in place. This phase produces the primary forecast artifacts that all downstream phases consume.
+**Rationale:** Model retraining cannot begin until Phase 1 Parquet files exist. This phase replaces the PCA composite Y variable with real USD anchor values and adds model version gating to prevent v1.0 PCA code from silently running in the v1.1 path. Interface contract audit must precede code changes — the PITFALLS.md is explicit that the broken pipeline algebra pitfall is a "hidden corruption" failure mode where no exceptions are thrown.
 
-**Delivers:** Trained LightGBM model on statistical residuals, ensemble combiner with weighted blending, SHAP feature importance calculations, serialized model artifacts (`models/ai_industry/`), backtesting report (train pre-2020, evaluate 2020-2024), market size point estimates with 80%/95% confidence intervals, 2030 growth forecast artifacts.
+**Delivers:** `model_version` config flag gating v1.0/v1.1 paths; ARIMA and Prophet retrained on USD series; LightGBM retrained on USD residuals with updated feature matrix; value chain multiplier path deleted from `inference/forecast.py`; interface contract test asserting output is USD billions; PCA composite demoted to comparison utility in `features.py`; `features.py` macro indicators promoted to X variable matrix.
 
-**Addresses features:** ML refinement model, hybrid statistical + ML ensemble, market size point estimate, growth forecast with confidence intervals, model diagnostics, SHAP driver attribution (v1.x trigger).
+**Addresses features:** Realistic forecast trajectory; working MAPE/R² diagnostics (model foundation)
 
-**Avoids pitfalls:** Data leakage (TimeSeriesSplit, scaler fitted on training data only), point forecasts without uncertainty (CI generation is part of ensemble output, not an afterthought), ML overfitting (compare LightGBM OOS performance vs. Prophet baseline before accepting the ML correction).
+**Avoids pitfalls:** Broken pipeline algebra (Pitfall 2); stale v1.0 PCA code interfering (Pitfall 9); data leakage in time series validation (Pitfall 10)
 
-**Stack:** LightGBM 4.6.0, scikit-learn 1.8.0, SHAP 0.46.x, statsmodels (for quantile regression CIs), joblib for model serialization.
+**Stack:** statsmodels 0.14.6, Prophet 1.1, LightGBM 4.6, scikit-learn 1.8 TimeSeriesSplit, skforecast 0.21.0
 
-**Research flag:** NEEDS RESEARCH — ensemble weighting strategy (fixed alpha vs. learned weighting vs. stacking) is a methodology decision with multiple valid approaches; the choice should be documented and defended in the methodology paper.
-
----
-
-### Phase 4: Inference Engine and Interactive Dashboard
-
-**Rationale:** Dashboard is built on top of finalized, serialized model artifacts. Building the dashboard before models are stable wastes layout work. The inference engine is the bridge between offline-trained models and the live dashboard — it must be separate from both training and presentation layers.
-
-**Delivers:** Inference module that loads serialized models and runs forward projections to 2030, Dash dashboard with time series charts, forecast fan chart with CI bands, market segment breakdown, scenario selector (pessimistic/base/optimistic), methodology panel explaining market boundary.
-
-**Addresses features:** Interactive dashboard with charts, scenario/sensitivity analysis, data source attribution in UI, real/nominal toggle, data freshness indicator.
-
-**Avoids pitfalls:** Training at dashboard runtime (inference loads pre-computed artifacts, callbacks never re-train), forecast communication errors (fan chart with interval bands as default view, scenario toggle, hedged language throughout), overloaded dashboard (lead with ensemble forecast; individual model comparisons in secondary tab).
-
-**Stack:** Dash 4.0.x, Plotly 6.6.0, dcc.Store for preprocessed aggregates, scattergl for high-point-count series.
-
-**Research flag:** STANDARD PATTERNS — Dash callback architecture and Plotly fan charts are well-documented. PDF export mechanism (Phase 5 dependency) should be prototyped early to confirm WeasyPrint integration works before the dashboard layout is finalized.
+**Research flag:** Standard patterns — model retraining on a new target variable with interface contract testing is well-documented. skforecast wraps existing LightGBM with no structural changes.
 
 ---
 
-### Phase 5: PDF Report and Methodology Paper
+### Phase 3: AI Revenue Attribution
 
-**Rationale:** Report generation requires a stable dashboard layout (to capture chart outputs) and complete model validation (to report defensible metrics). The methodology paper is the content artifact that makes this a published piece of economic research rather than a data science exercise. It is sequentially last but must be planned for from the start (documented assumptions, writeup-ready SHAP plots, LaTeX-exportable statsmodels summaries).
+**Rationale:** Revenue attribution is the most analytically distinctive feature and the data foundation for the segment model. The value chain layer taxonomy (chip / cloud / application / end-market) is a design artifact that must exist in config before any attribution percentages are populated — retrofitting layer assignments after the fact to fix a double-counting problem is a HIGH recovery cost (per PITFALLS.md recovery table).
 
-**Delivers:** WeasyPrint-rendered PDF report with methodology, charts (static PNG via Kaleido), and projections; Jinja2 HTML templates; methodology paper draft for LinkedIn publication; nbconvert-exported notebooks as supplementary material; README finalization.
+**Delivers:** `revenue_attribution.py` with explicit disclosure + analogue ratio paths; value chain layer taxonomy in config; every company assigned a `value_chain_layer` field; all attribution percentages stored with source, vintage date, and low/high range (pydantic-validated); 10-15 mixed-tech public companies attributed (Microsoft, Alphabet, Amazon, Meta, Salesforce, IBM); segment breakdown (infrastructure / software / services) summing to total; `lseg_ai.parquet` extended with `ai_revenue_usd` column; `AIRevenueAttributor` class with methodology documented per company.
 
-**Addresses features:** Exportable PDF report, methodology paper / LinkedIn writeup, bottom-up cross-validation summary (if completed in v1.x), documented assumptions artifact.
+**Addresses features:** AI revenue attribution for mixed-tech companies; segment breakdown model; analyst consensus layer (segment level)
 
-**Avoids pitfalls:** Forecast communication in static outputs (paper uses hedged language, reports prediction intervals explicitly, includes changepoint analysis figure, documents survivorship bias limitation).
+**Avoids pitfalls:** AI revenue double-counting (Pitfall 3); segment reporting opacity / false precision (Pitfall 4)
 
-**Stack:** WeasyPrint 68.x, Jinja2 3.1.x, Kaleido 0.2.x, matplotlib 3.10.x (300 DPI for publication figures), nbconvert 7.x.
+**Stack:** edgartools 5.25.1, yfinance 1.2.0, financetoolkit 2.0.6, rapidfuzz, pydantic 2.x
 
-**Research flag:** STANDARD PATTERNS — WeasyPrint + Jinja2 for HTML-to-PDF is well-documented. Confirm Kaleido version compatibility with Plotly 6.6.x early (Kaleido 0.2.x has known version-pinning sensitivity).
+**Research flag:** NEEDS phase research — value chain layer taxonomy design and per-company attribution source collection requires company-by-company research. Attribution methodology for non-disclosing companies (Meta, IBM, Salesforce) has no standard formula; requires sourcing sell-side analyst decompositions per company.
+
+---
+
+### Phase 4: Private Company Valuation
+
+**Rationale:** Private company valuations are additive to the total market size estimate but do not block the core model or backtesting. Treating them as a separate phase avoids a long-pole dependency on OpenAI/Anthropic revenue estimates (inherently uncertain). Private company multiples require explicit uncertainty parameterization from the start — a single point estimate applied to all companies is never acceptable given the 3.6x–225x range.
+
+**Delivers:** `dcf_valuation.py` with DCF + AI revenue multiple dual-track approach; private company registry (15-20 companies: OpenAI, Anthropic, Databricks, xAI, Mistral, etc.) in `ai.yaml` with valuation method, vintage date, and uncertainty band per company; revenue multiple parameters with vintage dates; sensitivity table showing total market size range across plausible multiple assumptions; `private_valuations_ai.parquet`; `PrivateCompanyValuation` dataclass with methodology fields.
+
+**Addresses features:** Private company valuation registry; total market size completeness
+
+**Avoids pitfalls:** Private company multiple comparability (Pitfall 5)
+
+**Stack:** numpy-financial 1.0.0, pydantic 2.x, yfinance 1.2.0 (public comparable multiples)
+
+**Research flag:** NEEDS phase research — current private company revenue estimates (OpenAI, Anthropic ARR for 2025-2026) and comparable transaction multiples require sourcing from recent (Q1 2026) advisory reports. 2021-2022 vintage multiples are definitively stale per Aventis Advisors and Finro Q1 2026 data.
+
+---
+
+### Phase 5: Backtesting and Diagnostics
+
+**Rationale:** Backtesting requires both the reworked model (Phase 2) and attribution data (Phase 3) to be in place. The diagnostics framework already exists in the dashboard but currently shows placeholder metrics. Ground truth taxonomy (hard / soft / directional validation) must be written as a design document before any validation code is written — otherwise the MAPE values displayed will measure the wrong thing.
+
+**Delivers:** `src/backtesting/` package (holdout.py, walk_forward.py, benchmark_compare.py); `backtesting_results.parquet` with `year`, `segment`, `actual_usd`, `predicted_usd`, `residual_usd`, `model`, `holdout_type` schema; real MAPE and R² computed against filed company revenue actuals (hard validation); analyst consensus comparison labeled explicitly as soft validation; diagnostics tab updated to show real out-of-sample metrics with [in-sample] / [out-of-sample] labels; MAPE benchmark targets documented (under 10% excellent, 10-20% acceptable for market sizing).
+
+**Addresses features:** Walk-forward backtesting with MAPE/R²; working diagnostics tab
+
+**Avoids pitfalls:** Backtesting against consensus, not actuals (Pitfall 6); diagnostic metrics measuring nothing real (Pitfall 7); data leakage in time series (Pitfall 10)
+
+**Stack:** skforecast 0.21.0, scikit-learn TimeSeriesSplit, scipy (supplementary statistical tests)
+
+**Research flag:** Standard patterns — walk-forward backtesting via skforecast is well-documented. The main work is assembling the ground truth dataset (done in Phases 1 and 3), not writing the validation code.
+
+---
+
+### Phase 6: Basic Dashboard Tier and Dashboard Polish
+
+**Rationale:** Basic tier must show real, validated numbers — not placeholders. It is built last in the dashboard sequence after the model is validated and outputs are stable. Dashboard polish (removing multiplier derivation Expert blocks, wiring real segment values, updating Normal/Expert modes) is batched into a single phase to avoid iterating on the same files across multiple phases.
+
+**Delivers:** `src/dashboard/tabs/basic.py` (Z-pattern layout: 3 hero KPIs with scope label, vintage date, and uncertainty range; segment bar chart with error bars replacing pie charts; growth fan chart); Basic tab as 5th tab in `layout.py`; multiplier calibration block deleted from `app.py`; `backtesting_results.parquet` loaded at app startup; Overview and Segments tabs updated to USD-native values; backtest chart rewritten to show actual vs. predicted (not residuals only); analyst consensus panel added to Basic and Normal tiers; revenue multiples reference table; all `"N/A"` diagnostics replaced with real metrics.
+
+**Addresses features:** Basic dashboard tier; updated Normal/Expert modes; revenue multiples reference table; analyst consensus panel; data vintage display
+
+**Avoids pitfalls:** Basic tier context stripped / misleading (Pitfall 8); "AI Market Cap" label ambiguity
+
+**Stack:** Dash 4.0, Plotly 6.6, dash-bootstrap-components (existing)
+
+**Research flag:** Standard patterns — Dash tab routing and KPI card layout are well-documented. No novel integration challenges.
 
 ---
 
 ### Phase Ordering Rationale
 
-- **Data before models:** The architecture has a strict one-way data flow. No modeling work is recoverable if the upstream data contains nominal/real conflation or undefined boundaries — full retrain required.
-- **Statistical before ML:** The two-stage hybrid pattern requires statistical residuals as ML training input. This is not convention; it is a hard dependency.
-- **Models before dashboard:** Pre-computed artifacts are the contract between modeling and presentation. Building Dash callbacks before the forecast artifact schema is stable requires rework.
-- **Reports last:** Report generation synthesizes all prior phases. The content of the methodology paper depends on having final metrics and validated forecasts.
-- **Notebooks throughout:** Exploratory Jupyter notebooks run in parallel with each phase (01_data_exploration, 02_baseline_models, 03_ml_layer, 04_evaluation) but production logic always lives in `src/`.
+- **Phase 1 before everything:** Market boundary definition and anchor selection are design decisions that corrupt everything downstream if deferred. The PITFALLS.md is unambiguous — anchor shopping and boundary inconsistency are the two pitfalls with HIGH recovery cost.
+- **Phase 2 before 3/4/5:** Model retraining requires Phase 1 Parquet files. Interface contract and version gating must exist before new data flows in.
+- **Phase 3 before 5:** Segment-level backtesting requires segment-level attribution data; MAPE at segment level is only meaningful with real attribution.
+- **Phase 4 independent of 5:** Private company valuations are additive; backtesting can proceed (and be meaningful) without them.
+- **Phase 6 last:** Dashboard must show stable, validated numbers. Building the Basic tier against placeholder model outputs risks rework when real numbers produce different magnitudes.
 
 ### Research Flags
 
-Phases needing deeper research during planning:
-- **Phase 1:** Validate specific World Bank/OECD indicator codes for AI industry proxies before writing ingestion config. Confirm eurostat package works with new Eurostat dissemination API for relevant indicators.
-- **Phase 3:** Decide on ensemble weighting strategy (fixed alpha, stacking, or dynamic weighting) and document rationale. Research conformal prediction intervals for gradient boosting as an alternative to quantile regression.
+Phases likely needing deeper research during planning:
+- **Phase 1:** Assembling a defensible historical actuals series requires evaluating 8-10 analyst report methodologies for definitional consistency before selecting anchors. This is economic research work, not software engineering.
+- **Phase 3:** Value chain layer taxonomy design and per-company analyst source collection. Attribution methodology for non-disclosing companies (Meta, IBM, Salesforce) has no standard formula; requires company-by-company source work.
+- **Phase 4:** Private company revenue estimates and Q1 2026 comparable transaction multiples must be freshly sourced; 2021-2022 vintage data is stale.
 
-Phases with standard, well-documented patterns:
-- **Phase 2:** ARIMA/Prophet on economic time series — established methodology with extensive documentation.
-- **Phase 4:** Dash 4.0.x callback architecture — official documentation is comprehensive and current.
-- **Phase 5:** WeasyPrint + Jinja2 — mature combination with good examples; prototype PDF export early as a risk mitigation step.
+Phases with standard patterns (skip research-phase):
+- **Phase 2:** Model retraining on new target variable + interface contract testing — well-documented via statsmodels, skforecast, and scikit-learn docs.
+- **Phase 5:** Walk-forward backtesting via skforecast — standard; the novelty is the ground truth dataset, not the validation code.
+- **Phase 6:** Dash tab routing, KPI cards, and chart rewrites — comprehensive official documentation.
 
 ---
 
@@ -226,47 +239,60 @@ Phases with standard, well-documented patterns:
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All library versions verified via PyPI and official docs. Compatibility matrix explicitly validated (statsmodels 0.14.6 + pandas 3.0 fix is a documented release note). One caveat: Kaleido/Plotly 6.6.x compatibility should be verified in a spike before relying on PDF export. |
-| Features | MEDIUM-HIGH | Must-have features are well-grounded in econometric and data science practice. Differentiator features (SHAP, scenarios) have clear precedent. The bottom-up/top-down cross-validation complexity depends on data availability that cannot be fully assessed without API exploration. |
-| Architecture | MEDIUM-HIGH | FTI pipeline and hybrid statistical+ML pattern are supported by peer-reviewed literature (PMC and MDPI sources). The specific ensemble weighting approach is a design decision that requires empirical validation during Phase 3. |
-| Pitfalls | HIGH | Critical pitfalls are verified across multiple primary and peer-reviewed sources. The data leakage pitfall has specific arXiv citation (arXiv:2512.06932). Market boundary definitional variance is confirmed by comparing published 2025 market estimates across major research firms. |
+| Stack | HIGH | All package versions verified via PyPI official sources as of March 2026. Compatibility matrix (pandas 3.0 × statsmodels 0.14.6 × Plotly 6.6 × LightGBM 4.6) explicitly confirmed. edgartools 5.25.1 active with weekly releases. skforecast 0.21.0 released March 13, 2026. |
+| Features | HIGH | Table stakes grounded in official analyst reports (Gartner, IDC, PitchBook Q4 2025). Differentiator features grounded in competitor analysis (CB Insights IAC methodology). Feature dependency tree is explicit and verified. Anti-features are well-justified with specific rationale. |
+| Architecture | HIGH | Based on direct codebase inspection of the existing 75-file `src/` package (2026-03-23). Component-level modify/preserve/replace table is granular. 22-step dependency-aware build order provided. Integration risks rated with specific notes. |
+| Pitfalls | HIGH | 9 new v1.1 pitfalls + 3 carried from v1.0. All critical pitfalls have verifiable warning signs and recovery cost estimates. Double-counting risk confirmed by Bloomberg 2026 circular deal analysis. Multiple range (3.6x–225x) sourced from Aventis Advisors 2025 data. |
 
-**Overall confidence:** MEDIUM-HIGH
+**Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **AI industry proxy indicators:** The specific World Bank and OECD indicator codes that best proxy for AI industry GDP contribution (R&D expenditure, patent filings, ICT sector revenue, semiconductor shipments) need empirical validation against actual API availability during Phase 1. Some candidate indicators may not have sufficient historical coverage (pre-2010).
-- **Bottom-up data availability:** Free data sources for bottom-up company revenue aggregation (beyond SEC EDGAR for US public companies) are uncertain. Crunchbase free tier has limited historical depth. This risk should be flagged in the Phase 1 data design document.
-- **Ensemble weighting calibration:** The `alpha` parameter in the hybrid ensemble (`alpha * stat_pred + (1-alpha) * ml_correction`) is a methodology decision. Research suggests hybrid consistently wins but does not prescribe a weighting method. Treat as an empirical decision in Phase 3 with documented rationale.
-- **WeasyPrint/Kaleido integration:** PDF export with embedded Plotly charts via Kaleido is a known complexity point (cited in Plotly community forum). Run a spike in Phase 4 before building the full reporting pipeline in Phase 5.
+- **Ground truth actuals series completeness:** The historical AI market size time series will realistically cover only 7-9 years (2016-2024) from heterogeneous sources with different definitions. MAPE over this sample will be noisy and potentially unstable (removing one data point may shift MAPE by 5+ percentage points). The methodology paper must communicate this limitation explicitly alongside every reported metric.
+- **Private company revenue estimates:** OpenAI, Anthropic, and xAI revenue estimates for 2025-2026 come from secondary press reporting and investor disclosure. These are inherently low-confidence inputs. The 40% uncertainty band in the architecture config example may understate true uncertainty — validate against multiple independent sources before fixing the config parameters.
+- **Market boundary harmonization:** The architecture specifies locking the boundary before data collection but does not prescribe which analyst definition to align to. This decision determines whether the headline number is in the hundreds of billions (IDC scope) or low trillions (Gartner scope) — a material choice with no objectively correct answer. Phase 1 must make this decision explicit and document the rationale.
+- **Attribution percentage vintage management:** The pipeline stores attribution percentages with vintage dates, but there is no automated staleness alert. For a quarterly-refreshed portfolio project this is acceptable — but a manual review step must be included in the maintenance workflow.
 
 ---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- PyPI official pages — statsmodels 0.14.6, scikit-learn 1.8.0, LightGBM 4.6.0, Plotly 6.6.0, Dash 4.0.x, WeasyPrint 68.1
-- pandas official release notes — v3.0.0 (CoW semantics, January 2026)
-- Astral uv official docs — project management and lockfile guide
-- SHAP official documentation — feature attribution API
-- Facebook Prophet official docs — cross-validation, changepoint tuning, diagnostics
-- World Bank Open Data — primary data source
-- OECD Data Explorer — primary data source
-- Cookiecutter Data Science (DrivenData) — canonical project structure
-- arXiv:2512.06932 — time series data leakage in LSTM evaluation
+- [edgartools PyPI v5.25.1, March 2026](https://pypi.org/project/edgartools/) — EDGAR XBRL ingestion; rate limiting; caching
+- [edgartools documentation](https://edgartools.readthedocs.io/) — XBRL concept extraction patterns
+- [skforecast PyPI v0.21.0, March 2026](https://pypi.org/project/skforecast/) — walk-forward backtesting API
+- [scikit-learn release history v1.8.0](https://scikit-learn.org/stable/whats_new.html) — pipeline and CV splitter API
+- [LightGBM PyPI v4.6.0](https://pypi.org/project/lightgbm/) — gradient boosting; pandas 3.0 compatibility
+- [statsmodels PyPI v0.14.6](https://pypi.org/project/statsmodels/) — econometric models; pandas 3.0 fix documented
+- [Plotly PyPI v6.6.0](https://pypi.org/project/plotly/) — Narwhals DataFrame bridge
+- [Dash PyPI v4.0.x](https://pypi.org/project/dash/) — dashboard framework
+- [WeasyPrint PyPI v68.1](https://pypi.org/project/weasyprint/) — HTML-to-PDF
+- [yfinance PyPI v1.2.0, February 2026](https://pypi.org/project/yfinance/) — market cap and analyst estimates
+- [numpy-financial v1.0.0](https://numpy.org/numpy-financial/) — DCF arithmetic
+- [Gartner: Worldwide AI Spending $1.5T 2025](https://www.gartner.com/en/newsroom/press-releases/2025-09-17-gartner-says-worldwide-ai-spending-will-total-1-point-5-trillion-in-2025) — broad market anchor
+- [IDC: AI Infrastructure $758B by 2029](https://my.idc.com/getdoc.jsp?containerId=prUS53894425) — narrow market anchor
+- [PitchBook Q4 2025 AI Valuation Guide](https://pitchbook.com/news/reports/q4-2025-ai-public-comp-sheet-and-valuation-guide) — EV/Revenue multiples; pure-play vs. conglomerate comparison
+- [CB Insights: Industry Analyst Consensus Methodology](https://www.cbinsights.com/research/team-blog/industry-analyst-market-sizings/) — wisdom of crowds approach
+- [RapidFuzz GitHub](https://github.com/rapidfuzz/RapidFuzz) — fuzzy name matching
+- [financetoolkit PyPI v2.0.6](https://pypi.org/project/financetoolkit/) — segment revenue and analyst estimates
+- Direct codebase inspection: `src/` package, 75 Python files, 2026-03-23
 
 ### Secondary (MEDIUM confidence)
-- PMC 12294620 — hybrid statistical + deep learning residual correction framework
-- MDPI 2225-1146/13/4/52 — econometric + Python forecasting pipeline patterns
-- Hopsworks FTI pipeline pattern — Feature/Training/Inference separation
-- Grand View Research / Statista AI market estimates — used to validate market boundary definitional variance
-- Plotly community forum — PDF export implementation patterns
-- World Bank blog — wbgapi introduction and usage
+- [Aventis Advisors: AI Valuation Multiples 2025](https://aventis-advisors.com/ai-valuation-multiples/) — 3.6x–225x private company multiple range
+- [Equidam: AI Startup Valuation Multiples 2025](https://www.equidam.com/ai-startup-valuation-revenue-multiples-2025-challenges-insights-2/) — DCF limitations for private AI companies
+- [AI Valuation Multiples Q1 2026, Finro](https://www.finrofca.com/news/ai-valuation-multiples-q1-2026-update) — current private market multiple dispersion
+- [Grand View Research: AI Market 2025 Segments](https://www.grandviewresearch.com/industry-analysis/artificial-intelligence-ai-market) — segment share benchmarks
+- [Bloomberg: AI Circular Deals 2026](https://www.bloomberg.com/graphics/2026-ai-circular-deals/) — double-counting risk confirmation
+- [Forecast Evaluation Best Practices, PMC](https://pmc.ncbi.nlm.nih.gov/articles/PMC9718476/) — MAPE benchmarks for market sizing
+- [Walk-forward Backtesting, Towards Data Science](https://towardsdatascience.com/putting-your-forecasting-model-to-the-test-a-guide-to-backtesting-24567d377fb5/) — walk-forward holdout validation pattern
+- [UXPin Dashboard Design Principles 2025](https://www.uxpin.com/studio/blog/dashboard-design-principles/) — Z-pattern layout; KPI hierarchy
+- [uv project management guide](https://docs.astral.sh/uv/guides/projects/) — lockfile-based dependency resolution
+- [edgartools HTTP client and caching internals, DeepWiki](https://deepwiki.com/dgunning/edgartools/7.3-http-client-and-caching) — rate limiting and cache behavior
+- arXiv:2512.06932 — time series data leakage in LSTM evaluation (carryover from v1.0)
 
-### Tertiary (LOW confidence)
-- Medium: pandas 3.0 CoW migration guide — cross-referenced against official release notes; use official docs as authoritative source
-- Worldmetrics: Top 10 Economic Modeling Software 2026 — aggregator site; do not rely for decisions
+### Tertiary (LOW confidence — needs validation)
+- Private AI company revenue estimates (OpenAI $5B ARR, Anthropic Series E implied valuation) — sourced from secondary press reporting; treat as calibration inputs only with wide uncertainty bands; validate against multiple sources before fixing config
 
 ---
-*Research completed: 2026-03-17*
+*Research completed: 2026-03-23*
 *Ready for roadmap: yes*
