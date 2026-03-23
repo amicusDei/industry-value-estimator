@@ -5,11 +5,11 @@ milestone_name: Model Credibility & Usability
 status: active
 stopped_at: ""
 last_updated: "2026-03-23"
-last_activity: "2026-03-23 — Milestone v1.1 started"
+last_activity: "2026-03-23 — v1.1 roadmap created (Phases 8-11)"
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
-  total_plans: 0
+  total_plans: 16
   completed_plans: 0
   percent: 0
 ---
@@ -21,57 +21,36 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** Be an analyst's best friend: produce AI industry valuations and growth forecasts grounded in real market data that people can actually trust and act on.
-**Current focus:** v1.1 Model Credibility & Usability
+**Current focus:** Phase 8 — Data Architecture and Ground Truth Assembly
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-03-23 — Milestone v1.1 started
+Phase: 8 of 11 (Data Architecture and Ground Truth Assembly)
+Plan: — (not started)
+Status: Ready to plan
+Last activity: 2026-03-23 — v1.1 roadmap created (Phases 8-11)
 
 Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
-**Velocity:**
-- Total plans completed: 1
-- Average duration: 5 min
-- Total execution time: 0.08 hours
+**Velocity (v1.0 history):**
+- Total plans completed: 22
+- Average duration: ~12 min
+- Total execution time: ~4.4 hours
 
-**By Phase:**
+**By Phase (v1.0):**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-data-foundation | 1 | 5 min | 5 min |
-
-**Recent Trend:**
-- Last 5 plans: 01-01 (5 min)
-- Trend: —
+| 01-data-foundation | 5 | 59 min | 12 min |
+| 02-statistical-baseline | 5 | 33 min | 7 min |
+| 03-ml-ensemble-and-validation | 3 | 8 min | 3 min |
+| 04-interactive-dashboard | 3 | 94 min | 31 min |
+| 05-reports-paper-and-portfolio | 4 | 85 min | 21 min |
+| 06-pipeline-integration-wiring | 2 | 11 min | 6 min |
 
 *Updated after each plan completion*
-| Phase 01-data-foundation P03 | 2 | 1 tasks | 3 files |
-| Phase 01-data-foundation P02 | 12 | 2 tasks | 4 files |
-| Phase 01-data-foundation P03 | 30 | 2 tasks | 3 files |
-| Phase 01-data-foundation P04 | 4 | 2 tasks | 7 files |
-| Phase 01-data-foundation P05 | 8 | 1 tasks | 3 files |
-| Phase 02-statistical-baseline P01 | 4 | 2 tasks | 4 files |
-| Phase 02-statistical-baseline P02 | 15 | 2 tasks | 5 files |
-| Phase 02-statistical-baseline P03 | 3 | 2 tasks | 3 files |
-| Phase 02-statistical-baseline P04 | 3 | 2 tasks | 2 files |
-| Phase 02-statistical-baseline P05 | 8 | 1 tasks | 2 files |
-| Phase 03-ml-ensemble-and-validation P01 | 3 | 2 tasks | 6 files |
-| Phase 03-ml-ensemble-and-validation P02 | 3 | 2 tasks | 7 files |
-| Phase 03-ml-ensemble-and-validation P03 | 2 | 1 tasks | 2 files |
-| Phase 04-interactive-dashboard P01 | 2 | 2 tasks | 9 files |
-| Phase 04-interactive-dashboard P02 | 2 | 2 tasks | 10 files |
-| Phase 04-interactive-dashboard P03 | 90 | 1 tasks | 6 files |
-| Phase 05-reports-paper-and-portfolio P02 | 10 | 4 tasks | 35 files |
-| Phase 05-reports-paper-and-portfolio P01 | 45 | 3 tasks | 11 files |
-| Phase 05-reports-paper-and-portfolio P03 | 18 | 2 tasks | 12 files |
-| Phase 05-reports-paper-and-portfolio P04 | 12 | 1 tasks | 5 files |
-| Phase 06-pipeline-integration-wiring P01 | 8 | 2 tasks | 2 files |
-| Phase 06-pipeline-integration-wiring PP02 | 3 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -80,69 +59,12 @@ Progress: [░░░░░░░░░░] 0%
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- [Roadmap]: 5-phase bottom-up build order matches architectural dependency chain (data → statistical → ML → dashboard → reports)
-- [Roadmap]: ARCH-01 (config-driven extensibility) placed in Phase 1 so pipeline is industry-agnostic from first commit
-- [Roadmap]: DATA-07 (data source attribution) placed in Phase 4 where it becomes visible in dashboard outputs
-- [01-01]: pandera.pandas import used (not top-level pandera) — forward-compatible with pandera 0.30.0+ deprecation
-- [01-01]: strict=False on all raw schemas — API responses include extra columns beyond required fields
-- [01-01]: check_no_nominal_columns() as standalone function callable independently before full PROCESSED_SCHEMA validation
-- [Phase 01-03]: Desktop Session auth config pattern: lseg-data.config.json gitignored, .example committed as template; app-key left empty
-- [Phase 01-03]: TRBC codes read from config dynamically — zero hardcoded codes in lseg.py, ensures reproducibility
-- [Phase 01-02]: _sdmx_to_dataframe helper: pandasdmx to_pandas() returns pd.Series with MultiIndex — reset_index() on Series to get flat DataFrame
-- [Phase 01-02]: patch.object on pipeline module instead of string-path patch to avoid importlib.reload bypassing mock bindings in pipeline unit tests
-- [Phase 01-02]: OECD SDMX dimension key fallback: try LOCATION first, catch exceptions, retry with COU + rename — handles API inconsistency between environments
-- [Phase 01-03]: TR.TRBCIndustryCode (8-digit) used in SCREEN() expression — config stores 8-digit Industry codes, not 10-digit Activity codes (TR.TRBCActivityCode)
-- [Phase 01-04]: apply_deflation builds year-indexed Series from year column, uses .values to reset index — prevents base_year lookup failure in deflate_to_base_year
-- [Phase 01-04]: normalize_oecd raises ValueError on missing economy column — silent pass-through produces invalid processed rows with no clear diagnosis
-- [Phase 01-04]: write_processed_parquet embeds source/industry/base_year/fetched_at as Parquet schema metadata bytes for downstream DATA-07 attribution
-- [Phase 01-05]: Pipeline test uses patch.object at pipeline module level, not wbgapi library — avoids MultiIndex reshape in world_bank.py during orchestration tests
-- [Phase 01-05]: run_full_pipeline uses same try/except per-source pattern as run_ingestion — consistent partial-success error isolation across full pipeline
-- [Phase 02-01]: constant-only OLS for CUSUM: linear trend detrending absorbs level shifts and reduces detection power; constant-only (ddof=1) achieves p<0.05 on step-function series
-- [Phase 02-01]: Markov switching minimum series length 20 obs: fewer obs cause EM non-convergence; fallback to dummy OLS for short or non-converging series
-- [Phase 02-01]: AICc used in compute_aic_bic: small-N correction required (n-k-1 denominator grows materially at n<50)
-- [Phase 02-02]: sklearn Pipeline enforces PCA fit-on-training-only by construction — scaler.mean_ verified in test_pca_no_leakage
-- [Phase 02-02]: temporal_cv_generic accepts arbitrary callables (fit_fn/forecast_fn) not ARIMA-specific — maximizes reuse across model types in downstream plans
-- [Phase 02-02]: diagnostics dict always captures OLS-layer diagnostics even when final model is WLS/GLSAR — preserves traceability for ASSUMPTIONS.md
-- [Phase 02-03]: AICc (not AIC) for ARIMA order selection on short annual series (N < 30)
-- [Phase 02-03]: changepoints=['2022-01-01'] anchors Prophet to GenAI surge; manual TimeSeriesSplit CV for consistent methodology with ARIMA
-- [Phase 02-03]: Year-aligned residuals via original_index re-assignment; residuals Parquet schema: year (int), segment (str), residual (float), model_type (str)
-- [Phase 02-statistical-baseline]: Two-tier ASSUMPTIONS.md (TL;DR + detailed appendix) mirrors academic paper style for Phase 5 methodology paper
-- [Phase 02-statistical-baseline]: Every assumption accompanied by explicit sensitivity note documenting impact direction and magnitude (16 total)
-- [Phase 02-05]: sys.path injection in script header resolves src/config imports for both python scripts/... and python -m scripts... invocations
-- [Phase 02-05]: All 4 AI segments selected Prophet as winner on synthetic data — structural break at 2022 favors Prophet changepoint prior; split will differ on live API data
-- [Phase 03-01]: libomp installed via Homebrew — LightGBM macOS dylib requires OpenMP at runtime
-- [Phase 03-01]: Closure with mutable _state dict aligns feature_matrix to temporal_cv_generic y-slice API without changing the shared CV scaffold
-- [Phase 03-02]: Additive blend confirmed: LightGBM corrects statistical residuals (stat_pred + lgbm_weight * correction), not a parallel full forecast
-- [Phase 03-02]: 2.5% annual CAGR as inflation proxy for real-to-nominal USD conversion — upgradeable to live World Bank NY.GDP.DEFL.ZS deflator
-- [Phase 03-02]: Epsilon guard (1e-10) in compute_ensemble_weights prevents division by zero; zero-RMSE model receives near-maximum weight
-- [Phase 03-02]: matplotlib.use('Agg') called inside save_shap_summary_plot to keep headless-safe without forcing global backend change at import time
-- [Phase 03-ml-ensemble-and-validation]: Statistical baseline RMSE = std(residuals): stat model's predicted correction of its own residuals is zero, making residual std the natural RMSE baseline for inverse-RMSE weighting
-- [Phase 03-ml-ensemble-and-validation]: Forecast features use constant forward projection: last two known residuals projected flat for 2025-2030 — no-information extrapolation for mean-reverting residuals
-- [Phase 04-interactive-dashboard]: uv run required for dash imports — dash/plotly in uv-managed venv, not base python3 path
-- [Phase 04-interactive-dashboard]: CI bands always use real 2020 USD; usd_col param only toggles point line (historical/forecast traces)
-- [Phase 04-interactive-dashboard]: MAPE and R^2 documented as N/A — residuals_statistical.parquet has only residual column, no actual/predicted
-- [Phase 04-interactive-dashboard]: Forecast bridge: last historical point prepended to forecast trace x/y arrays for visual continuity at boundary
-- [Phase 04-interactive-dashboard]: Tab layout builders are pure functions (segment, usd_col) → html.Div — stateless, uniform callback dispatch
-- [Phase 04-interactive-dashboard]: Headline uses Forecast Index label, not USD trillions — values are normalized composite indices
-- [Phase 04-interactive-dashboard]: Global controls outside tab-content to prevent state reset on tab switch (Pitfall 3)
-- [Phase 04-interactive-dashboard]: Checkpoint approved after 3 rounds: normal mode USD headlines, expert mode raw indices, fan charts, SHAP, diagnostics all verified by user
-- [Phase 05-02]: NumPy-style docstrings chosen for all src/ modules to match existing arima.py convention
-- [Phase 05-02]: docs/ARCHITECTURE.md created with Mermaid flowchart covering full data pipeline
-- [Phase 05-02]: AST-based TestDocstringCoverage enforces docstring invariant automatically on every future PR
-- [Phase 05-01]: OECD PATS_IPC replaced by MSTI B_ICTS (ICT-sector BERD) as AI patent proxy — stats.oecd.org deprecated, PATS_IPC not available in new sdmx.oecd.org API
-- [Phase 05-01]: Per-economy deflation fix: apply_deflation builds (economy, year) lookup map to avoid Series ambiguity with duplicate year indices across 16 economies
-- [Phase 05-01]: PCA composite per segment with 3-indicator subset — hardware (exports+patents+ICT-BERD), infra (GDP+ICT-svc+BERD), software (ICT-svc+RD%+GERD), adoption (RD%+researchers+GDP)
-- [Phase 05-03]: PDF artifacts committed to git — PRES-04 plan explicitly requires reports/executive_brief.pdf and reports/full_report.pdf as plan artifacts; adjusted .gitignore
-- [Phase 05-03]: load_report_context mode='normal'/'expert' mirrors dashboard normal/expert distinction — executive brief uses normal mode, full report uses expert mode with diagnostics
-- [Phase 05-03]: kaleido v1 API: fig.to_image(format='png') not engine='kaleido' (deprecated in Plotly 6.x) — documented in chart_export.py
-- [Phase 05-04]: Real data key findings used in paper/README: $200B 2023 anchor, $171B 2021, $82B 2019 — 2024 excluded with documented data lag explanation
-- [Phase 05-04]: Methodology paper: first-person LinkedIn narrative tone covering PCA composite + ARIMA/Prophet + LightGBM hybrid with GitHub call-to-action
-- [Phase 05-04]: Dashboard requires restart (scripts/run_dashboard.py) to show real pipeline data — data loaded at module startup, not on demand; expected behavior
-- [Phase 06-pipeline-integration-wiring]: changepoint_year: int = 2022 default on both fit_prophet_segment and run_prophet_cv — preserves all 222 existing tests without modification
-- [Phase 06-pipeline-integration-wiring]: Test classes 1-4 xfail — test pipeline functions that don't exist until Plan 06-02; TestProphetChangepoint (class 5) passes immediately
-- [Phase 06-pipeline-integration-wiring]: Stationarity and OLS logging only — no algorithmic override of pmdarima AICc-based order selection
-- [Phase 06-pipeline-integration-wiring]: OLS residuals not written to residuals_statistical.parquet — logged to stdout only for ASSUMPTIONS.md traceability
-- [Phase 06-pipeline-integration-wiring]: LSEG scalar applied post-PCA: lseg_ai.parquet is a single-year cross-section (year=2026), cannot be added as time-series column
+- [Roadmap v1.1]: Build order locked as data → model → attribution/valuation → backtesting → dashboard; nothing downstream starts until Phase 8 Parquet files exist
+- [Roadmap v1.1]: Value chain layer taxonomy (MODL-04) placed in Phase 9 and must be designed before any attribution percentages are written — retrofitting is HIGH recovery cost
+- [Roadmap v1.1]: PCA composite + value chain multiplier is deleted (not gated) in Phase 9; schema continuity preserved via column name, not value type
+- [Roadmap v1.1]: Private company valuation (MODL-03) merged into Phase 10 with attribution — both are data enrichment that backtesting depends on; keeping them separate would create a false gate
+- [Roadmap v1.1]: Walk-forward backtesting (MODL-06) placed in Phase 10 (not Phase 11) — backtesting is a data product that the dashboard consumes, not a dashboard feature
+- [Roadmap v1.1]: Basic dashboard tier built last (Phase 11) — must show validated numbers; building against placeholder model output risks full rework
 
 ### Pending Todos
 
@@ -150,11 +72,12 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 1]: Specific World Bank/OECD indicator codes for AI industry proxies need validation against live APIs before writing ingestion config — definitions vary 2-3x across research firms
-- [Phase 3]: Ensemble weighting strategy (fixed alpha vs. stacking vs. dynamic) is an open methodology decision — must be empirically tested and documented
+- [Phase 8]: Market boundary definition (DATA-08) is a design decision, not a data task — must be locked before any data is collected to prevent anchor estimate shopping (Pitfall 1); requires evaluating 8-10 analyst report methodologies for definitional consistency
+- [Phase 10]: Value chain layer taxonomy must exist before attribution percentages are populated — design artifact from Phase 9 gates Phase 10 work
+- [Phase 10]: Private company revenue estimates (OpenAI, Anthropic) sourced from secondary press reporting; treat as wide-uncertainty inputs; validate against multiple sources before fixing config parameters
 
 ## Session Continuity
 
-Last session: 2026-03-23T12:07:37.887Z
-Stopped at: Completed 06-02-PLAN.md — Pipeline integration wiring: LSEG scalar, structural break detection, stationarity, OLS
+Last session: 2026-03-23
+Stopped at: v1.1 roadmap created — ready to plan Phase 8
 Resume file: None
