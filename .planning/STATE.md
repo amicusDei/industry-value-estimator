@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Model Credibility & Usability
 status: planning
-stopped_at: Completed 09-01-PLAN.md
-last_updated: "2026-03-24T12:56:24.109Z"
+stopped_at: Completed 09-02-PLAN.md
+last_updated: "2026-03-24T13:03:39.340Z"
 last_activity: 2026-03-23 — v1.1 roadmap created (Phases 8-11)
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 7
-  completed_plans: 5
+  completed_plans: 6
   percent: 0
 ---
 
@@ -56,6 +56,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 08 P03 | 6 | 1 tasks | 5 files |
 | Phase 08 P04 | 25 | 2 tasks | 5 files |
 | Phase 09 P01 | 219 | 2 tasks | 5 files |
+| Phase 09 P02 | 420 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -83,6 +84,8 @@ Recent decisions affecting current work:
 - [Phase 09]: value_chain_layer_taxonomy locked 2026-03-24 with 4 layers (chip/cloud/application/end_market) in ai.yaml — gates Phase 10 attribution
 - [Phase 09]: build_pca_composite deleted from features.py — flat indicator matrix replaces PCA path in v1.1 model
 - [Phase 09]: model_version: v1.1_real_data set in ai.yaml — will be used as interface gate in Plan 09-02
+- [Phase 09]: market_anchors_ai.parquet column names are median_usd_billions_real_2020 (not median_real_2020) — all USD loaders use actual column names
+- [Phase 09]: fit_prophet_from_anchors gracefully omits 2022 changepoint when outside training data range — prevents Prophet ValueError on sparse real-observation segments
 
 ### Pending Todos
 
@@ -96,6 +99,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T12:56:24.108Z
-Stopped at: Completed 09-01-PLAN.md
+Last session: 2026-03-24T13:03:39.338Z
+Stopped at: Completed 09-02-PLAN.md
 Resume file: None
