@@ -230,4 +230,20 @@ def run_full_pipeline(
         except Exception as e:
             print(f"EDGAR ingestion failed: {e}")
 
+    # Step 8: AI revenue attribution for bundled-segment public companies (Plan 10-02)
+    try:
+        from src.processing.revenue_attribution import compile_and_write_attribution
+        attribution_path = compile_and_write_attribution(industry_id)
+        processed_paths["revenue_attribution"] = attribution_path
+    except Exception as e:
+        print(f"Revenue attribution failed: {e}")
+
+    # Step 9: Private company valuations (compile YAML registry to Parquet)
+    try:
+        from src.processing.private_valuations import compile_and_write_private_valuations
+        private_path = compile_and_write_private_valuations(industry_id)
+        processed_paths["private_valuations"] = private_path
+    except Exception as e:
+        print(f"Private valuations failed: {e}")
+
     return processed_paths

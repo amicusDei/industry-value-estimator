@@ -270,6 +270,38 @@ class TestOlsWiring:
 # Tests for configurable changepoint_year — already wired by Plan 06-01
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Class 6: TestPrivateValuationsPipelineWiring
+# Tests that compile_and_write_private_valuations is wired in pipeline.py Step 9
+# ---------------------------------------------------------------------------
+
+class TestPrivateValuationsPipelineWiring:
+    """Tests that private valuations Step 9 is wired in run_full_pipeline."""
+
+    def test_private_valuations_step_in_pipeline(self):
+        """compile_and_write_private_valuations returns Path ending in private_valuations_ai.parquet."""
+        from src.processing.private_valuations import compile_and_write_private_valuations
+        result = compile_and_write_private_valuations("ai")
+        assert isinstance(result, Path), f"Expected Path, got {type(result)}"
+        assert str(result).endswith(".parquet"), (
+            f"Expected path ending in .parquet, got {result}"
+        )
+        assert "private_valuations_ai" in str(result), (
+            f"Expected 'private_valuations_ai' in path, got {result}"
+        )
+
+    def test_step_9_present_in_pipeline_source(self):
+        """pipeline.py source contains Step 9 and compile_and_write_private_valuations import."""
+        pipeline_source_path = (
+            Path(__file__).parent.parent / "src" / "ingestion" / "pipeline.py"
+        )
+        source = pipeline_source_path.read_text()
+        assert "Step 9" in source, "Expected 'Step 9' in pipeline.py source"
+        assert "compile_and_write_private_valuations" in source, (
+            "Expected 'compile_and_write_private_valuations' in pipeline.py source"
+        )
+
+
 class TestProphetChangepoint:
     """Tests for configurable changepoint_year in Prophet functions (wired in Plan 06-01)."""
 
