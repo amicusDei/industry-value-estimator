@@ -357,3 +357,38 @@ class TestProphetChangepoint:
             f"Expected '2022' NOT in any fold's changepoints when changepoint_year=2021, "
             f"got: {captured_changepoints}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Class 6: TestAttributionWiring
+# Tests that Step 8 revenue attribution is wired into pipeline.py
+# ---------------------------------------------------------------------------
+
+class TestAttributionWiring:
+    """Tests that Step 8 revenue attribution runs in the pipeline (Plan 10-02 wires this)."""
+
+    def test_attribution_step_in_pipeline(self):
+        """compile_and_write_attribution('ai') returns a Path ending in revenue_attribution_ai.parquet."""
+        from src.processing.revenue_attribution import compile_and_write_attribution
+        from pathlib import Path
+
+        result = compile_and_write_attribution("ai")
+
+        assert isinstance(result, Path), f"Expected Path, got {type(result)}"
+        assert result.name == "revenue_attribution_ai.parquet", (
+            f"Expected filename 'revenue_attribution_ai.parquet', got '{result.name}'"
+        )
+        assert result.exists(), f"Parquet file not found at {result}"
+
+    def test_attribution_step_wired_in_pipeline_module(self):
+        """pipeline.py Step 8 imports compile_and_write_attribution (source-level check)."""
+        from pathlib import Path
+
+        pipeline_path = Path(__file__).parent.parent / "src" / "ingestion" / "pipeline.py"
+        source = pipeline_path.read_text()
+        assert "compile_and_write_attribution" in source, (
+            "compile_and_write_attribution not found in pipeline.py source"
+        )
+        assert "Step 8" in source, (
+            "Step 8 comment not found in pipeline.py source"
+        )
