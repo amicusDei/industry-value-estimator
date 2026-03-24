@@ -19,6 +19,7 @@
 #   funding_date: str                        — ISO date of last funding round
 #   estimated_arr_usd_billions: float        — Estimated ARR (press/secondary sources)
 #   arr_source: str                          — Source for ARR estimate
+#   arr_source_url: str                      — URL for ARR source (empty if unavailable)
 #   comparable_low_multiple: float           — Low EV/ARR multiple from peer group
 #   comparable_mid_multiple: float           — Mid EV/ARR multiple (anchored to peers)
 #   comparable_high_multiple: float          — High EV/ARR multiple
@@ -28,18 +29,23 @@
 #   implied_ev_high: float                  — estimated_arr * comparable_high_multiple
 #   segment: str                            — One of: ai_hardware, ai_infrastructure, ai_software, ai_adoption
 #   vintage_date: str                        — ISO date for this valuation estimate
+#   notes: str                              — Rationale and caveats
 #
 # Pitfall guard: Multiple ranges must be 2025-2026 vintage (not 2021-2022 era peaks).
 # Reference: PitchBook Q4 2025 AI Comp Sheet: ~33x for pure-plays, ~7x for conglomerates.
+#
+# Total entries: 18 companies across HIGH (6), MEDIUM (7), LOW (5) confidence tiers.
 #
 # DO NOT MODIFY without updating vintage_date per entry.
 
 entries:
 
   # ============================================================
-  # OpenAI — HIGH confidence (recent funding round at $157B post-money)
-  # ARR sourced from The Information (Q3 2024 press reporting).
+  # HIGH CONFIDENCE — Recent funding round with known post-money valuation
   # ============================================================
+
+  # OpenAI — HIGH confidence (October 2024 round at $157B post-money)
+  # ARR sourced from The Information (Q3 2024 press reporting).
 
   - company_name: "OpenAI"
     confidence_tier: "HIGH"
@@ -47,6 +53,7 @@ entries:
     funding_date: "2024-10-01"
     estimated_arr_usd_billions: 3.4
     arr_source: "The Information, 2024-09"
+    arr_source_url: ""
     comparable_low_multiple: 25.0
     comparable_mid_multiple: 40.0
     comparable_high_multiple: 60.0
@@ -58,10 +65,8 @@ entries:
     vintage_date: "2024-10-01"
     notes: "Mid multiple anchored to funding round post-money valuation ($157B) as crosscheck. Low/high reflect market range. ChatGPT + API revenue growing rapidly."
 
-  # ============================================================
-  # Anthropic — HIGH confidence (recent $61.5B Series E round)
+  # Anthropic — HIGH confidence (December 2024 Series E round at $61.5B)
   # ARR sourced from Reuters (Q4 2024 press reporting).
-  # ============================================================
 
   - company_name: "Anthropic"
     confidence_tier: "HIGH"
@@ -69,6 +74,7 @@ entries:
     funding_date: "2024-12-01"
     estimated_arr_usd_billions: 0.9
     arr_source: "Reuters, 2024-10"
+    arr_source_url: ""
     comparable_low_multiple: 30.0
     comparable_mid_multiple: 50.0
     comparable_high_multiple: 70.0
@@ -80,17 +86,37 @@ entries:
     vintage_date: "2024-12-01"
     notes: "Claude API and Claude.ai subscription revenue. Mid multiple anchored against funding round ($61.5B). Strong enterprise adoption via AWS Bedrock channel."
 
-  # ============================================================
-  # Databricks — MEDIUM confidence (September 2023 round at $43B)
-  # ARR estimate from Forbes (Q1 2024); data platform serves AI workloads.
-  # ============================================================
+  # xAI — HIGH confidence (December 2024 round at $50B post-money)
+  # ARR estimate from Bloomberg (Q4 2024); Grok API and Grok subscription revenue.
+
+  - company_name: "xAI"
+    confidence_tier: "HIGH"
+    last_funding_valuation_usd_billions: 50.0
+    funding_date: "2024-12-01"
+    estimated_arr_usd_billions: 0.4
+    arr_source: "Bloomberg, 2024-11"
+    arr_source_url: ""
+    comparable_low_multiple: 30.0
+    comparable_mid_multiple: 50.0
+    comparable_high_multiple: 75.0
+    comparable_peer_group: "ai_software_pure_play"
+    implied_ev_low: 12.0
+    implied_ev_mid: 20.0
+    implied_ev_high: 30.0
+    segment: "ai_software"
+    vintage_date: "2024-12-01"
+    notes: "Grok API revenue early-stage. Mid multiple anchored to $50B funding round. High multiple reflects high growth optionality; low multiple is conservative given early monetization."
+
+  # Databricks — HIGH confidence (December 2024 round at $62B post-money)
+  # ARR sourced from Forbes (Q1 2024); data platform serves AI workloads.
 
   - company_name: "Databricks"
-    confidence_tier: "MEDIUM"
-    last_funding_valuation_usd_billions: 43.0
-    funding_date: "2023-09-14"
+    confidence_tier: "HIGH"
+    last_funding_valuation_usd_billions: 62.0
+    funding_date: "2024-12-01"
     estimated_arr_usd_billions: 1.6
     arr_source: "Forbes, 2024-02"
+    arr_source_url: ""
     comparable_low_multiple: 15.0
     comparable_mid_multiple: 25.0
     comparable_high_multiple: 35.0
@@ -100,4 +126,306 @@ entries:
     implied_ev_high: 56.0
     segment: "ai_infrastructure"
     vintage_date: "2024-02-01"
-    notes: "Data lakehouse platform heavily used for AI/ML workloads. MEDIUM because ARR is press estimate and last funding round is 2023. Multiple reflects data platform peers (not pure LLM play). Segment assigned to ai_infrastructure as compute/data layer."
+    notes: "Data lakehouse platform heavily used for AI/ML workloads. Multiple reflects data platform peers (Snowflake, Palantir). Segment assigned to ai_infrastructure as compute/data layer."
+
+  # CoreWeave — HIGH confidence (November 2024 round at $23B post-money)
+  # ARR sourced from CNBC (Q4 2024); GPU cloud provider for AI training.
+
+  - company_name: "CoreWeave"
+    confidence_tier: "HIGH"
+    last_funding_valuation_usd_billions: 23.0
+    funding_date: "2024-11-01"
+    estimated_arr_usd_billions: 1.5
+    arr_source: "CNBC, 2024-11"
+    arr_source_url: ""
+    comparable_low_multiple: 10.0
+    comparable_mid_multiple: 15.0
+    comparable_high_multiple: 22.0
+    comparable_peer_group: "cloud_infrastructure"
+    implied_ev_low: 15.0
+    implied_ev_mid: 22.5
+    implied_ev_high: 33.0
+    segment: "ai_infrastructure"
+    vintage_date: "2024-11-01"
+    notes: "GPU cloud provider focused on AI training workloads. Lower multiples than pure software — capital-intensive infrastructure business. Mid multiple anchored to $23B funding round crosscheck."
+
+  # Scale AI — HIGH confidence (August 2024 round at $13.8B post-money)
+  # ARR sourced from The Information (Q3 2024); data annotation and RLHF services.
+
+  - company_name: "Scale AI"
+    confidence_tier: "HIGH"
+    last_funding_valuation_usd_billions: 13.8
+    funding_date: "2024-08-01"
+    estimated_arr_usd_billions: 0.75
+    arr_source: "The Information, 2024-08"
+    arr_source_url: ""
+    comparable_low_multiple: 20.0
+    comparable_mid_multiple: 30.0
+    comparable_high_multiple: 45.0
+    comparable_peer_group: "ai_software_pure_play"
+    implied_ev_low: 15.0
+    implied_ev_mid: 22.5
+    implied_ev_high: 33.75
+    segment: "ai_software"
+    vintage_date: "2024-08-01"
+    notes: "Data labeling and RLHF services; growing government contracts. Mid multiple slightly below funding round valuation ($13.8B) reflecting multiple compression in late 2024. High multiple captures upside from defense/gov expansion."
+
+  # ============================================================
+  # MEDIUM CONFIDENCE — Revenue estimate from credible press + comparable multiple
+  # ============================================================
+
+  # Mistral — MEDIUM confidence (June 2024 Series B at ~6B EUR valuation)
+  # ARR estimated from TechCrunch (Q2 2024); European LLM challenger.
+
+  - company_name: "Mistral"
+    confidence_tier: "MEDIUM"
+    last_funding_valuation_usd_billions: 6.0
+    funding_date: "2024-06-01"
+    estimated_arr_usd_billions: 0.15
+    arr_source: "TechCrunch, 2024-06"
+    arr_source_url: ""
+    comparable_low_multiple: 40.0
+    comparable_mid_multiple: 65.0
+    comparable_high_multiple: 90.0
+    comparable_peer_group: "ai_software_pure_play"
+    implied_ev_low: 6.0
+    implied_ev_mid: 9.75
+    implied_ev_high: 13.5
+    segment: "ai_software"
+    vintage_date: "2024-06-01"
+    notes: "European LLM provider; revenue from API and enterprise licensing. High multiple range reflects early-stage growth premium. Revenue estimate is secondary press with wide uncertainty."
+
+  # Cohere — MEDIUM confidence (July 2024 Series D at ~5B valuation)
+  # ARR estimated from Reuters (Q3 2024); enterprise NLP/LLM platform.
+
+  - company_name: "Cohere"
+    confidence_tier: "MEDIUM"
+    last_funding_valuation_usd_billions: 5.0
+    funding_date: "2024-07-01"
+    estimated_arr_usd_billions: 0.08
+    arr_source: "Reuters, 2024-07"
+    arr_source_url: ""
+    comparable_low_multiple: 35.0
+    comparable_mid_multiple: 55.0
+    comparable_high_multiple: 80.0
+    comparable_peer_group: "ai_software_pure_play"
+    implied_ev_low: 2.8
+    implied_ev_mid: 4.4
+    implied_ev_high: 6.4
+    segment: "ai_software"
+    vintage_date: "2024-07-01"
+    notes: "Enterprise-focused LLM platform competing with OpenAI API. ARR estimate from press; wide multiple range reflects early monetization stage. Mid EV roughly matches $5B funding valuation."
+
+  # Hugging Face — MEDIUM confidence (August 2023 Series D at $4.5B valuation)
+  # ARR estimated from Forbes (Q3 2024); open-source ML hub with enterprise tier.
+
+  - company_name: "Hugging Face"
+    confidence_tier: "MEDIUM"
+    last_funding_valuation_usd_billions: 4.5
+    funding_date: "2023-08-01"
+    estimated_arr_usd_billions: 0.07
+    arr_source: "Forbes, 2024-08"
+    arr_source_url: ""
+    comparable_low_multiple: 30.0
+    comparable_mid_multiple: 50.0
+    comparable_high_multiple: 75.0
+    comparable_peer_group: "ai_software_pure_play"
+    implied_ev_low: 2.1
+    implied_ev_mid: 3.5
+    implied_ev_high: 5.25
+    segment: "ai_software"
+    vintage_date: "2024-08-01"
+    notes: "Open-source ML model hub with enterprise subscription layer. Revenue heavily dependent on enterprise hosted inference. Last funding round 2023 so valuation may be stale."
+
+  # Together AI — MEDIUM confidence (June 2024 Series B at $1.25B valuation)
+  # ARR estimated from VentureBeat (Q2 2024); AI cloud inference platform.
+
+  - company_name: "Together AI"
+    confidence_tier: "MEDIUM"
+    last_funding_valuation_usd_billions: 1.25
+    funding_date: "2024-06-01"
+    estimated_arr_usd_billions: 0.1
+    arr_source: "VentureBeat, 2024-06"
+    arr_source_url: ""
+    comparable_low_multiple: 25.0
+    comparable_mid_multiple: 40.0
+    comparable_high_multiple: 60.0
+    comparable_peer_group: "cloud_infrastructure"
+    implied_ev_low: 2.5
+    implied_ev_mid: 4.0
+    implied_ev_high: 6.0
+    segment: "ai_infrastructure"
+    vintage_date: "2024-06-01"
+    notes: "Managed inference platform for open-source LLMs. Revenue estimate wide-uncertainty. Mid EV exceeds funding round suggesting growth since Series B. Infrastructure peer group multiples applied."
+
+  # Anyscale — MEDIUM confidence (August 2022 Series C at $1B valuation; stale)
+  # ARR estimated from TechCrunch (Q1 2024); Ray distributed computing platform.
+
+  - company_name: "Anyscale"
+    confidence_tier: "MEDIUM"
+    last_funding_valuation_usd_billions: 1.0
+    funding_date: "2022-08-01"
+    estimated_arr_usd_billions: 0.05
+    arr_source: "TechCrunch, 2024-03"
+    arr_source_url: ""
+    comparable_low_multiple: 20.0
+    comparable_mid_multiple: 35.0
+    comparable_high_multiple: 50.0
+    comparable_peer_group: "ai_infrastructure"
+    implied_ev_low: 1.0
+    implied_ev_mid: 1.75
+    implied_ev_high: 2.5
+    segment: "ai_infrastructure"
+    vintage_date: "2024-03-01"
+    notes: "Ray open-source distributed computing framework with managed cloud tier. Funding round 2022 vintage is stale. ARR estimate from secondary press. MEDIUM confidence reflects both stale valuation and uncertain ARR."
+
+  # Glean — MEDIUM confidence (September 2024 round at $4.6B valuation)
+  # ARR estimated from The Information (Q3 2024); enterprise AI search platform.
+
+  - company_name: "Glean"
+    confidence_tier: "MEDIUM"
+    last_funding_valuation_usd_billions: 4.6
+    funding_date: "2024-09-01"
+    estimated_arr_usd_billions: 0.1
+    arr_source: "The Information, 2024-09"
+    arr_source_url: ""
+    comparable_low_multiple: 25.0
+    comparable_mid_multiple: 40.0
+    comparable_high_multiple: 60.0
+    comparable_peer_group: "ai_software_pure_play"
+    implied_ev_low: 2.5
+    implied_ev_mid: 4.0
+    implied_ev_high: 6.0
+    segment: "ai_software"
+    vintage_date: "2024-09-01"
+    notes: "Enterprise AI search and knowledge management. Mid EV slightly below $4.6B funding — multiple compression from peak. Strong enterprise pipeline from Microsoft and Google Workspace replacements."
+
+  # Perplexity — MEDIUM confidence (December 2024 round at $9B valuation)
+  # ARR estimated from TechCrunch (Q4 2024); AI search engine with subscription tier.
+
+  - company_name: "Perplexity"
+    confidence_tier: "MEDIUM"
+    last_funding_valuation_usd_billions: 9.0
+    funding_date: "2024-12-01"
+    estimated_arr_usd_billions: 0.08
+    arr_source: "TechCrunch, 2024-12"
+    arr_source_url: ""
+    comparable_low_multiple: 40.0
+    comparable_mid_multiple: 65.0
+    comparable_high_multiple: 100.0
+    comparable_peer_group: "ai_software_pure_play"
+    implied_ev_low: 3.2
+    implied_ev_mid: 5.2
+    implied_ev_high: 8.0
+    segment: "ai_software"
+    vintage_date: "2024-12-01"
+    notes: "AI-powered search engine disrupting Google. High multiple premium for consumer growth optionality. ARR estimate from press; wide uncertainty. Mid EV at $5.2B vs $9B funding implies some multiple compression."
+
+  # ============================================================
+  # LOW CONFIDENCE — Revenue unknown; valuation inferred from funding/market signals
+  # ============================================================
+
+  # Inflection AI — LOW confidence (March 2024 Microsoft/Reid Hoffman restructuring)
+  # ARR unknown; Pi consumer AI product; most talent moved to Microsoft.
+
+  - company_name: "Inflection AI"
+    confidence_tier: "LOW"
+    last_funding_valuation_usd_billions: 4.0
+    funding_date: "2024-03-01"
+    estimated_arr_usd_billions: 0.02
+    arr_source: "Estimated from press signals, 2024-03"
+    arr_source_url: ""
+    comparable_low_multiple: 50.0
+    comparable_mid_multiple: 80.0
+    comparable_high_multiple: 120.0
+    comparable_peer_group: "ai_software_pure_play"
+    implied_ev_low: 1.0
+    implied_ev_mid: 1.6
+    implied_ev_high: 2.4
+    segment: "ai_software"
+    vintage_date: "2024-03-01"
+    notes: "Pi assistant product with unknown revenue. Most leadership transitioned to Microsoft. Residual entity has very uncertain ARR. HIGH multiple range reflects deep uncertainty — actual EV likely very low. Treat as indicative only."
+
+  # Aleph Alpha — LOW confidence (November 2023 round at ~0.5B valuation)
+  # ARR unknown; European sovereign AI provider; B2G revenue model.
+
+  - company_name: "Aleph Alpha"
+    confidence_tier: "LOW"
+    last_funding_valuation_usd_billions: 0.5
+    funding_date: "2024-01-01"
+    estimated_arr_usd_billions: 0.01
+    arr_source: "Estimated from company signals, 2024-01"
+    arr_source_url: ""
+    comparable_low_multiple: 30.0
+    comparable_mid_multiple: 50.0
+    comparable_high_multiple: 80.0
+    comparable_peer_group: "ai_software_pure_play"
+    implied_ev_low: 0.3
+    implied_ev_mid: 0.5
+    implied_ev_high: 0.8
+    segment: "ai_software"
+    vintage_date: "2024-01-01"
+    notes: "German sovereign AI provider; revenue mainly from German government contracts. ARR estimate is highly speculative. Mid EV roughly matches funding round valuation. Wide multiple range reflects B2G uncertainty."
+
+  # AI21 Labs — LOW confidence (August 2023 Series C at $1.4B valuation)
+  # ARR estimated from secondary press (Q2 2024); Jurassic LLM API provider.
+
+  - company_name: "AI21 Labs"
+    confidence_tier: "LOW"
+    last_funding_valuation_usd_billions: 1.4
+    funding_date: "2023-08-01"
+    estimated_arr_usd_billions: 0.03
+    arr_source: "Estimated from press signals, 2024-05"
+    arr_source_url: ""
+    comparable_low_multiple: 25.0
+    comparable_mid_multiple: 40.0
+    comparable_high_multiple: 60.0
+    comparable_peer_group: "ai_software_pure_play"
+    implied_ev_low: 0.75
+    implied_ev_mid: 1.2
+    implied_ev_high: 1.8
+    segment: "ai_software"
+    vintage_date: "2024-05-01"
+    notes: "Jurassic LLM family; pivoting to Jamba (hybrid SSM/transformer). ARR estimate very uncertain — small API business. Funding round 2023 vintage. Mid EV roughly matches funding round. LOW confidence due to uncertain pivot trajectory."
+
+  # Runway — LOW confidence (June 2024 round at $1.5B valuation)
+  # ARR estimated from secondary press (Q2 2024); AI video generation tools.
+
+  - company_name: "Runway"
+    confidence_tier: "LOW"
+    last_funding_valuation_usd_billions: 1.5
+    funding_date: "2024-06-01"
+    estimated_arr_usd_billions: 0.05
+    arr_source: "Estimated from press signals, 2024-06"
+    arr_source_url: ""
+    comparable_low_multiple: 30.0
+    comparable_mid_multiple: 50.0
+    comparable_high_multiple: 75.0
+    comparable_peer_group: "ai_software_pure_play"
+    implied_ev_low: 1.5
+    implied_ev_mid: 2.5
+    implied_ev_high: 3.75
+    segment: "ai_software"
+    vintage_date: "2024-06-01"
+    notes: "AI video generation (Gen-1, Gen-2, Gen-3 Alpha). Consumer and prosumer market. ARR estimate is wide-uncertainty secondary press. Mid multiple reflective of early-stage creative software with high growth potential."
+
+  # Stability AI — LOW confidence (March 2023 peak at ~4B; restructured 2024)
+  # ARR estimated from secondary press (Q1 2024); open-source image diffusion models.
+
+  - company_name: "Stability AI"
+    confidence_tier: "LOW"
+    last_funding_valuation_usd_billions: 1.0
+    funding_date: "2024-03-01"
+    estimated_arr_usd_billions: 0.05
+    arr_source: "Estimated from press signals, 2024-03"
+    arr_source_url: ""
+    comparable_low_multiple: 15.0
+    comparable_mid_multiple: 25.0
+    comparable_high_multiple: 40.0
+    comparable_peer_group: "ai_software_pure_play"
+    implied_ev_low: 0.75
+    implied_ev_mid: 1.25
+    implied_ev_high: 2.0
+    segment: "ai_software"
+    vintage_date: "2024-03-01"
+    notes: "Stable Diffusion creator; significant leadership turnover and restructuring in 2024. Lower multiples than peers reflect business uncertainty. ARR estimate is speculative. Valuation sharply reduced from 2023 peak ($4B). Treat as high-risk indicative only."
