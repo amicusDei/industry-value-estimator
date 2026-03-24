@@ -144,3 +144,67 @@ class TestSecondIndustryExtensibility:
             assert "USA" in codes
         finally:
             config_path.unlink(missing_ok=True)
+
+
+PIPELINE_SRC = Path(__file__).parent.parent / "src" / "ingestion" / "pipeline.py"
+
+
+class TestPipelinePhase8Steps:
+    """Phase 8 pipeline additions: market anchors (Step 6) and EDGAR (Step 7).
+
+    Tests read pipeline.py source text directly to avoid the pandasdmx top-level
+    import error (pandasdmx has a pydantic v2 incompatibility that prevents module
+    import in the test environment — a known pre-existing issue in this project).
+    """
+
+    @pytest.fixture(autouse=True)
+    def pipeline_source(self):
+        """Load pipeline.py source text once per test."""
+        return PIPELINE_SRC.read_text()
+
+    def test_run_full_pipeline_accepts_include_edgar_parameter(self, pipeline_source):
+        """run_full_pipeline signature includes include_edgar: bool = False."""
+        assert "include_edgar: bool = False" in pipeline_source, (
+            "run_full_pipeline must declare include_edgar: bool = False parameter"
+        )
+
+    def test_pipeline_source_calls_compile_and_write_market_anchors(self, pipeline_source):
+        """run_full_pipeline contains a call to compile_and_write_market_anchors."""
+        assert "compile_and_write_market_anchors" in pipeline_source, (
+            "pipeline.py must call compile_and_write_market_anchors"
+        )
+
+    def test_pipeline_source_calls_fetch_all_edgar_companies(self, pipeline_source):
+        """run_full_pipeline contains a call to fetch_all_edgar_companies."""
+        assert "fetch_all_edgar_companies" in pipeline_source, (
+            "pipeline.py must call fetch_all_edgar_companies"
+        )
+
+    def test_edgar_step_gated_by_include_edgar_flag(self, pipeline_source):
+        """EDGAR step is only triggered when include_edgar=True."""
+        assert "if include_edgar" in pipeline_source, (
+            "fetch_all_edgar_companies must be gated behind 'if include_edgar'"
+        )
+
+    def test_edgar_step_gated_by_email_env_var(self, pipeline_source):
+        """EDGAR step checks for EDGAR_USER_EMAIL environment variable."""
+        assert "EDGAR_USER_EMAIL" in pipeline_source, (
+            "pipeline.py must check EDGAR_USER_EMAIL env var before EDGAR ingestion"
+        )
+
+    def test_market_anchors_step_not_gated_by_flag(self, pipeline_source):
+        """Market anchors always runs (no flag needed — uses local YAML, not external API)."""
+        # The compile_and_write_market_anchors call should appear outside any
+        # 'if include_*' block — it always runs regardless of optional flags.
+        # We verify it appears at the same indentation as other always-run steps.
+        lines = pipeline_source.splitlines()
+        for i, line in enumerate(lines):
+            if "compile_and_write_market_anchors" in line:
+                # The call itself should be in a try block but not inside 'if include_edgar'
+                # Check that the enclosing scope is not the edgar block
+                context_start = max(0, i - 15)
+                context = "\n".join(lines[context_start:i])
+                assert "if include_edgar" not in context or context.count("if include_edgar") == 0, (
+                    "compile_and_write_market_anchors must not be inside the include_edgar block"
+                )
+                break

@@ -94,6 +94,7 @@ def _ingest_lseg(config: dict, industry_id: str) -> Path:
 def run_full_pipeline(
     industry_id: str,
     include_lseg: bool = False,
+    include_edgar: bool = False,
 ) -> dict[str, Path]:
     """
     Run the complete pipeline: ingest raw data, normalize, and write processed Parquet.
@@ -110,6 +111,9 @@ def run_full_pipeline(
         Industry identifier matching a YAML in config/industries/
     include_lseg : bool
         Whether to include LSEG data (requires Workspace running)
+    include_edgar : bool
+        Whether to include EDGAR ingestion (requires EDGAR_USER_EMAIL env var).
+        Makes live SEC API calls — set True only when EDGAR data is needed.
 
     Returns
     -------
@@ -195,5 +199,35 @@ def run_full_pipeline(
                 close_lseg_session()
             except Exception:
                 pass
+
+    # Step 6: Compile market anchors (YAML registry -> reconciled Parquet)
+    try:
+        from src.ingestion.market_anchors import compile_and_write_market_anchors
+        anchors_path = compile_and_write_market_anchors(industry_id)
+        processed_paths["market_anchors"] = anchors_path
+    except Exception as e:
+        print(f"Market anchors compilation failed: {e}")
+
+    # Step 7: Ingest EDGAR company filings (requires SEC identity)
+    if include_edgar:
+        try:
+            import os
+            from src.ingestion.edgar import (
+                set_edgar_identity,
+                fetch_all_edgar_companies,
+                save_raw_edgar,
+            )
+            from src.processing.validate import EDGAR_RAW_SCHEMA
+            edgar_email = os.environ.get("EDGAR_USER_EMAIL")
+            if not edgar_email:
+                print("EDGAR_USER_EMAIL not set — skipping EDGAR ingestion")
+            else:
+                set_edgar_identity(edgar_email)
+                edgar_df = fetch_all_edgar_companies(config)
+                EDGAR_RAW_SCHEMA.validate(edgar_df)
+                edgar_path = save_raw_edgar(edgar_df, industry_id)
+                processed_paths["edgar"] = edgar_path
+        except Exception as e:
+            print(f"EDGAR ingestion failed: {e}")
 
     return processed_paths
