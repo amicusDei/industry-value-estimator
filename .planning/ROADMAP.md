@@ -53,13 +53,12 @@ Plans:
   1. Every company in the system is assigned exactly one value chain layer (chip / cloud / application / end-market) in `ai.yaml` before any attribution percentage is written — preventing double-counting at aggregate level
   2. ARIMA, Prophet, and LightGBM are retrained with real USD billions as the Y variable; the value chain multiplier block is deleted from `inference/forecast.py` (not bridged or gated — deleted); a contract test asserts that `point_estimate_real_2020` in `forecasts_ensemble.parquet` is in USD billions
   3. Forecast trajectories are in the 25-40% CAGR range consistent with analyst consensus; the methodology documents where and why the model diverges from consensus, with explicit rationale
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 09-01: Value chain layer taxonomy design and config
-- [ ] 09-02: Interface contract audit and model version gating
-- [ ] 09-03: ARIMA and Prophet retraining on USD series
-- [ ] 09-04: LightGBM retraining and multiplier path deletion
+- [ ] 09-01-PLAN.md — Lock value chain taxonomy in ai.yaml, rebuild features.py as flat feature builder, create contract test scaffolds
+- [ ] 09-02-PLAN.md — Retrain ARIMA and Prophet on USD market anchors with two-layer uncertainty
+- [ ] 09-03-PLAN.md — Retrain LightGBM, delete multiplier code, produce USD forecasts_ensemble.parquet, verify CAGR
 
 #### Phase 10: Revenue Attribution and Private Company Valuation
 
@@ -112,6 +111,6 @@ Phases execute in numeric order: 8 → 9 → 10 → 11
 | 6. Pipeline Integration Wiring | v1.0 | 2/2 | Complete | 2026-03-23 |
 | 7. Dashboard Attribution Polish | v1.0 | 0/0 | Complete | 2026-03-23 |
 | 8. Data Architecture and Ground Truth Assembly | 4/4 | Complete   | 2026-03-24 | - |
-| 9. Ground-Up Model Rework and Value Chain Design | v1.1 | 0/4 | Not started | - |
+| 9. Ground-Up Model Rework and Value Chain Design | v1.1 | 0/3 | Not started | - |
 | 10. Revenue Attribution and Private Company Valuation | v1.1 | 0/4 | Not started | - |
 | 11. Dashboard and Diagnostics | v1.1 | 0/4 | Not started | - |
