@@ -11,7 +11,7 @@ Requirements for Model Credibility & Usability milestone. Each maps to roadmap p
 
 - [x] **DATA-08**: Market boundary definition locked — explicit scope definition (e.g., "AI software + services + infrastructure, ex-general IT") with documented mapping to how IDC, Gartner, and Grand View define their estimates
 - [x] **DATA-09**: Published analyst estimate corpus assembled — 10+ estimates per segment with vintage date, source firm, scope definition, and methodology notes
-- [ ] **DATA-10**: Company filings ingestion via SEC EDGAR — 10-K/10-Q segment disclosures for 10-15 key public AI companies (Nvidia, Microsoft, Google, Amazon, Meta, etc.)
+- [x] **DATA-10**: Company filings ingestion via SEC EDGAR — 10-K/10-Q segment disclosures for 10-15 key public AI companies (Nvidia, Microsoft, Google, Amazon, Meta, etc.)
 - [ ] **DATA-11**: Historical ground truth time series assembled — yearly AI market size by segment (2017-2025) reconciled across sources into a single defensible series
 
 ### Model & Valuation
@@ -71,7 +71,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | DATA-08 | Phase 8 | Complete |
 | DATA-09 | Phase 8 | Complete |
-| DATA-10 | Phase 8 | Pending |
+| DATA-10 | Phase 8 | Complete |
 | DATA-11 | Phase 8 | Pending |
 | MODL-01 | Phase 9 | Pending |
 | MODL-04 | Phase 9 | Pending |

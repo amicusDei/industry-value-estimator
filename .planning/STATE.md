@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Model Credibility & Usability
 status: planning
-stopped_at: Completed 08-02-PLAN.md
-last_updated: "2026-03-24T00:17:11.528Z"
+stopped_at: Completed 08-03-PLAN.md
+last_updated: "2026-03-24T00:26:15.815Z"
 last_activity: 2026-03-23 — v1.1 roadmap created (Phases 8-11)
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 4
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -53,6 +53,7 @@ Progress: [░░░░░░░░░░] 0%
 *Updated after each plan completion*
 | Phase 08 P01 | 15 | 2 tasks | 3 files |
 | Phase 08 P02 | 20 | 1 tasks | 4 files |
+| Phase 08 P03 | 6 | 1 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,8 @@ Recent decisions affecting current work:
 - [Phase 08]: 14 EDGAR companies across 4 layers (4 hardware, 4 infrastructure, 4 software, 3 adoption) with disclosure type annotations
 - [Phase 08]: MARKET_ANCHOR_SCHEMA estimate_year range extended to 2035 to accommodate long-horizon forecast entries (2030, 2032) in the analyst registry
 - [Phase 08]: estimated_flag = estimate_year > publication_year distinguishes actuals from forecasts for Plan 08-04 reconciliation weighting
+- [Phase 08]: uv override-dependencies used to resolve edgartools vs pandasdmx/lseg-data pydantic/httpx conflicts — both libraries verified to work at runtime despite declared constraints
+- [Phase 08]: BUNDLED_SEGMENT_COMPANIES set (6 CIKs) marks companies requiring Phase 10 AI revenue attribution — Microsoft, Amazon, Alphabet, Meta, IBM, Accenture
 
 ### Pending Todos
 
@@ -85,6 +88,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T00:17:11.525Z
-Stopped at: Completed 08-02-PLAN.md
+Last session: 2026-03-24T00:26:15.812Z
+Stopped at: Completed 08-03-PLAN.md
 Resume file: None
