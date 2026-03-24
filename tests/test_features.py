@@ -1,8 +1,10 @@
 """
 Tests for src/processing/features.py and src/models/statistical/regression.py.
 
-Task 1: Feature engineering — indicator matrix, PCA composite, manual weights, stationarity
+Task 1: Feature engineering — flat indicator matrix, manual weights, stationarity
 Task 2: OLS diagnostic-driven upgrade chain, temporal cross-validation helper
+
+Note: PCA composite tests removed in Phase 9 Plan 09-01 — build_pca_composite deleted.
 """
 import numpy as np
 import pandas as pd
@@ -53,34 +55,6 @@ class TestBuildIndicatorMatrix:
         # After forward-fill (+ bfill), no NaN should remain
         assert not np.isnan(matrix).any()
 
-
-class TestPcaComposite:
-    def _make_matrix(self, n_rows=10, n_cols=3, seed=42):
-        rng = np.random.default_rng(seed)
-        return rng.normal(0, 1, size=(n_rows, n_cols))
-
-    def test_pca_composite_shape(self):
-        from src.processing.features import build_pca_composite
-
-        matrix = self._make_matrix(n_rows=10, n_cols=3)
-        scores, explained, pipe = build_pca_composite(matrix, train_end_idx=7)
-        assert scores.shape == (10,)
-        assert isinstance(explained, float)
-        assert 0 < explained <= 1.0
-
-    def test_pca_no_leakage(self):
-        from src.processing.features import build_pca_composite
-
-        matrix = self._make_matrix(n_rows=10, n_cols=3)
-        scores, explained, pipe = build_pca_composite(matrix, train_end_idx=7)
-        # Scaler mean_ must match mean of training portion only (first 7 rows)
-        expected_mean = matrix[:7].mean(axis=0)
-        np.testing.assert_allclose(
-            pipe.named_steps["scaler"].mean_,
-            expected_mean,
-            rtol=1e-10,
-            err_msg="Scaler mean_ does not match training-only mean — PCA leakage detected",
-        )
 
 
 class TestManualComposite:

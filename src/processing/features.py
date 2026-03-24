@@ -2,31 +2,23 @@
 Feature engineering for the AI industry statistical baseline.
 
 Provides:
-- build_indicator_matrix: pivot long-format processed data to wide indicator matrix
-- build_pca_composite: first principal component composite index (train-only fitting, no leakage)
-- build_manual_composite: weighted sum alternative for sensitivity comparison
+- build_indicator_matrix: flat macro indicator matrix for ARIMA exogenous regressors and LightGBM features
+- build_manual_composite: weighted sum composite for sensitivity comparison
 - assess_stationarity: ADF + KPSS stationarity tests with differencing recommendation
 
 All preprocessing is designed to be fit on training data only to prevent data leakage
 in temporal cross-validation. See RESEARCH.md Pattern 6 and Pitfall 3.
 
-PCA composite rationale: AI market activity has no single clean observable metric.
-Six proxies capture different facets (R&D spend, patent filings, VC investment, public
-company revenue, researcher density, high-tech exports). PCA reduces these to the first
-principal component — the linear combination that maximises explained variance. This is
-preferable to manual weighting because it is data-driven and reproducible across
-different industry configs.
-
-See docs/ASSUMPTIONS.md section Modeling Assumptions for the composite index approach,
-explained variance thresholds, and sensitivity to number of principal components.
+Flat feature builder rationale: Phase 9 retrains ARIMA, Prophet, and LightGBM directly on
+real USD market sizes from market_anchors_ai.parquet. The macro indicators (R&D spend,
+patents, ICT exports, GDP) feed into models as exogenous regressors — no PCA reduction
+is applied. Keeping the full indicator matrix preserves interpretability and allows
+per-indicator feature importance analysis via SHAP in Phase 10.
 """
 import warnings
 
 import numpy as np
 import pandas as pd
-from sklearn.decomposition import PCA
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
 from statsmodels.tsa.stattools import adfuller, kpss
 
 
@@ -36,7 +28,10 @@ def build_indicator_matrix(
     segment: str | None = None,
 ) -> tuple[np.ndarray, pd.Index]:
     """
-    Build a wide indicator matrix from long-format processed data.
+    Build flat macro indicator matrix from long-format processed data.
+
+    Output: wide matrix (n_years x n_indicators) in value_real_2020 units.
+    No PCA reduction applied.
 
     Parameters
     ----------
@@ -74,54 +69,6 @@ def build_indicator_matrix(
 
     return wide.values, wide.index
 
-
-def build_pca_composite(
-    indicator_matrix: np.ndarray,
-    train_end_idx: int,
-) -> tuple[np.ndarray, float, Pipeline]:
-    """
-    Build PCA composite index (first principal component) fitted on training data only.
-
-    The pipeline is fit ONLY on indicator_matrix[:train_end_idx] to prevent data leakage.
-    The trained pipeline is then applied to the full matrix to produce scores for all years.
-
-    Why train-only fitting matters: if PCA were fit on the full matrix (including test years),
-    the scaler's mean and standard deviation would absorb future information. The PC loadings
-    would subtly reflect the trend direction of the test period, making the composite index
-    look like it has better predictive power than it actually does. This is the canonical
-    temporal leakage pitfall in time-series feature engineering.
-
-    The sklearn Pipeline ensures scaler and PCA are always fit together in the correct order.
-    The fitted Pipeline is returned so callers can verify non-leakage by inspecting
-    pipe.named_steps["scaler"].mean_ (should reflect only training period values).
-
-    See docs/ASSUMPTIONS.md section Modeling Assumptions for PCA composite rationale.
-
-    Parameters
-    ----------
-    indicator_matrix : np.ndarray, shape (n_years, n_indicators)
-        Rows = years, columns = proxy indicators.
-    train_end_idx : int
-        Exclusive upper bound of training period rows. E.g. 7 means rows 0–6 are training.
-
-    Returns
-    -------
-    scores : np.ndarray, shape (n_years,)
-        First principal component scores for all years.
-    explained : float
-        Explained variance ratio of the first principal component.
-    pipe : Pipeline
-        Fitted sklearn Pipeline (scaler + PCA). Caller can inspect
-        pipe.named_steps["scaler"].mean_ to verify no leakage.
-    """
-    pipe = Pipeline([
-        ("scaler", StandardScaler()),
-        ("pca", PCA(n_components=1)),
-    ])
-    pipe.fit(indicator_matrix[:train_end_idx])  # FIT ON TRAINING DATA ONLY
-    scores = pipe.transform(indicator_matrix).flatten()
-    explained = pipe.named_steps["pca"].explained_variance_ratio_[0]
-    return scores, explained, pipe
 
 
 def build_manual_composite(
