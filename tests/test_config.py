@@ -191,3 +191,47 @@ class TestScopeMapping:
         assert len(ec) >= 13
         layers = {c["value_chain_layer"] for c in ec}
         assert layers == {"ai_hardware", "ai_infrastructure", "ai_software", "ai_adoption"}
+
+
+class TestValueChainTaxonomy:
+    """MODL-04: Value chain layer taxonomy locked in ai.yaml before Phase 10 attribution."""
+
+    @pytest.fixture
+    def ai_config(self):
+        return load_industry_config("ai")
+
+    def test_taxonomy_section_exists(self, ai_config):
+        """value_chain_layer_taxonomy key exists in loaded config."""
+        assert "value_chain_layer_taxonomy" in ai_config
+
+    def test_taxonomy_has_four_layers(self, ai_config):
+        """Taxonomy defines exactly 4 layers."""
+        assert len(ai_config["value_chain_layer_taxonomy"]["layers"]) == 4
+
+    def test_taxonomy_locked_date(self, ai_config):
+        """Taxonomy is locked on the expected date."""
+        assert ai_config["value_chain_layer_taxonomy"]["locked_date"] == "2026-03-24"
+
+    def test_all_edgar_companies_have_layer(self, ai_config):
+        """Every EDGAR company has value_chain_layer in the 4 valid values."""
+        valid_layers = {"ai_hardware", "ai_infrastructure", "ai_software", "ai_adoption"}
+        for company in ai_config["edgar_companies"]:
+            assert "value_chain_layer" in company, (
+                f"Company {company.get('name')} missing value_chain_layer"
+            )
+            assert company["value_chain_layer"] in valid_layers, (
+                f"Company {company.get('name')} has invalid layer: {company['value_chain_layer']}"
+            )
+
+    def test_layer_segment_mapping_complete(self, ai_config):
+        """All 4 segment maps_to_segment values are present in the taxonomy."""
+        expected_segments = {"ai_hardware", "ai_infrastructure", "ai_software", "ai_adoption"}
+        actual_segments = {
+            layer["maps_to_segment"]
+            for layer in ai_config["value_chain_layer_taxonomy"]["layers"]
+        }
+        assert actual_segments == expected_segments
+
+    def test_model_version_is_v1_1(self, ai_config):
+        """model_version is set to v1.1_real_data."""
+        assert ai_config["model_version"] == "v1.1_real_data"

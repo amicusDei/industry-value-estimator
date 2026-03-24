@@ -5,6 +5,7 @@
 
 industry: ai
 display_name: "Artificial Intelligence Industry"
+model_version: "v1.1_real_data"
 base_year: 2020  # Deflation base year — all monetary series in 2020 constant USD
 
 # 4 segments modeled separately (overlap allowed, documented)
@@ -138,30 +139,58 @@ lseg:
     - "TR.TRBCActivity"
     - "TR.TRBCActivityCode"
 
-# Value chain multiplier — converts composite index to USD billions
-# Methodology: linear anchor calibration against industry consensus market size
-# See docs/ASSUMPTIONS.md § Value Chain Multiplier for full derivation
-value_chain:
-  # Anchor: AI market estimated at ~$200B in 2023
-  # Consensus from McKinsey Global Institute (2023), Statista (2023), Grand View Research (2024)
-  # All agree on a $185–$215B range; $200B used as central estimate
-  anchor_year: 2023
-  anchor_value_usd_billions: 200
-  multiplier_method: "per_segment_anchor"
-  # Per-segment shares of the $200B anchor (2023 industry consensus)
-  # Hardware (NVIDIA, AMD, TSMC AI chips): ~35% = $70B
-  # Infrastructure (AWS/Azure/GCP AI compute build-out): ~25% = $50B
-  # Software & Platforms (AI SaaS, foundation model APIs): ~25% = $50B
-  # Adoption (enterprise AI deployment spend): ~15% = $30B
-  segment_anchor_shares:
-    ai_hardware: 0.35
-    ai_infrastructure: 0.25
-    ai_software: 0.25
-    ai_adoption: 0.15
-  # Note: index values can be negative (PCA scores, zero-centered)
-  # USD values are floored at zero for display; negative values indicate
-  # the model has no signal above baseline for that segment/year
-  usd_floor_billions: 0.0
+# ============================================================
+# VALUE CHAIN LAYER TAXONOMY (locked in Plan 09-01)
+# One-to-one mapping between company layers and market segments.
+# DO NOT ADD LAYERS without a new plan — this gates Phase 10 attribution.
+# ============================================================
+value_chain_layer_taxonomy:
+  locked_date: "2026-03-24"
+  rationale: >
+    One-to-one mapping between value chain layers and market segments prevents
+    double-counting in Phase 10 attribution. Every company is assigned to exactly
+    one primary layer. The primary layer determines which segment's market size
+    that company's AI revenue contributes to.
+  layers:
+    - layer_id: chip
+      maps_to_segment: ai_hardware
+      description: "GPU, CPU, AI accelerator manufacturers (NVIDIA, AMD, Intel, TSMC)"
+    - layer_id: cloud
+      maps_to_segment: ai_infrastructure
+      description: "Cloud platform AI infrastructure providers (Microsoft/Azure, Alphabet/GCP, Amazon/AWS, Oracle)"
+    - layer_id: application
+      maps_to_segment: ai_software
+      description: "AI software, platform, and SaaS companies (Salesforce, ServiceNow, Palantir, C3.ai)"
+    - layer_id: end_market
+      maps_to_segment: ai_adoption
+      description: "Companies using AI primarily within non-AI products (Meta, IBM, Accenture)"
+  multi_layer_policy: >
+    Companies that span multiple layers are assigned to the layer where the largest
+    share of their AI-specific revenue originates. Secondary layer participation is
+    noted in company notes but does not affect segment attribution in Phase 10.
+
+# LEGACY — archived v1.0 multiplier approach. No longer read by pipeline after Phase 9.
+# LEGACY: value_chain:
+# LEGACY:   # Anchor: AI market estimated at ~$200B in 2023
+# LEGACY:   # Consensus from McKinsey Global Institute (2023), Statista (2023), Grand View Research (2024)
+# LEGACY:   # All agree on a $185–$215B range; $200B used as central estimate
+# LEGACY:   anchor_year: 2023
+# LEGACY:   anchor_value_usd_billions: 200
+# LEGACY:   multiplier_method: "per_segment_anchor"
+# LEGACY:   # Per-segment shares of the $200B anchor (2023 industry consensus)
+# LEGACY:   # Hardware (NVIDIA, AMD, TSMC AI chips): ~35% = $70B
+# LEGACY:   # Infrastructure (AWS/Azure/GCP AI compute build-out): ~25% = $50B
+# LEGACY:   # Software & Platforms (AI SaaS, foundation model APIs): ~25% = $50B
+# LEGACY:   # Adoption (enterprise AI deployment spend): ~15% = $30B
+# LEGACY:   segment_anchor_shares:
+# LEGACY:     ai_hardware: 0.35
+# LEGACY:     ai_infrastructure: 0.25
+# LEGACY:     ai_software: 0.25
+# LEGACY:     ai_adoption: 0.15
+# LEGACY:   # Note: index values can be negative (PCA scores, zero-centered)
+# LEGACY:   # USD values are floored at zero for display; negative values indicate
+# LEGACY:   # the model has no signal above baseline for that segment/year
+# LEGACY:   usd_floor_billions: 0.0
 
 # Source metadata (for DATA-07 attribution downstream)
 source_attribution:
