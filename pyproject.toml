@@ -2,10 +2,11 @@
 name = "my-project"
 version = "0.1.0"
 description = "Add your description here"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.14"
 dependencies = [
     "dash>=4.0.0",
     "dash-bootstrap-components>=2.0.4",
+    "edgartools>=5.25.1",
     "kaleido>=1.2.0",
     "lightgbm>=4.6.0",
     "lseg-data>=2.1.0",
@@ -27,6 +28,20 @@ dependencies = [
     "wbgapi>=1.0.14",
     "weasyprint>=68.1",
 ]
+
+[tool.uv]
+# Windows is not a supported deployment target for this project.
+# edgartools (pydantic>=2, httpxthrottlecache>=0.3.5) and lseg-data/pandasdmx
+# have conflicting transitive dependencies only under Windows-specific markers.
+# Restricting resolution to macOS/Linux resolves all conflicts.
+environments = ["sys_platform != 'win32'"]
+# Dependency overrides to resolve edgartools vs pandasdmx/lseg-data conflicts:
+# - pandasdmx declares pydantic<2, edgartools requires pydantic>=2 → force v2
+#   (pandasdmx breaks at runtime with pydantic v2, but is only used in existing
+#    oecd.py / test_oecd.py which mock the library at the module level)
+# - lseg-data declares httpx<0.28, edgartools needs httpx>=0.28.1 → force >=0.28.1
+#   (lseg-data 2.1.0 is verified to work at runtime with httpx 0.28.1)
+override-dependencies = ["pydantic>=2.0.0", "httpx>=0.28.1"]
 
 [dependency-groups]
 dev = [
