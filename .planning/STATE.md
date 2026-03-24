@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Model Credibility & Usability
 status: planning
-stopped_at: Completed 08-01-PLAN.md
-last_updated: "2026-03-23T22:16:46.866Z"
+stopped_at: Completed 08-02-PLAN.md
+last_updated: "2026-03-24T00:17:11.528Z"
 last_activity: 2026-03-23 — v1.1 roadmap created (Phases 8-11)
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -52,6 +52,7 @@ Progress: [░░░░░░░░░░] 0%
 
 *Updated after each plan completion*
 | Phase 08 P01 | 15 | 2 tasks | 3 files |
+| Phase 08 P02 | 20 | 1 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -69,6 +70,8 @@ Recent decisions affecting current work:
 - [Phase 08]: Market boundary locked 2026-03-23 before data collection — prevents anchor estimate shopping
 - [Phase 08]: IDC chosen as closest_analyst_match at scope_coefficient 1.0; Gartner 0.18x; McKinsey 0.25x (economic value not market size)
 - [Phase 08]: 14 EDGAR companies across 4 layers (4 hardware, 4 infrastructure, 4 software, 3 adoption) with disclosure type annotations
+- [Phase 08]: MARKET_ANCHOR_SCHEMA estimate_year range extended to 2035 to accommodate long-horizon forecast entries (2030, 2032) in the analyst registry
+- [Phase 08]: estimated_flag = estimate_year > publication_year distinguishes actuals from forecasts for Plan 08-04 reconciliation weighting
 
 ### Pending Todos
 
@@ -82,6 +85,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T22:16:46.863Z
-Stopped at: Completed 08-01-PLAN.md
+Last session: 2026-03-24T00:17:11.525Z
+Stopped at: Completed 08-02-PLAN.md
 Resume file: None
