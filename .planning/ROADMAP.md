@@ -69,13 +69,13 @@ Plans:
   1. `revenue_attribution.py` produces AI revenue figures for 10-15 mixed-tech public companies (Microsoft, Alphabet, Amazon, Meta, Salesforce, IBM, etc.); every output row carries `attribution_method`, `ratio_source`, `uncertainty_low`, `uncertainty_high`, and `vintage_date` — no company has a point estimate without bounds
   2. A private company registry covers 15-20 major private AI companies (OpenAI, Anthropic, Databricks, xAI, Mistral, etc.) with DCF and comparable-multiple valuations, explicit uncertainty bands, and vintage dates stored per company in `private_valuations_ai.parquet`
   3. Walk-forward backtesting runs on pre-2022 training data and evaluates 2022-2024 against filed company revenue actuals; real MAPE and R² values appear in `backtesting_results.parquet` — labeled explicitly as hard (filed actuals) vs. soft (analyst consensus) validation
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 10-01: Value chain layer taxonomy integration and attribution scaffold
-- [ ] 10-02: Public company AI revenue attribution (10-15 companies)
-- [ ] 10-03: Private company valuation registry (15-20 companies)
-- [ ] 10-04: Walk-forward backtesting and diagnostics validation
+- [ ] 10-01-PLAN.md — Pandera schemas, ai.yaml subsegment ratios, stub YAML registries, and test scaffolds (Wave 0)
+- [ ] 10-02-PLAN.md — Public company AI revenue attribution (14 companies) with revenue_attribution.py and pipeline wiring
+- [ ] 10-03-PLAN.md — Private company valuation registry (18 companies) with private_valuations.py and pipeline wiring
+- [ ] 10-04-PLAN.md — Walk-forward backtesting with hard/soft actuals, MAPE/R2, and pipeline wiring
 
 #### Phase 11: Dashboard and Diagnostics
 
@@ -112,5 +112,5 @@ Phases execute in numeric order: 8 → 9 → 10 → 11
 | 7. Dashboard Attribution Polish | v1.0 | 0/0 | Complete | 2026-03-23 |
 | 8. Data Architecture and Ground Truth Assembly | 4/4 | Complete   | 2026-03-24 | - |
 | 9. Ground-Up Model Rework and Value Chain Design | 3/3 | Complete   | 2026-03-24 | - |
-| 10. Revenue Attribution and Private Company Valuation | v1.1 | 0/4 | Not started | - |
+| 10. Revenue Attribution and Private Company Valuation | v1.1 | 0/4 | Planning complete | - |
 | 11. Dashboard and Diagnostics | v1.1 | 0/4 | Not started | - |
