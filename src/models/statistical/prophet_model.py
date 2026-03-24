@@ -3,7 +3,9 @@ Prophet per-segment fitting with explicit 2022 changepoint, forecasting, residua
 temporal CV, and residual Parquet output for Phase 3 ML training.
 
 Provides:
-- fit_prophet_segment: Fit Prophet with configurable GenAI changepoint year
+- prepare_prophet_from_anchors: Prepare market_anchors_ai.parquet data in Prophet ds/y format
+- fit_prophet_from_anchors: Fit Prophet on USD anchor series with 2022 changepoint (v1.1)
+- fit_prophet_segment: Fit Prophet with configurable GenAI changepoint year (v1.0 — preserved)
 - forecast_prophet: Future dataframe + prediction
 - get_prophet_residuals: Year-indexed in-sample residuals
 - run_prophet_cv: Manual expanding-window CV (not Prophet's built-in — see Open Question 3)
@@ -20,9 +22,12 @@ Design notes:
 - Residuals are year-indexed (int) not datetime-indexed — prevents Phase 3 join errors
   (RESEARCH.md Pitfall 5)
 - Parquet schema: year (int), segment (str), residual (float), model_type (str)
+- v1.1 entry points (prepare_prophet_from_anchors, fit_prophet_from_anchors) load Y from
+  market_anchors_ai.parquet, filter n_sources > 0, and use median_usd_billions_real_2020
 """
 
 import logging
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -36,6 +41,104 @@ from src.diagnostics.model_eval import compute_rmse, compute_mape
 # Suppress verbose cmdstanpy / prophet output
 logging.getLogger("cmdstanpy").setLevel(logging.WARNING)
 logging.getLogger("prophet").setLevel(logging.WARNING)
+
+# Column names for USD billions variables in market_anchors_ai.parquet
+_MEDIAN_COL = "median_usd_billions_real_2020"
+
+
+def prepare_prophet_from_anchors(segment: str) -> pd.DataFrame:
+    """Prepare market anchors data in Prophet ds/y format for a segment.
+
+    Filters to real observations only (n_sources > 0) to exclude interpolated
+    fill rows (RESEARCH.md Pitfall 1: Training on Interpolated Anchor Rows).
+
+    Parameters
+    ----------
+    segment : str
+        Segment name, e.g. "ai_hardware", "ai_software".
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with columns: ds (datetime YYYY-01-01), y (USD billions).
+        Sorted by ds, indexed by RangeIndex.
+
+    Warns
+    -----
+    UserWarning
+        If fewer than 5 observations remain after filtering interpolated rows.
+    """
+    from config.settings import DATA_PROCESSED
+    anchors = pd.read_parquet(DATA_PROCESSED / "market_anchors_ai.parquet")
+    real = anchors[anchors["n_sources"] > 0].copy()
+    seg = (
+        real[real["segment"] == segment]
+        .sort_values("estimate_year")
+        [["estimate_year", _MEDIAN_COL]]
+        .rename(columns={"estimate_year": "ds", _MEDIAN_COL: "y"})
+        .reset_index(drop=True)
+    )
+    seg["ds"] = pd.to_datetime(seg["ds"].astype(str) + "-01-01")
+    if len(seg) < 5:
+        warnings.warn(
+            f"prepare_prophet_from_anchors: segment '{segment}' has only {len(seg)} real "
+            f"observations after filtering n_sources > 0. Forecasts may be unreliable.",
+            UserWarning,
+            stacklevel=2,
+        )
+    return seg
+
+
+def fit_prophet_from_anchors(segment: str, changepoint_year: int = 2022) -> Prophet:
+    """Fit Prophet on USD market anchor series for a segment.
+
+    v1.1 entry point — uses market_anchors_ai.parquet as the training Y variable
+    (median_usd_billions_real_2020) instead of the legacy long-format processed DataFrame.
+
+    Uses a single explicit changepoint at changepoint_year to capture the GenAI
+    structural break in the AI market growth trajectory. If the changepoint_year falls
+    outside the training data range (e.g. very few real observations), the changepoint
+    is omitted and Prophet uses its default automatic changepoint detection.
+
+    Parameters
+    ----------
+    segment : str
+        Segment name, e.g. "ai_hardware", "ai_software".
+    changepoint_year : int, optional
+        Year for explicit Prophet changepoint. Default 2022 (GenAI surge).
+        Override with a detected structural break year if needed.
+
+    Returns
+    -------
+    Prophet
+        Fitted Prophet model. Use forecast_prophet() to generate predictions.
+    """
+    seg_df = prepare_prophet_from_anchors(segment)
+    # Only include explicit changepoint if it falls within the training period
+    min_year = seg_df["ds"].dt.year.min() if len(seg_df) > 0 else changepoint_year + 1
+    max_year = seg_df["ds"].dt.year.max() if len(seg_df) > 0 else changepoint_year - 1
+    if min_year <= changepoint_year <= max_year:
+        changepoints = [f"{changepoint_year}-01-01"]
+    else:
+        changepoints = []
+        if len(seg_df) > 0:
+            import warnings as _warnings
+            _warnings.warn(
+                f"fit_prophet_from_anchors: changepoint_year={changepoint_year} is outside "
+                f"training range [{min_year}, {max_year}] for segment '{segment}'. "
+                "Using default Prophet changepoints.",
+                UserWarning,
+                stacklevel=2,
+            )
+    model = Prophet(
+        changepoints=changepoints,
+        changepoint_prior_scale=0.1,
+        yearly_seasonality=False,
+        weekly_seasonality=False,
+        daily_seasonality=False,
+    )
+    model.fit(seg_df)
+    return model
 
 
 def fit_prophet_segment(

@@ -265,6 +265,53 @@ class TestProphet:
         for fold in results:
             assert "rmse" in fold, f"Missing 'rmse' key in fold: {fold}"
 
+    @pytest.mark.skipif(
+        not _ANCHORS_PATH.exists(),
+        reason="market_anchors_ai.parquet not generated — run Phase 8 pipeline first",
+    )
+    def test_prepare_prophet_from_anchors(self):
+        """prepare_prophet_from_anchors returns ds/y DataFrame with USD billions y values."""
+        from src.models.statistical.prophet_model import prepare_prophet_from_anchors
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            df = prepare_prophet_from_anchors("ai_hardware")
+
+        assert isinstance(df, pd.DataFrame), f"Expected pd.DataFrame, got {type(df)}"
+        assert "ds" in df.columns, f"Missing 'ds' column, got: {list(df.columns)}"
+        assert "y" in df.columns, f"Missing 'y' column, got: {list(df.columns)}"
+        assert pd.api.types.is_datetime64_any_dtype(df["ds"]), (
+            f"Expected datetime ds column, got dtype={df['ds'].dtype}"
+        )
+        if len(df) > 0:
+            assert (df["y"] > 1.0).all(), (
+                f"Expected all y > 1.0 USD billions, got min={df['y'].min():.4f}"
+            )
+
+    @pytest.mark.skipif(
+        not _ANCHORS_PATH.exists(),
+        reason="market_anchors_ai.parquet not generated — run Phase 8 pipeline first",
+    )
+    def test_fit_prophet_from_anchors(self):
+        """fit_prophet_from_anchors fits Prophet on USD anchor series and forecasts > 0."""
+        from prophet import Prophet
+        from src.models.statistical.prophet_model import fit_prophet_from_anchors, forecast_prophet
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            model = fit_prophet_from_anchors("ai_hardware")
+
+        assert isinstance(model, Prophet), f"Expected Prophet, got {type(model)}"
+
+        forecast = forecast_prophet(model, periods=6)
+        assert isinstance(forecast, pd.DataFrame)
+        assert "yhat" in forecast.columns
+        # Out-of-sample forecasts (last 6 rows) should be positive USD billions
+        future_yhat = forecast["yhat"].tail(6)
+        assert (future_yhat > 0).all(), (
+            f"Forecast values not all positive: {future_yhat.tolist()}"
+        )
+
 
 # ---------------------------------------------------------------------------
 # Task 2: TestResiduals

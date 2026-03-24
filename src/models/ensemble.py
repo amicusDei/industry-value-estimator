@@ -21,8 +21,10 @@ and the additive vs. parallel blend decision.
 Exports:
 - compute_ensemble_weights: inverse-RMSE weights summing to 1.0
 - blend_forecasts: additive blend (stat_pred + lgbm_weight * correction)
+- compute_source_disagreement_columns: add anchor p25/p75 disagreement band to forecast DF
 """
 import numpy as np
+import pandas as pd
 
 
 def compute_ensemble_weights(
@@ -86,3 +88,50 @@ def blend_forecasts(
         Blended forecast: stat_pred + lgbm_weight * lgbm_correction.
     """
     return stat_pred + lgbm_weight * lgbm_correction
+
+
+def compute_source_disagreement_columns(
+    forecast_df: pd.DataFrame,
+    anchors_df: pd.DataFrame,
+) -> pd.DataFrame:
+    """Add source disagreement band columns from market anchors to a forecast DataFrame.
+
+    Layer 1 uncertainty: analyst source disagreement (p25/p75 spread) — distinct from
+    model prediction intervals (Layer 2). These columns are populated for historical
+    years where anchor data exists; NaN for forecast years without anchor data.
+
+    Parameters
+    ----------
+    forecast_df : pd.DataFrame
+        Forecast DataFrame with at minimum columns: year (int), segment (str).
+    anchors_df : pd.DataFrame
+        Market anchors DataFrame (from market_anchors_ai.parquet) with columns:
+        estimate_year (int), segment (str), p25_usd_billions_real_2020 (float),
+        p75_usd_billions_real_2020 (float).
+
+    Returns
+    -------
+    pd.DataFrame
+        Copy of forecast_df with two additional columns:
+        - anchor_p25_real_2020: p25 source disagreement lower bound (NaN for forecast years)
+        - anchor_p75_real_2020: p75 source disagreement upper bound (NaN for forecast years)
+    """
+    anchor_lookup = anchors_df.set_index(["estimate_year", "segment"])[
+        ["p25_usd_billions_real_2020", "p75_usd_billions_real_2020"]
+    ]
+    df = forecast_df.copy()
+
+    p25_values = []
+    p75_values = []
+    for _, row in df.iterrows():
+        key = (row["year"], row["segment"])
+        if key in anchor_lookup.index:
+            p25_values.append(anchor_lookup.loc[key, "p25_usd_billions_real_2020"])
+            p75_values.append(anchor_lookup.loc[key, "p75_usd_billions_real_2020"])
+        else:
+            p25_values.append(float("nan"))
+            p75_values.append(float("nan"))
+
+    df["anchor_p25_real_2020"] = p25_values
+    df["anchor_p75_real_2020"] = p75_values
+    return df
