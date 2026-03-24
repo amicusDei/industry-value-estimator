@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Model Credibility & Usability
 status: planning
-stopped_at: Completed 10-04-PLAN.md
-last_updated: "2026-03-24T14:53:48.661Z"
+stopped_at: Completed 10-05-PLAN.md
+last_updated: "2026-03-24T20:53:23.920Z"
 last_activity: 2026-03-23 — v1.1 roadmap created (Phases 8-11)
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 11
-  completed_plans: 11
+  total_plans: 12
+  completed_plans: 12
   percent: 0
 ---
 
@@ -62,6 +62,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 10 P02 | 6 | 2 tasks | 5 files |
 | Phase 10 P03 | 325 | 2 tasks | 6 files |
 | Phase 10 P04 | 5 | 2 tasks | 6 files |
+| Phase 10-revenue-attribution-and-private-company-valuation P05 | 60 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -100,6 +101,8 @@ Recent decisions affecting current work:
 - [Phase 10]: Private company valuation registry: 18 companies (6 HIGH/7 MEDIUM/5 LOW) with comparable EV/ARR multiples; implied_ev ordering invariant enforced programmatically before Parquet write
 - [Phase 10]: apply_comparable_multiples is a pure function for ARR re-estimation without full recompilation; pipeline Steps 8+9 both wired with try/except isolation
 - [Phase 10]: MAPE labels for walk-forward backtesting are interpretive only (not gates) — 3 folds insufficient for statistical significance; hard actuals limited to DIRECT_DISCLOSURE_CIKS (NVIDIA/Palantir/C3.ai) to prevent circular validation; custom walk-forward loop over skforecast for 3-fold audibility
+- [Phase 10]: edgartools API: get_facts_by_concept() is correct (not facts.query(concept) which is a 0-arg builder); C3.ai CIK corrected to 0001577526; Accenture CIK corrected to 0001467373 (10-K filer); EDGAR deduplication required before aggregation (37x duplicates from comparative-year reporting)
+- [Phase 10]: Circular soft-actual MAPE transparency: circular_flag=True + mape_label=circular_not_validated exposes the limitation rather than hiding behind 0% MAPE; hard MAPE from EDGAR is non-circular but high for ai_software (C3.ai alone vs full-segment forecast)
 
 ### Pending Todos
 
@@ -113,6 +116,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T14:53:48.657Z
-Stopped at: Completed 10-04-PLAN.md
+Last session: 2026-03-24T20:53:23.916Z
+Stopped at: Completed 10-05-PLAN.md
 Resume file: None
