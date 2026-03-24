@@ -2,6 +2,9 @@
 ARIMA per-segment fitting, automated order selection (AICc), forecasting, and temporal CV.
 
 Provides:
+- load_segment_y_series: Load USD billions Y series from market_anchors_ai.parquet
+- load_source_disagreement_band: p25/p75 source disagreement band from market anchors
+- assert_model_version: Gate ARIMA training to v1.1_real_data config
 - select_arima_order: AICc-based ARIMA order selection via pmdarima auto_arima
 - fit_arima_segment: Fit ARIMA(p,d,q) on a pandas Series using statsmodels
 - forecast_arima: Out-of-sample forecast with prediction intervals
@@ -15,7 +18,12 @@ Design notes:
   (RESEARCH.md Pitfall 5)
 - CV reuses temporal_cv_generic from regression.py for consistent CV methodology
   across all model types (RESEARCH.md Pattern 7)
+- Y variable is median_usd_billions_real_2020 from market_anchors_ai.parquet (v1.1)
+- Training filters out interpolated rows (n_sources == 0) per RESEARCH.md Pitfall 1
 """
+
+import logging
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -23,6 +31,101 @@ import pmdarima as pm
 from statsmodels.tsa.arima.model import ARIMA
 
 from src.models.statistical.regression import temporal_cv_generic
+
+logger = logging.getLogger(__name__)
+
+# Column name for the USD billions Y variable in market_anchors_ai.parquet
+_MEDIAN_COL = "median_usd_billions_real_2020"
+_P25_COL = "p25_usd_billions_real_2020"
+_P75_COL = "p75_usd_billions_real_2020"
+
+
+def assert_model_version() -> None:
+    """Assert that ai.yaml model_version is v1.1_real_data.
+
+    This is a hard gate preventing ARIMA from training on the wrong pipeline version.
+    Must be called at the start of any v1.1 training entry point.
+
+    Raises
+    ------
+    AssertionError
+        If model_version is not 'v1.1_real_data'.
+    """
+    import yaml
+    from pathlib import Path
+    cfg_path = Path(__file__).resolve().parent.parent.parent.parent / "config" / "industries" / "ai.yaml"
+    _cfg = yaml.safe_load(open(cfg_path))
+    assert _cfg.get("model_version") == "v1.1_real_data", (
+        f"model_version must be 'v1.1_real_data', got: {_cfg.get('model_version')}. "
+        "Update config/industries/ai.yaml before running v1.1 ARIMA training."
+    )
+
+
+def load_segment_y_series(segment: str) -> pd.Series:
+    """Load USD billions Y series for a segment from market_anchors_ai.parquet.
+
+    Filters to real observations only (n_sources > 0) to exclude interpolated rows
+    (RESEARCH.md Pitfall 1: Training on Interpolated Anchor Rows).
+
+    Parameters
+    ----------
+    segment : str
+        Segment name, e.g. "ai_hardware", "ai_software".
+
+    Returns
+    -------
+    pd.Series
+        Series indexed by estimate_year (int), values in USD billions (median_usd_billions_real_2020).
+
+    Warns
+    -----
+    UserWarning
+        If fewer than 5 observations remain after filtering interpolated rows.
+    """
+    from config.settings import DATA_PROCESSED
+    anchors = pd.read_parquet(DATA_PROCESSED / "market_anchors_ai.parquet")
+    real = anchors[anchors["n_sources"] > 0].copy()
+    seg = (
+        real[real["segment"] == segment]
+        .sort_values("estimate_year")
+        .set_index("estimate_year")[_MEDIAN_COL]
+    )
+    if len(seg) < 5:
+        warnings.warn(
+            f"load_segment_y_series: segment '{segment}' has only {len(seg)} real observations "
+            f"after filtering n_sources > 0. Forecasts may be unreliable.",
+            UserWarning,
+            stacklevel=2,
+        )
+    return seg
+
+
+def load_source_disagreement_band(segment: str) -> tuple[pd.Series, pd.Series]:
+    """Layer 1 uncertainty: p25/p75 source disagreement band from market anchors.
+
+    Returns the interquartile spread of analyst estimates as the source disagreement
+    band — this is distinct from model prediction intervals (Layer 2).
+
+    Parameters
+    ----------
+    segment : str
+        Segment name, e.g. "ai_hardware", "ai_software".
+
+    Returns
+    -------
+    tuple[pd.Series, pd.Series]
+        (p25_series, p75_series) indexed by estimate_year (int), in USD billions.
+        Filtered to real observations only (n_sources > 0).
+    """
+    from config.settings import DATA_PROCESSED
+    anchors = pd.read_parquet(DATA_PROCESSED / "market_anchors_ai.parquet")
+    real = anchors[anchors["n_sources"] > 0].copy()
+    seg = (
+        real[real["segment"] == segment]
+        .sort_values("estimate_year")
+        .set_index("estimate_year")
+    )
+    return seg[_P25_COL], seg[_P75_COL]
 
 
 def select_arima_order(series: pd.Series) -> tuple[int, int, int]:
@@ -138,6 +241,7 @@ def run_arima_cv(
     series: pd.Series,
     order: tuple[int, int, int],
     n_splits: int = 3,
+    y_series: "pd.Series | None" = None,
 ) -> list[dict]:
     """
     Expanding-window temporal cross-validation for ARIMA.
@@ -148,19 +252,26 @@ def run_arima_cv(
     Parameters
     ----------
     series : pd.Series
-        Annual time series in chronological order.
+        Annual time series in chronological order. Used if y_series is None.
     order : tuple[int, int, int]
         (p, d, q) order — typically from select_arima_order().
     n_splits : int
         Number of expanding-window folds. Default 3.
         With ~20 annual observations, 3–4 folds is typical.
+    y_series : pd.Series, optional
+        If provided, this USD series is used instead of `series`. Allows callers
+        to pass a pre-loaded USD billions series from market_anchors_ai.parquet
+        (v1.1 training path) while preserving backward compatibility for callers
+        that pass `series` directly.
 
     Returns
     -------
     list[dict]
         One dict per fold with keys: fold, train_end, test_end, rmse, mape.
     """
-    values = series.values
+    # v1.1 path: use y_series if provided (USD billions from market_anchors)
+    active_series = y_series if y_series is not None else series
+    values = active_series.values
 
     def fit_fn(train: np.ndarray):
         """Fit ARIMA on the training slice. Signature required by temporal_cv_generic."""

@@ -5,6 +5,7 @@ Covers MODL-01 (model fitting) and MODL-06 (temporal CV).
 
 import logging
 import warnings
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -12,6 +13,9 @@ import pytest
 
 # Suppress cmdstanpy logging for Prophet tests
 logging.getLogger("cmdstanpy").setLevel(logging.WARNING)
+
+# Path to market_anchors_ai.parquet — used for skipif guards on anchor-dependent tests
+_ANCHORS_PATH = Path(__file__).resolve().parent.parent / "data" / "processed" / "market_anchors_ai.parquet"
 
 # ---------------------------------------------------------------------------
 # Synthetic data helpers
@@ -122,6 +126,73 @@ class TestARIMA:
         for fold in results:
             assert "rmse" in fold, f"Missing 'rmse' key in fold: {fold}"
             assert "mape" in fold, f"Missing 'mape' key in fold: {fold}"
+
+    @pytest.mark.skipif(
+        not _ANCHORS_PATH.exists(),
+        reason="market_anchors_ai.parquet not generated — run Phase 8 pipeline first",
+    )
+    def test_load_segment_y_series_returns_usd_range(self):
+        """load_segment_y_series returns USD billions values (>1.0) indexed by integer years."""
+        from src.models.statistical.arima import load_segment_y_series
+
+        s = load_segment_y_series("ai_hardware")
+
+        assert isinstance(s, pd.Series), f"Expected pd.Series, got {type(s)}"
+        assert len(s) > 0, "ai_hardware Y series is empty after n_sources > 0 filter"
+        assert s.index.dtype in (np.int64, np.int32, int, "int64", "int32"), (
+            f"Expected integer year index, got dtype={s.index.dtype}"
+        )
+        assert (s > 1.0).all(), (
+            f"Expected all values > 1.0 USD billions, got min={s.min():.4f}"
+        )
+
+    @pytest.mark.skipif(
+        not _ANCHORS_PATH.exists(),
+        reason="market_anchors_ai.parquet not generated — run Phase 8 pipeline first",
+    )
+    def test_arima_forecast_usd_range(self):
+        """ARIMA fit and forecast on USD anchor series produces positive values."""
+        from src.models.statistical.arima import (
+            load_segment_y_series,
+            select_arima_order,
+            fit_arima_segment,
+            forecast_arima,
+        )
+
+        s = load_segment_y_series("ai_hardware")
+        if len(s) < 3:
+            pytest.skip(f"Only {len(s)} real observations for ai_hardware — cannot fit ARIMA")
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            order = select_arima_order(s)
+            results = fit_arima_segment(s, order)
+            forecast = forecast_arima(results, steps=6)
+
+        assert isinstance(forecast, pd.DataFrame)
+        assert len(forecast) == 6
+        mean_col = [c for c in forecast.columns if "mean" in str(c).lower()]
+        assert len(mean_col) >= 1, f"Expected 'mean' column, got: {list(forecast.columns)}"
+        assert (forecast[mean_col[0]] > 0).all(), (
+            "Forecast values not all positive — check USD series unit"
+        )
+
+    @pytest.mark.skipif(
+        not _ANCHORS_PATH.exists(),
+        reason="market_anchors_ai.parquet not generated — run Phase 8 pipeline first",
+    )
+    def test_load_source_disagreement_band(self):
+        """load_source_disagreement_band returns p25 and p75 series in USD billions."""
+        from src.models.statistical.arima import load_source_disagreement_band
+
+        p25, p75 = load_source_disagreement_band("ai_hardware")
+
+        assert isinstance(p25, pd.Series), f"Expected pd.Series for p25, got {type(p25)}"
+        assert isinstance(p75, pd.Series), f"Expected pd.Series for p75, got {type(p75)}"
+        assert len(p25) > 0, "p25 series is empty"
+        assert (p25.index == p75.index).all(), "p25 and p75 must share the same index"
+        # p75 should be >= p25 (interquartile range)
+        assert (p75 >= p25).all(), "p75 must be >= p25 for all years"
 
 
 # ---------------------------------------------------------------------------
