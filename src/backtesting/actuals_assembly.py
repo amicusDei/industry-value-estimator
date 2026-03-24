@@ -102,6 +102,31 @@ def assemble_actuals(industry_id: str = "ai") -> pd.DataFrame:
                 direct_df = pd.DataFrame()
 
             if not direct_df.empty:
+                # Deduplicate EDGAR rows: the raw EDGAR parquet contains duplicate revenue facts
+                # because each 10-K filing reports comparative prior-year data, and the XBRL
+                # extractor captures all instances. Deduplicate by keeping the maximum value_usd
+                # per (cik, period_end, xbrl_concept) — this retains the one unique fact per
+                # company/period/concept combination and eliminates cross-filing duplicates.
+                if "xbrl_concept" in direct_df.columns:
+                    direct_df = (
+                        direct_df.sort_values("value_usd", ascending=False)
+                        .drop_duplicates(subset=["cik", "period_end", "xbrl_concept"])
+                        .copy()
+                    )
+                else:
+                    direct_df = direct_df.drop_duplicates(subset=["cik", "period_end"]).copy()
+
+                # For backtesting, use annual totals only (10-K filings).
+                # 10-Q quarterly filings are filtered out to avoid double-counting
+                # (Q1+Q2+Q3 quarterly revenues would sum to less than the annual total,
+                # and mixing with 10-K annuals would distort the aggregated actual).
+                if "form_type" in direct_df.columns:
+                    annual_df = direct_df[direct_df["form_type"].isin(["10-K", "20-F"])]
+                    if annual_df.empty:
+                        # Fallback: if no 10-K/20-F rows, use all rows
+                        annual_df = direct_df
+                    direct_df = annual_df
+
                 # Convert value_usd to USD billions (divide by 1e9)
                 value_col = "value_usd" if "value_usd" in direct_df.columns else None
                 if value_col:
@@ -121,17 +146,20 @@ def assemble_actuals(industry_id: str = "ai") -> pd.DataFrame:
                 else:
                     direct_df["segment"] = "ai_hardware"  # fallback
 
-                # Group by year + segment and sum actual_usd_billions
+                # For each (year, segment), take the maximum actual_usd_billions
+                # (avoids double-counting when multiple companies map to same segment/year).
+                # NVIDIA: ai_hardware, Palantir: ai_software, C3.ai: ai_software
+                # Since these are separate companies, we SUM their revenues per segment/year.
                 period_col = "period_end" if "period_end" in direct_df.columns else "year"
                 agg_df = (
-                    direct_df.groupby(["year", "segment"], as_index=False)["actual_usd_billions"].sum()
+                    direct_df.groupby(["year", "segment"], as_index=False)
+                    .agg(
+                        actual_usd_billions=("actual_usd_billions", "sum"),
+                        source_date=(period_col, "max"),
+                    )
                 )
                 agg_df["actual_type"] = "hard"
                 agg_df["source"] = "EDGAR 10-K"
-                agg_df["source_date"] = (
-                    direct_df.groupby(["year", "segment"])[period_col].max().reset_index()[period_col]
-                    if period_col in direct_df.columns else str(agg_df["year"])
-                )
                 records.append(agg_df[["year", "segment", "actual_usd_billions", "actual_type", "source", "source_date"]])
     else:
         print(
