@@ -263,7 +263,7 @@ EDGAR_RAW_SCHEMA = DataFrameSchema(
 )
 
 
-MARKET_ANCHOR_SCHEMA = DataFrameSchema(
+MARKET_ANCHOR_NOMINAL_SCHEMA = DataFrameSchema(
     {
         "estimate_year": Column(int, Check.in_range(2017, 2035)),
         "segment": Column(
@@ -280,3 +280,28 @@ MARKET_ANCHOR_SCHEMA = DataFrameSchema(
     coerce=True,
     strict=False,
 )
+"""Schema for the nominal-only output of compile_market_anchors() (pre-deflation)."""
+
+
+MARKET_ANCHOR_SCHEMA = DataFrameSchema(
+    {
+        "estimate_year": Column(int, Check.in_range(2017, 2035)),
+        "segment": Column(
+            str,
+            Check.isin(["total", "ai_hardware", "ai_infrastructure", "ai_software", "ai_adoption"]),
+        ),
+        "p25_usd_billions_nominal": Column(float, Check.greater_than(0), nullable=False),
+        "median_usd_billions_nominal": Column(float, Check.greater_than(0), nullable=False),
+        "p75_usd_billions_nominal": Column(float, Check.greater_than(0), nullable=False),
+        "n_sources": Column(int, Check.greater_than_or_equal_to(0)),
+        "source_list": Column(str, nullable=False),
+        "estimated_flag": Column(bool, nullable=False),
+        "p25_usd_billions_real_2020": Column(float, Check.greater_than(0), nullable=False),
+        "median_usd_billions_real_2020": Column(float, Check.greater_than(0), nullable=False),
+        "p75_usd_billions_real_2020": Column(float, Check.greater_than(0), nullable=False),
+    },
+    coerce=True,
+    strict=False,
+)
+"""Full schema for the post-deflation output of compile_and_write_market_anchors() (DATA-11).
+Includes both nominal and real_2020 columns, plus full year coverage 2017-2025."""

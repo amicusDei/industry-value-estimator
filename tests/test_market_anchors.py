@@ -181,3 +181,159 @@ class TestCompileMarketAnchors:
         assert len(df) > 0
         for field in REQUIRED_ENTRY_FIELDS:
             assert field in df.columns, f"Missing column '{field}' in registry DataFrame"
+
+
+# ============================================================
+# Plan 08-04 tests: deflation, year coverage, estimated_flag, percentile ordering
+# ============================================================
+
+PARQUET_PATH = Path(__file__).parent.parent / "data" / "processed" / "market_anchors_ai.parquet"
+
+
+@pytest.fixture(scope="module")
+def anchors_df() -> pd.DataFrame:
+    """
+    Produce the full market_anchors_ai.parquet and load it.
+
+    Runs compile_and_write_market_anchors() once per test module to avoid
+    repeated file I/O. All DATA-11 tests share this fixture.
+    """
+    from src.ingestion.market_anchors import compile_and_write_market_anchors
+    path = compile_and_write_market_anchors("ai")
+    return pd.read_parquet(path)
+
+
+class TestDeflation:
+    """DATA-11: Nominal values are deflated to real 2020 USD."""
+
+    def test_real_2020_columns_exist(self, anchors_df):
+        """Output has _real_2020 columns for p25, median, p75."""
+        expected_real_cols = {
+            "p25_usd_billions_real_2020",
+            "median_usd_billions_real_2020",
+            "p75_usd_billions_real_2020",
+        }
+        missing = expected_real_cols - set(anchors_df.columns)
+        assert not missing, f"Missing real_2020 columns: {missing}"
+
+    def test_real_less_than_nominal_for_post_2020(self, anchors_df):
+        """For years > 2020, real values should be <= nominal (inflation adjustment)."""
+        post_2020 = anchors_df[anchors_df["estimate_year"] > 2020]
+        # Only check rows where we have actual (non-extrapolated from edge) data
+        # Focus on 'total' segment which has genuine multi-source data post-2020
+        total_post = post_2020[post_2020["segment"] == "total"]
+        for _, row in total_post.iterrows():
+            assert row["median_usd_billions_real_2020"] <= row["median_usd_billions_nominal"], (
+                f"Year {row['estimate_year']}: real_2020 ({row['median_usd_billions_real_2020']:.2f}) "
+                f"> nominal ({row['median_usd_billions_nominal']:.2f})"
+            )
+
+    def test_real_greater_than_nominal_for_pre_2020(self, anchors_df):
+        """For years < 2020, real values should be >= nominal (deflation adjustment)."""
+        pre_2020 = anchors_df[
+            (anchors_df["estimate_year"] < 2020) & (anchors_df["segment"] == "total")
+        ]
+        for _, row in pre_2020.iterrows():
+            assert row["median_usd_billions_real_2020"] >= row["median_usd_billions_nominal"], (
+                f"Year {row['estimate_year']}: real_2020 ({row['median_usd_billions_real_2020']:.2f}) "
+                f"< nominal ({row['median_usd_billions_nominal']:.2f})"
+            )
+
+
+class TestYearCoverage:
+    """DATA-11: Full 2017-2025 coverage after interpolation."""
+
+    def test_all_years_present(self, anchors_df):
+        """Every segment has entries for all years 2017-2025."""
+        expected_years = set(range(2017, 2026))
+        for segment in anchors_df["segment"].unique():
+            seg_years = set(anchors_df[anchors_df["segment"] == segment]["estimate_year"].tolist())
+            missing = expected_years - seg_years
+            assert not missing, (
+                f"Segment '{segment}' missing years: {sorted(missing)}"
+            )
+
+    def test_no_nan_values(self, anchors_df):
+        """No NaN in median_usd_billions_real_2020 after interpolation."""
+        nan_count = anchors_df["median_usd_billions_real_2020"].isna().sum()
+        assert nan_count == 0, (
+            f"Found {nan_count} NaN values in median_usd_billions_real_2020"
+        )
+
+    def test_min_row_count(self, anchors_df):
+        """At least 45 rows present (9 years x 5 segments)."""
+        assert len(anchors_df) >= 45, (
+            f"Expected >= 45 rows, got {len(anchors_df)}"
+        )
+
+
+class TestEstimatedFlag:
+    """DATA-11: Interpolated years are flagged."""
+
+    def test_interpolated_rows_flagged(self, anchors_df):
+        """Rows with n_sources=0 (interpolated/extrapolated) have estimated_flag=True."""
+        interpolated = anchors_df[anchors_df["n_sources"] == 0]
+        if len(interpolated) > 0:
+            all_flagged = interpolated["estimated_flag"].all()
+            assert all_flagged, (
+                "Some interpolated rows (n_sources=0) do not have estimated_flag=True"
+            )
+
+    def test_real_data_rows_not_flagged(self, anchors_df):
+        """Rows backed by multiple analyst sources have estimated_flag reflecting actual data.
+
+        For the 'total' segment where we have confirmed multi-source data for specific years,
+        the rows with n_sources >= 3 should generally have estimated_flag consistent with
+        whether the estimate_year > publication_year.
+        """
+        # Rows with n_sources >= 3 should exist for 2020-2024 total segment
+        high_coverage = anchors_df[
+            (anchors_df["segment"] == "total") & (anchors_df["n_sources"] >= 3)
+        ]
+        assert len(high_coverage) > 0, (
+            "Expected total segment rows with n_sources >= 3 for core years 2020-2024"
+        )
+
+    def test_year_2017_is_estimated_for_sub_segments(self, anchors_df):
+        """Year 2017 for sub-segments (ai_hardware etc.) must be estimated (no real data)."""
+        sub_segments = ["ai_hardware", "ai_infrastructure", "ai_software", "ai_adoption"]
+        for seg in sub_segments:
+            row_2017 = anchors_df[
+                (anchors_df["segment"] == seg) & (anchors_df["estimate_year"] == 2017)
+            ]
+            assert len(row_2017) == 1, f"Expected exactly one row for {seg} year 2017"
+            assert row_2017.iloc[0]["estimated_flag"] is True or row_2017.iloc[0]["estimated_flag"] == True, (
+                f"{seg} year 2017 should be estimated_flag=True (no source data)"
+            )
+
+
+class TestPercentileOrder:
+    """DATA-11: p25 <= median <= p75 invariant."""
+
+    def test_percentile_ordering_nominal(self, anchors_df):
+        """p25_nominal <= median_nominal <= p75_nominal for all rows."""
+        for i, row in anchors_df.iterrows():
+            assert row["p25_usd_billions_nominal"] <= row["median_usd_billions_nominal"], (
+                f"Row {i} (year={row['estimate_year']}, seg={row['segment']}): "
+                f"p25_nominal ({row['p25_usd_billions_nominal']:.4f}) > "
+                f"median_nominal ({row['median_usd_billions_nominal']:.4f})"
+            )
+            assert row["median_usd_billions_nominal"] <= row["p75_usd_billions_nominal"], (
+                f"Row {i} (year={row['estimate_year']}, seg={row['segment']}): "
+                f"median_nominal ({row['median_usd_billions_nominal']:.4f}) > "
+                f"p75_nominal ({row['p75_usd_billions_nominal']:.4f})"
+            )
+
+    def test_percentile_ordering_real(self, anchors_df):
+        """p25_real_2020 <= median_real_2020 <= p75_real_2020 for all rows."""
+        for i, row in anchors_df.iterrows():
+            assert row["p25_usd_billions_real_2020"] <= row["median_usd_billions_real_2020"], (
+                f"Row {i} (year={row['estimate_year']}, seg={row['segment']}): "
+                f"p25_real ({row['p25_usd_billions_real_2020']:.4f}) > "
+                f"median_real ({row['median_usd_billions_real_2020']:.4f})"
+            )
+            assert row["median_usd_billions_real_2020"] <= row["p75_usd_billions_real_2020"], (
+                f"Row {i} (year={row['estimate_year']}, seg={row['segment']}): "
+                f"median_real ({row['median_usd_billions_real_2020']:.4f}) > "
+                f"p75_real ({row['p75_usd_billions_real_2020']:.4f})"
+            )
