@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Model Credibility & Usability
 status: planning
-stopped_at: Completed 08-03-PLAN.md
-last_updated: "2026-03-24T00:26:15.815Z"
+stopped_at: Completed 08-04-PLAN.md
+last_updated: "2026-03-24T08:01:51.734Z"
 last_activity: 2026-03-23 — v1.1 roadmap created (Phases 8-11)
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -54,6 +54,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 08 P01 | 15 | 2 tasks | 3 files |
 | Phase 08 P02 | 20 | 1 tasks | 4 files |
 | Phase 08 P03 | 6 | 1 tasks | 5 files |
+| Phase 08 P04 | 25 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,9 @@ Recent decisions affecting current work:
 - [Phase 08]: estimated_flag = estimate_year > publication_year distinguishes actuals from forecasts for Plan 08-04 reconciliation weighting
 - [Phase 08]: uv override-dependencies used to resolve edgartools vs pandasdmx/lseg-data pydantic/httpx conflicts — both libraries verified to work at runtime despite declared constraints
 - [Phase 08]: BUNDLED_SEGMENT_COMPANIES set (6 CIKs) marks companies requiring Phase 10 AI revenue attribution — Microsoft, Amazon, Alphabet, Meta, IBM, Accenture
+- [Phase 08]: Raw World Bank parquet used as deflator source (not processed) to get full 2010-2024 deflator coverage for market anchor deflation
+- [Phase 08]: MARKET_ANCHOR_NOMINAL_SCHEMA added alongside MARKET_ANCHOR_SCHEMA to preserve backward compatibility with compile_market_anchors() callers
+- [Phase 08]: Sub-segments with 2023-2024 data only use bfill/ffill for 2017-2022 extrapolation with estimated_flag=True marking
 
 ### Pending Todos
 
@@ -88,6 +92,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T00:26:15.812Z
-Stopped at: Completed 08-03-PLAN.md
+Last session: 2026-03-24T08:01:51.731Z
+Stopped at: Completed 08-04-PLAN.md
 Resume file: None
