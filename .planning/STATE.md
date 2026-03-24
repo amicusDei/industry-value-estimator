@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Model Credibility & Usability
 status: planning
-stopped_at: Phase 9 context gathered
-last_updated: "2026-03-24T12:26:22.879Z"
+stopped_at: Completed 09-01-PLAN.md
+last_updated: "2026-03-24T12:56:24.109Z"
 last_activity: 2026-03-23 — v1.1 roadmap created (Phases 8-11)
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 7
+  completed_plans: 5
   percent: 0
 ---
 
@@ -55,6 +55,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 08 P02 | 20 | 1 tasks | 4 files |
 | Phase 08 P03 | 6 | 1 tasks | 5 files |
 | Phase 08 P04 | 25 | 2 tasks | 5 files |
+| Phase 09 P01 | 219 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,9 @@ Recent decisions affecting current work:
 - [Phase 08]: Raw World Bank parquet used as deflator source (not processed) to get full 2010-2024 deflator coverage for market anchor deflation
 - [Phase 08]: MARKET_ANCHOR_NOMINAL_SCHEMA added alongside MARKET_ANCHOR_SCHEMA to preserve backward compatibility with compile_market_anchors() callers
 - [Phase 08]: Sub-segments with 2023-2024 data only use bfill/ffill for 2017-2022 extrapolation with estimated_flag=True marking
+- [Phase 09]: value_chain_layer_taxonomy locked 2026-03-24 with 4 layers (chip/cloud/application/end_market) in ai.yaml — gates Phase 10 attribution
+- [Phase 09]: build_pca_composite deleted from features.py — flat indicator matrix replaces PCA path in v1.1 model
+- [Phase 09]: model_version: v1.1_real_data set in ai.yaml — will be used as interface gate in Plan 09-02
 
 ### Pending Todos
 
@@ -92,6 +96,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T12:26:22.872Z
-Stopped at: Phase 9 context gathered
-Resume file: .planning/phases/09-ground-up-model-rework-and-value-chain-design/09-CONTEXT.md
+Last session: 2026-03-24T12:56:24.108Z
+Stopped at: Completed 09-01-PLAN.md
+Resume file: None

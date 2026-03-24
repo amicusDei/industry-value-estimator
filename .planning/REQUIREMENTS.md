@@ -19,7 +19,7 @@ Requirements for Model Credibility & Usability milestone. Each maps to roadmap p
 - [ ] **MODL-01**: Anchored market size model replaces PCA composite — ARIMA/Prophet/LightGBM retrained with real USD market sizes as target variable instead of composite index
 - [ ] **MODL-02**: AI revenue attribution for 10-15 mixed-tech public companies — parameterized attribution ratios from earnings disclosures + analyst consensus, with documented uncertainty per company
 - [ ] **MODL-03**: Private company valuation registry — 15-20 major private AI companies (OpenAI, Anthropic, Databricks, etc.) valued via comparable multiples with confidence flags and explicit uncertainty ranges
-- [ ] **MODL-04**: Value chain layer taxonomy — chip/cloud/application/end-market classification assigned per company preventing double-counting when aggregating to total market size
+- [x] **MODL-04**: Value chain layer taxonomy — chip/cloud/application/end-market classification assigned per company preventing double-counting when aggregating to total market size
 - [ ] **MODL-05**: Forecast trajectories reflect realistic AI growth (25-40% CAGR consistent with analyst consensus) with documented rationale where model diverges from consensus
 - [ ] **MODL-06**: Walk-forward backtesting — train on pre-2022 data, evaluate 2022-2024 against filed actuals, producing real MAPE and R² in Diagnostics tab
 
@@ -74,7 +74,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-10 | Phase 8 | Complete |
 | DATA-11 | Phase 8 | Complete |
 | MODL-01 | Phase 9 | Pending |
-| MODL-04 | Phase 9 | Pending |
+| MODL-04 | Phase 9 | Complete |
 | MODL-05 | Phase 9 | Pending |
 | MODL-02 | Phase 10 | Pending |
 | MODL-03 | Phase 10 | Pending |
