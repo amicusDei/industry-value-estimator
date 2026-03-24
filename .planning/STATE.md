@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Model Credibility & Usability
 status: planning
-stopped_at: Completed 09-02-PLAN.md
-last_updated: "2026-03-24T13:03:39.340Z"
+stopped_at: Completed 09-03-PLAN.md
+last_updated: "2026-03-24T13:19:50.416Z"
 last_activity: 2026-03-23 — v1.1 roadmap created (Phases 8-11)
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 7
   percent: 0
 ---
 
@@ -57,6 +57,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 08 P04 | 25 | 2 tasks | 5 files |
 | Phase 09 P01 | 219 | 2 tasks | 5 files |
 | Phase 09 P02 | 420 | 2 tasks | 4 files |
+| Phase 09 P03 | 1200 | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,9 @@ Recent decisions affecting current work:
 - [Phase 09]: model_version: v1.1_real_data set in ai.yaml — will be used as interface gate in Plan 09-02
 - [Phase 09]: market_anchors_ai.parquet column names are median_usd_billions_real_2020 (not median_real_2020) — all USD loaders use actual column names
 - [Phase 09]: fit_prophet_from_anchors gracefully omits 2022 changepoint when outside training data range — prevents Prophet ValueError on sparse real-observation segments
+- [Phase 09]: MACRO_FEATURE_COLS defined but fall back to residual-only features when world_bank_ai.parquet coverage < 80% in 2017-2025
+- [Phase 09]: CAGR divergence documented in forecast.py: root cause is 2-obs training window per segment; 25-40% target deferred to Phase 10 data enrichment
+- [Phase 09]: Forecast floor at max(last_y * 0.5, 1.5B) prevents negative USD forecasts from sparse-data Prophet extrapolation (ai_adoption 2023>2024 declining anchor)
 
 ### Pending Todos
 
@@ -99,6 +103,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T13:03:39.338Z
-Stopped at: Completed 09-02-PLAN.md
+Last session: 2026-03-24T13:19:50.415Z
+Stopped at: Completed 09-03-PLAN.md
 Resume file: None
