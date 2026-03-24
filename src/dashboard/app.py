@@ -6,18 +6,14 @@ once from Parquet files and stored as module globals (FORECASTS_DF, RESIDUALS_DF
 efficient reuse across callback invocations — Dash callbacks are called on every user
 interaction, so data loading inside callbacks would create unacceptable latency.
 
-Value chain multiplier calibration is performed at module load time:
-1. Reads anchor values from config/industries/ai.yaml (§ value_chain)
-2. Derives per-segment multipliers: multiplier = anchor_usd_for_segment / index_at_anchor_year
-3. Attaches USD columns (usd_point, usd_ci80_lower, etc.) to FORECASTS_DF
-This calibration converts the dimensionless PCA composite index to USD billions for display.
+v1.1 update: point_estimate_real_2020 is USD billions directly (v1.1 models trained
+on real USD market anchors). Pass-through alias columns (usd_point etc.) are preserved
+for tab compatibility until Phase 11 refactors all tabs to use point_estimate_real_2020
+directly.
 
 Normal/Expert mode content distinction:
 - Normal mode: USD headlines, narrative insights, accessible language
-- Expert mode: raw composite index values, multiplier derivation tables, ASSUMPTIONS.md refs
-
-See docs/ASSUMPTIONS.md section Value Chain Multiplier Calibration for the $200B 2023
-anchor selection rationale and sensitivity analysis.
+- Expert mode: model diagnostics, CV metrics, ASSUMPTIONS.md refs
 """
 import sys
 from pathlib import Path
@@ -46,67 +42,14 @@ SEGMENTS = [seg["id"] for seg in AI_CONFIG["segments"]]
 SEGMENT_DISPLAY = {seg["id"]: seg["display_name"] for seg in AI_CONFIG["segments"]}
 
 # ---------------------------------------------------------------------------
-# Value chain multiplier — converts PCA composite index to USD billions
-# Calibrated against industry consensus: ~$200B global AI market in 2023
-# See config/industries/ai.yaml § value_chain and docs/ASSUMPTIONS.md
+# Minimal pass-through — point_estimate_real_2020 IS USD billions in v1.1
+# These alias columns prevent downstream tab crashes until Phase 11 refactors them
 # ---------------------------------------------------------------------------
-_vc = AI_CONFIG["value_chain"]
-_anchor_year: int = int(_vc["anchor_year"])
-_anchor_total_usd: float = float(_vc["anchor_value_usd_billions"])
-_segment_shares: dict = _vc["segment_anchor_shares"]
-_usd_floor: float = float(_vc.get("usd_floor_billions", 0.0))
-
-# Compute per-segment multipliers:
-#   anchor_usd_for_segment = anchor_total * segment_share
-#   index_at_anchor = point_estimate_real_2020 for that segment at anchor_year
-#   multiplier = anchor_usd / index_at_anchor (if index != 0)
-# If index_at_anchor <= 0 (synthetic data artefact), fall back to global multiplier.
-_df_anchor = FORECASTS_DF[FORECASTS_DF["year"] == _anchor_year]
-_global_index_anchor = _df_anchor["point_estimate_real_2020"].sum()
-_global_multiplier: float = (
-    _anchor_total_usd / _global_index_anchor
-    if _global_index_anchor != 0 else 1.0
-)
-
-VALUE_CHAIN_MULTIPLIERS: dict = {}  # segment -> USD-billions per index unit
-for _seg in SEGMENTS:
-    _seg_anchor_usd = _anchor_total_usd * _segment_shares.get(_seg, 0.25)
-    _seg_rows = _df_anchor[_df_anchor["segment"] == _seg]
-    _seg_idx_at_anchor = float(_seg_rows["point_estimate_real_2020"].iloc[0]) if len(_seg_rows) > 0 else 0.0
-    if _seg_idx_at_anchor > 0:
-        VALUE_CHAIN_MULTIPLIERS[_seg] = _seg_anchor_usd / _seg_idx_at_anchor
-    else:
-        # Fallback: global multiplier scaled by segment share
-        VALUE_CHAIN_MULTIPLIERS[_seg] = _global_multiplier * _segment_shares.get(_seg, 0.25)
-
-# Attach USD columns to FORECASTS_DF in-place
-# usd_point, usd_ci80_lower, usd_ci80_upper, usd_ci95_lower, usd_ci95_upper
-# Values are floored at usd_floor for display integrity
-_usd_rows = []
-for _seg, _grp in FORECASTS_DF.groupby("segment"):
-    _mult = VALUE_CHAIN_MULTIPLIERS.get(_seg, _global_multiplier)
-    _grp = _grp.copy()
-    _grp["usd_point"] = (_grp["point_estimate_real_2020"] * _mult).clip(lower=_usd_floor)
-    _grp["usd_ci80_lower"] = (_grp["ci80_lower"] * _mult).clip(lower=_usd_floor)
-    _grp["usd_ci80_upper"] = (_grp["ci80_upper"] * _mult).clip(lower=_usd_floor)
-    _grp["usd_ci95_lower"] = (_grp["ci95_lower"] * _mult).clip(lower=_usd_floor)
-    _grp["usd_ci95_upper"] = (_grp["ci95_upper"] * _mult).clip(lower=_usd_floor)
-    _usd_rows.append(_grp)
-FORECASTS_DF = pd.concat(_usd_rows).sort_values(["segment", "year"]).reset_index(drop=True)
-
-# Multiplier derivation string for Expert mode display
-VALUE_CHAIN_DERIVATION: dict = {}
-for _seg in SEGMENTS:
-    _seg_anchor_usd = _anchor_total_usd * _segment_shares.get(_seg, 0.25)
-    _seg_rows = _df_anchor[_df_anchor["segment"] == _seg]
-    _seg_idx_at_anchor = float(_seg_rows["point_estimate_real_2020"].iloc[0]) if len(_seg_rows) > 0 else 0.0
-    _mult = VALUE_CHAIN_MULTIPLIERS[_seg]
-    VALUE_CHAIN_DERIVATION[_seg] = {
-        "anchor_usd": _seg_anchor_usd,
-        "index_at_anchor": _seg_idx_at_anchor,
-        "multiplier": _mult,
-        "method": "per_segment_anchor" if _seg_idx_at_anchor > 0 else "global_fallback",
-    }
+FORECASTS_DF["usd_point"] = FORECASTS_DF["point_estimate_real_2020"]
+FORECASTS_DF["usd_ci80_lower"] = FORECASTS_DF["ci80_lower"]
+FORECASTS_DF["usd_ci80_upper"] = FORECASTS_DF["ci80_upper"]
+FORECASTS_DF["usd_ci95_lower"] = FORECASTS_DF["ci95_lower"]
+FORECASTS_DF["usd_ci95_upper"] = FORECASTS_DF["ci95_upper"]
 
 # Compute diagnostics at startup from residuals
 DIAGNOSTICS = {}

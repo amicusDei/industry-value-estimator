@@ -77,45 +77,14 @@ def load_report_context(mode: str = "normal") -> dict:
         seg["id"]: seg["display_name"] for seg in ai_config["segments"]
     }
 
-    # --- Value chain multipliers (same logic as src/dashboard/app.py) ---
-    vc = ai_config["value_chain"]
-    anchor_year = int(vc["anchor_year"])
-    anchor_total_usd = float(vc["anchor_value_usd_billions"])
-    segment_shares: dict = vc["segment_anchor_shares"]
-    usd_floor = float(vc.get("usd_floor_billions", 0.0))
-
-    df_anchor = forecasts_df[forecasts_df["year"] == anchor_year]
-    global_index_anchor = df_anchor["point_estimate_real_2020"].sum()
-    global_multiplier = (
-        anchor_total_usd / global_index_anchor if global_index_anchor != 0 else 1.0
-    )
-
-    value_chain_multipliers: dict[str, float] = {}
-    for seg in segments:
-        seg_anchor_usd = anchor_total_usd * segment_shares.get(seg, 0.25)
-        seg_rows = df_anchor[df_anchor["segment"] == seg]
-        seg_idx_at_anchor = (
-            float(seg_rows["point_estimate_real_2020"].iloc[0]) if len(seg_rows) > 0 else 0.0
-        )
-        if seg_idx_at_anchor > 0:
-            value_chain_multipliers[seg] = seg_anchor_usd / seg_idx_at_anchor
-        else:
-            value_chain_multipliers[seg] = global_multiplier * segment_shares.get(seg, 0.25)
-
-    # Attach USD columns to forecasts_df
-    usd_rows = []
-    for seg, grp in forecasts_df.groupby("segment"):
-        mult = value_chain_multipliers.get(seg, global_multiplier)
-        grp = grp.copy()
-        grp["usd_point"] = (grp["point_estimate_real_2020"] * mult).clip(lower=usd_floor)
-        grp["usd_ci80_lower"] = (grp["ci80_lower"] * mult).clip(lower=usd_floor)
-        grp["usd_ci80_upper"] = (grp["ci80_upper"] * mult).clip(lower=usd_floor)
-        grp["usd_ci95_lower"] = (grp["ci95_lower"] * mult).clip(lower=usd_floor)
-        grp["usd_ci95_upper"] = (grp["ci95_upper"] * mult).clip(lower=usd_floor)
-        usd_rows.append(grp)
-    forecasts_df = (
-        pd.concat(usd_rows).sort_values(["segment", "year"]).reset_index(drop=True)
-    )
+    # --- Minimal pass-through — point_estimate_real_2020 IS USD billions in v1.1 ---
+    # These alias columns prevent downstream template crashes until Phase 11.
+    forecasts_df = forecasts_df.copy()
+    forecasts_df["usd_point"] = forecasts_df["point_estimate_real_2020"]
+    forecasts_df["usd_ci80_lower"] = forecasts_df["ci80_lower"]
+    forecasts_df["usd_ci80_upper"] = forecasts_df["ci80_upper"]
+    forecasts_df["usd_ci95_lower"] = forecasts_df["ci95_lower"]
+    forecasts_df["usd_ci95_upper"] = forecasts_df["ci95_upper"]
 
     # --- Per-segment metrics ---
     per_segment_metrics: dict[str, dict] = {}
@@ -202,9 +171,6 @@ def load_report_context(mode: str = "normal") -> dict:
         "per_segment_metrics": per_segment_metrics,
         "vintage": vintage,
         "generation_date": generation_date,
-        "value_chain_multipliers": value_chain_multipliers,
-        "anchor_year": anchor_year,
-        "anchor_total_usd": anchor_total_usd,
     }
 
     # --- Expert mode extras ---

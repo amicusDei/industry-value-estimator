@@ -4,8 +4,9 @@ Overview tab layout builder.
 Normal mode: dollar headlines, USD fan chart, per-segment USD breakdown, growth rates,
 and clean narrative a non-technical reader can follow.
 
-Expert mode: adds raw composite index values, value chain multiplier derivation,
-ensemble parameters, CV metrics, and ASSUMPTIONS.md references.
+Expert mode: adds model diagnostics, CV metrics, RMSE per segment, and
+ASSUMPTIONS.md references. In v1.1 the model outputs USD billions directly —
+no multiplier conversion is applied.
 """
 from __future__ import annotations
 
@@ -17,8 +18,6 @@ from src.dashboard.app import (
     FORECASTS_DF,
     SEGMENTS,
     SEGMENT_DISPLAY,
-    VALUE_CHAIN_MULTIPLIERS,
-    VALUE_CHAIN_DERIVATION,
     SOURCE_ATTRIBUTION,
 )
 
@@ -166,10 +165,8 @@ def build_overview_layout(segment: str, usd_col: str, mode: str = "normal") -> h
         ),
     ]
 
-    # Expert mode adds raw index value and multiplier reference to the headline card
+    # Expert mode adds raw index value note to the headline card (v1.1: no multiplier)
     if expert:
-        mult = VALUE_CHAIN_MULTIPLIERS.get(segment, sum(VALUE_CHAIN_MULTIPLIERS.values())) if segment != "all" else None
-        deriv = VALUE_CHAIN_DERIVATION.get(segment) if segment != "all" else None
         expert_headline_note = html.Div([
             html.Hr(style={"margin": "12px 0", "borderColor": "#EDE9FF"}),
             html.P([
@@ -371,7 +368,7 @@ def _build_normal_insights_card(
 
 
 def _build_expert_methodology_card(segment: str) -> html.Div:
-    """Build the expert mode methodology card with raw index values and multiplier derivation."""
+    """Build the expert mode methodology card with model diagnostics and RMSE per segment."""
     from src.dashboard.app import RESIDUALS_DF
     import numpy as np
 
@@ -383,71 +380,20 @@ def _build_expert_methodology_card(segment: str) -> html.Div:
             rmse_val = float(np.sqrt(np.mean(grp["residual"].to_numpy() ** 2)))
             rmse_rows.append(html.Tr([
                 html.Td(SEGMENT_DISPLAY.get(seg, seg), style={"padding": "6px 12px", "fontSize": "13px", "fontWeight": 500}),
-                html.Td(f"{rmse_val:.4f}", style={"padding": "6px 12px", "fontSize": "13px", "fontFamily": "monospace"}),
-                html.Td(
-                    f"{VALUE_CHAIN_MULTIPLIERS.get(seg, 0):.2f} B/unit",
-                    style={"padding": "6px 12px", "fontSize": "13px", "fontFamily": "monospace"},
-                ),
+                html.Td(f"{rmse_val:.2f}B", style={"padding": "6px 12px", "fontSize": "13px", "fontFamily": "monospace"}),
             ]))
-
-    # Value chain derivation section
-    from src.dashboard.app import AI_CONFIG as _AI_CONFIG
-    vc = _AI_CONFIG["value_chain"]
-
-    deriv_rows = []
-    for seg in SEGMENTS:
-        d = VALUE_CHAIN_DERIVATION.get(seg, {})
-        deriv_rows.append(html.Tr([
-            html.Td(SEGMENT_DISPLAY.get(seg, seg), style={"padding": "5px 10px", "fontSize": "12px"}),
-            html.Td(f"{d.get('anchor_usd', 0):.0f}B", style={"padding": "5px 10px", "fontSize": "12px", "fontFamily": "monospace"}),
-            html.Td(f"{d.get('index_at_anchor', 0):.4f}", style={"padding": "5px 10px", "fontSize": "12px", "fontFamily": "monospace"}),
-            html.Td(f"{d.get('multiplier', 0):.2f}", style={"padding": "5px 10px", "fontSize": "12px", "fontFamily": "monospace"}),
-            html.Td(d.get("method", ""), style={"padding": "5px 10px", "fontSize": "11px", "color": "#888"}),
-        ]))
 
     return html.Div([
         html.H2(
-            "Expert View \u2014 Raw Index, Multiplier Derivation & Methodology",
+            "Expert View \u2014 Model Diagnostics & Methodology",
             style={**_SECTION_HEADING_STYLE, "color": "#7C4DFF"},
         ),
         html.P(
-            "This panel is visible in Expert mode only. It surfaces the raw composite index values, "
-            "the value chain multiplier derivation, model parameters, CV metrics, and "
-            "docs/ASSUMPTIONS.md references for technical reviewers and reproducibility.",
+            "This panel is visible in Expert mode only. It surfaces model parameters, "
+            "CV metrics, RMSE per segment, and docs/ASSUMPTIONS.md references for "
+            "technical reviewers and reproducibility. "
+            "Model outputs USD billions directly (v1.1). No multiplier conversion applied.",
             style=_SECTION_SUBTITLE_STYLE,
-        ),
-
-        # Value chain multiplier derivation
-        html.H3(
-            "Value Chain Multiplier Derivation",
-            style={"fontSize": "16px", "fontWeight": 600, "marginBottom": "8px", "marginTop": "0"},
-        ),
-        html.P([
-            html.Strong("Anchor: "),
-            f"Global AI market \u2248 ${vc['anchor_value_usd_billions']}B in {vc['anchor_year']} "
-            "(McKinsey Global Institute 2023, Statista 2023, Grand View Research 2024 consensus). ",
-            html.Strong("Method: "),
-            f"{vc['multiplier_method']} \u2014 each segment gets an anchor USD value proportional to "
-            "its consensus market share; multiplier = anchor_usd / index_at_anchor_year.",
-        ], style={"fontSize": "13px", "color": "#444", "lineHeight": "1.6", "marginBottom": "10px"}),
-        html.Table(
-            [
-                html.Thead(html.Tr([
-                    html.Th("Segment", style={"padding": "6px 10px", "fontSize": "12px", "backgroundColor": "#F4F6FA"}),
-                    html.Th("Anchor USD", style={"padding": "6px 10px", "fontSize": "12px", "backgroundColor": "#F4F6FA"}),
-                    html.Th("Index at 2023", style={"padding": "6px 10px", "fontSize": "12px", "backgroundColor": "#F4F6FA"}),
-                    html.Th("Multiplier (B/unit)", style={"padding": "6px 10px", "fontSize": "12px", "backgroundColor": "#F4F6FA"}),
-                    html.Th("Method", style={"padding": "6px 10px", "fontSize": "12px", "backgroundColor": "#F4F6FA"}),
-                ])),
-                html.Tbody(deriv_rows),
-            ],
-            style={"borderCollapse": "collapse", "width": "100%", "border": "1px solid #E8EBF0", "marginBottom": "16px"},
-        ),
-        html.P(
-            "Note: Segments with negative index values at the anchor year use a global fallback multiplier "
-            "(global_multiplier \u00d7 segment_share). This arises from synthetic/placeholder pipeline data \u2014 "
-            "real World Bank/OECD/LSEG data will produce positive index values at the anchor year.",
-            style={"fontSize": "12px", "color": "#888", "fontStyle": "italic", "marginBottom": "16px"},
         ),
 
         html.Hr(style={"margin": "16px 0", "borderColor": "#E8EBF0"}),
@@ -458,6 +404,7 @@ def _build_expert_methodology_card(segment: str) -> html.Div:
                 html.H4("Ensemble Composition", style={"fontSize": "14px", "fontWeight": 600, "marginBottom": "8px"}),
                 html.Ul([
                     html.Li("Models: ARIMA (pmdarima auto_arima, AICc criterion) + Prophet (Facebook Prophet 1.1)", style={"fontSize": "13px"}),
+                    html.Li("v1.1: retrained on real USD billions from market_anchors_ai.parquet", style={"fontSize": "13px"}),
                     html.Li("Ensemble: equal-weight average of ARIMA and Prophet point estimates", style={"fontSize": "13px"}),
                     html.Li("CI bands: bootstrap-derived from model residuals (500 draws)", style={"fontSize": "13px"}),
                     html.Li("ARIMA: max_p=2, max_q=2, seasonal=False, information_criterion='aicc'", style={"fontSize": "13px"}),
@@ -465,13 +412,12 @@ def _build_expert_methodology_card(segment: str) -> html.Div:
                 ], style={"paddingLeft": "20px", "marginBottom": "0"}),
             ], width=6),
             dbc.Col([
-                html.H4("Out-of-Sample RMSE + Multiplier by Segment", style={"fontSize": "14px", "fontWeight": 600, "marginBottom": "8px"}),
+                html.H4("Out-of-Sample RMSE by Segment (USD Billions)", style={"fontSize": "14px", "fontWeight": 600, "marginBottom": "8px"}),
                 html.Table(
                     [
                         html.Thead(html.Tr([
                             html.Th("Segment", style={"padding": "6px 12px", "fontSize": "13px", "backgroundColor": "#F4F6FA"}),
-                            html.Th("RMSE (index)", style={"padding": "6px 12px", "fontSize": "13px", "backgroundColor": "#F4F6FA"}),
-                            html.Th("Multiplier", style={"padding": "6px 12px", "fontSize": "13px", "backgroundColor": "#F4F6FA"}),
+                            html.Th("RMSE (USD B)", style={"padding": "6px 12px", "fontSize": "13px", "backgroundColor": "#F4F6FA"}),
                         ])),
                         html.Tbody(rmse_rows),
                     ],
@@ -487,11 +433,11 @@ def _build_expert_methodology_card(segment: str) -> html.Div:
             html.Code("docs/ASSUMPTIONS.md", style={"fontSize": "12px"}),
             " for all modeling assumptions, rationale, and what-if analysis. "
             "Key: (1) structural break at 2022 explicitly modeled; "
-            "(2) ~15 training obs/segment \u2014 AICc small-sample correction applied; "
+            "(2) ~9 real training obs/segment \u2014 AICc small-sample correction applied; "
             "(3) segments modeled independently with post-hoc aggregation; "
-            "(4) PCA first PC of 6 proxy indicators = AI activity index; "
-            "(5) value chain multiplier calibrated to $200B 2023 consensus \u2014 "
-            "see docs/ASSUMPTIONS.md \u00a7 Value Chain Multiplier Calibration.",
+            "(4) v1.1 models trained on real USD anchors from analyst corpus; "
+            "(5) source disagreement bands from p25/p75 analyst spread encoded as "
+            "anchor_p25_real_2020 / anchor_p75_real_2020 columns.",
         ], style={"fontSize": "13px", "color": "#444", "lineHeight": "1.6", "marginBottom": "0"}),
     ], style={
         **_CARD_STYLE,
