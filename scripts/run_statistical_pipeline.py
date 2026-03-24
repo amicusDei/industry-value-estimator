@@ -27,7 +27,7 @@ Design notes
 - LSEG scalar: lseg_ai.parquet is a single-year company snapshot; loaded
   as a per-segment revenue-share weight applied to PCA composite scores
 - PCA composite: 3 indicators per segment, fitted on training window only
-  (70% of observations) to prevent leakage — see build_pca_composite()
+  (70% of observations) to prevent leakage
 - Structural break: CUSUM + Chow tests detect the break year from data;
   detected break_year is passed to Prophet changepoint (default 2022)
 - Stationarity: assess_stationarity (ADF+KPSS) called per-segment before
@@ -76,7 +76,8 @@ from src.models.statistical.prophet_model import (
     save_all_residuals,
 )
 from src.diagnostics.model_eval import compare_models
-from src.processing.features import build_pca_composite, assess_stationarity
+from src.processing.features import assess_stationarity
+# build_pca_composite removed in Phase 9 (v1.1) — use run_ensemble_pipeline.py for USD forecasts
 from src.diagnostics.structural_breaks import run_cusum, run_chow
 from src.models.statistical.regression import fit_top_down_ols_with_upgrade
 import statsmodels.api as sm
@@ -315,10 +316,9 @@ def _build_segment_series(
     feature_cols = [c for c in _SEGMENT_FEATURES[segment] if c in combined.columns]
     matrix = combined[feature_cols].values.astype(float)
     train_end = max(3, int(len(matrix) * 0.7))  # minimum 3 training obs
-    scores, explained, _ = build_pca_composite(matrix, train_end_idx=train_end)
-    print(f"    PCA for {segment}: {len(feature_cols)} features, "
-          f"explained variance={explained:.3f}, "
-          f"range=[{scores.min():.2f}, {scores.max():.2f}]")
+    # PCA composite removed in Phase 9 (v1.1) — model now uses USD market anchors directly
+    # See run_ensemble_pipeline.py for the v1.1 forecasting pipeline
+    print(f"    [SKIP] PCA composite removed in v1.1 — {len(feature_cols)} features available as exogenous regressors")
 
     # Apply LSEG revenue weight if available for this segment
     if lseg_scalar is not None and segment in lseg_scalar:
