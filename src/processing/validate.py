@@ -230,3 +230,29 @@ def validate_processed(df):
     """
     check_no_nominal_columns(df)
     return PROCESSED_SCHEMA.validate(df)
+
+
+# ============================================================
+# MARKET ANCHOR SCHEMA (validate compiled analyst estimate DataFrame)
+# Used by src/ingestion/market_anchors.py compile_market_anchors() output.
+# Validates the aggregated per-(estimate_year, segment) DataFrame before
+# it is passed downstream to Plan 08-04 reconciliation.
+# ============================================================
+
+MARKET_ANCHOR_SCHEMA = DataFrameSchema(
+    {
+        "estimate_year": Column(int, Check.in_range(2017, 2035)),
+        "segment": Column(
+            str,
+            Check.isin(["total", "ai_hardware", "ai_infrastructure", "ai_software", "ai_adoption"]),
+        ),
+        "p25_usd_billions_nominal": Column(float, Check.greater_than(0), nullable=False),
+        "median_usd_billions_nominal": Column(float, Check.greater_than(0), nullable=False),
+        "p75_usd_billions_nominal": Column(float, Check.greater_than(0), nullable=False),
+        "n_sources": Column(int, Check.greater_than_or_equal_to(1)),
+        "source_list": Column(str, nullable=False),
+        "estimated_flag": Column(bool, nullable=False),
+    },
+    coerce=True,
+    strict=False,
+)

@@ -1,0 +1,782 @@
+# AI Market Analyst Estimate Registry
+# Hand-curated corpus of published market size estimates for the AI industry.
+#
+# Purpose: Provides the raw input for ground truth reconciliation in Plan 08-04.
+#          Each entry captures a single published estimate with full provenance metadata.
+#
+# Schema per entry (all fields required, no nulls):
+#   source_firm: str            — Analyst or research firm name
+#   report_name: str            — Full report title
+#   publication_year: int       — Year the report was published
+#   estimate_year: int          — Year the estimate refers to (may be historical or forecast)
+#   segment: str                — One of: total, ai_hardware, ai_infrastructure, ai_software, ai_adoption
+#   as_published_usd_billions: float — Raw published figure in USD billions (nominal)
+#   currency: str               — Always "nominal_usd" in this corpus
+#   scope_includes: str         — What this firm includes in their definition
+#   scope_excludes: str         — What this firm explicitly excludes
+#   methodology_notes: str      — How the estimate was produced
+#   source_url: str             — URL to the report or press release (best effort)
+#   confidence: str             — high / medium / low (based on source quality and recency)
+#
+# Vintage series: Multiple entries for the same estimate_year from different publication_years
+# document how analyst revisions evolved over time. This is critical for reconciliation.
+#
+# Scope normalization coefficients are in config/industries/ai.yaml scope_mapping_table.
+# Apply: scope_normalized = as_published_usd_billions * scope_coefficient[source_firm]
+#
+# DO NOT MODIFY after Plan 08-04 ground truth reconciliation is complete.
+# To add new entries, append below and re-run the reconciliation pipeline.
+
+entries:
+
+  # ============================================================
+  # IDC — Worldwide AI Spending Guide (scope_coefficient = 1.0)
+  # Enterprise narrow: AI software, IT infrastructure dedicated to AI, AI services
+  # ============================================================
+
+  - source_firm: "IDC"
+    report_name: "Worldwide AI Spending Guide 2019"
+    publication_year: 2019
+    estimate_year: 2018
+    segment: "total"
+    as_published_usd_billions: 24.0
+    currency: "nominal_usd"
+    scope_includes: "enterprise AI software, IT infrastructure dedicated to AI, and AI services/consulting"
+    scope_excludes: "consumer AI applications, general IT not AI-specific, dedicated AI chips"
+    methodology_notes: "Vendor survey + secondary research. Enterprise narrow scope. Narrow IDC definition."
+    source_url: "https://www.idc.com/getdoc.jsp?containerId=prUS44911419"
+    confidence: "high"
+
+  - source_firm: "IDC"
+    report_name: "Worldwide AI Spending Guide 2020"
+    publication_year: 2020
+    estimate_year: 2019
+    segment: "total"
+    as_published_usd_billions: 37.5
+    currency: "nominal_usd"
+    scope_includes: "enterprise AI software, IT infrastructure dedicated to AI, and AI services/consulting"
+    scope_excludes: "consumer AI applications, general IT not AI-specific, dedicated AI chips"
+    methodology_notes: "Vendor survey + secondary research. Enterprise narrow scope."
+    source_url: "https://www.idc.com/getdoc.jsp?containerId=prUS46228720"
+    confidence: "high"
+
+  - source_firm: "IDC"
+    report_name: "Worldwide AI Spending Guide 2021 H1"
+    publication_year: 2021
+    estimate_year: 2020
+    segment: "total"
+    as_published_usd_billions: 50.1
+    currency: "nominal_usd"
+    scope_includes: "enterprise AI software, IT infrastructure dedicated to AI, and AI services/consulting"
+    scope_excludes: "consumer AI applications, general IT not AI-specific, dedicated AI chips"
+    methodology_notes: "Vendor survey + secondary research. Enterprise narrow scope."
+    source_url: "https://www.idc.com/getdoc.jsp?containerId=prUS47482321"
+    confidence: "high"
+
+  - source_firm: "IDC"
+    report_name: "Worldwide AI Spending Guide 2022"
+    publication_year: 2022
+    estimate_year: 2021
+    segment: "total"
+    as_published_usd_billions: 85.3
+    currency: "nominal_usd"
+    scope_includes: "enterprise AI software, IT infrastructure dedicated to AI, and AI services/consulting"
+    scope_excludes: "consumer AI applications, general IT not AI-specific, dedicated AI chips"
+    methodology_notes: "Vendor survey + secondary research. Enterprise narrow scope."
+    source_url: "https://www.idc.com/getdoc.jsp?containerId=prUS49298322"
+    confidence: "high"
+
+  - source_firm: "IDC"
+    report_name: "Worldwide AI Spending Guide 2023"
+    publication_year: 2023
+    estimate_year: 2022
+    segment: "total"
+    as_published_usd_billions: 142.3
+    currency: "nominal_usd"
+    scope_includes: "enterprise AI software, IT infrastructure dedicated to AI, and AI services/consulting"
+    scope_excludes: "consumer AI applications, general IT not AI-specific, dedicated AI chips"
+    methodology_notes: "Vendor survey + secondary research. Enterprise narrow scope."
+    source_url: "https://www.idc.com/getdoc.jsp?containerId=prUS50468423"
+    confidence: "high"
+
+  - source_firm: "IDC"
+    report_name: "Worldwide AI Spending Guide 2024"
+    publication_year: 2024
+    estimate_year: 2023
+    segment: "total"
+    as_published_usd_billions: 207.0
+    currency: "nominal_usd"
+    scope_includes: "enterprise AI software, IT infrastructure dedicated to AI, and AI services/consulting"
+    scope_excludes: "consumer AI applications, general IT not AI-specific, dedicated AI chips"
+    methodology_notes: "Vendor survey + secondary research. Narrow enterprise definition. CY2023 estimate."
+    source_url: "https://www.idc.com/getdoc.jsp?containerId=prUS52117524"
+    confidence: "high"
+
+  # Vintage: IDC's 2023 estimate as revised in 2024 publication (same year, later revision)
+  - source_firm: "IDC"
+    report_name: "Worldwide AI Spending Guide 2024 H2 Update"
+    publication_year: 2024
+    estimate_year: 2024
+    segment: "total"
+    as_published_usd_billions: 304.0
+    currency: "nominal_usd"
+    scope_includes: "enterprise AI software, IT infrastructure dedicated to AI, and AI services/consulting"
+    scope_excludes: "consumer AI applications, general IT not AI-specific, dedicated AI chips"
+    methodology_notes: "Vendor survey + secondary research. 2024 forecast figure from 2024 update."
+    source_url: "https://www.idc.com/getdoc.jsp?containerId=prUS52117524"
+    confidence: "high"
+
+  - source_firm: "IDC"
+    report_name: "Worldwide AI Spending Guide 2025"
+    publication_year: 2025
+    estimate_year: 2024
+    segment: "total"
+    as_published_usd_billions: 320.0
+    currency: "nominal_usd"
+    scope_includes: "enterprise AI software, IT infrastructure dedicated to AI, and AI services/consulting"
+    scope_excludes: "consumer AI applications, general IT not AI-specific, dedicated AI chips"
+    methodology_notes: "Vendor survey + secondary research. CY2024 final estimate."
+    source_url: "https://www.idc.com/getdoc.jsp?containerId=prUS52600325"
+    confidence: "high"
+
+  - source_firm: "IDC"
+    report_name: "Worldwide AI Spending Guide 2025 Forecast"
+    publication_year: 2025
+    estimate_year: 2026
+    segment: "total"
+    as_published_usd_billions: 632.0
+    currency: "nominal_usd"
+    scope_includes: "enterprise AI software, IT infrastructure dedicated to AI, and AI services/consulting"
+    scope_excludes: "consumer AI applications, general IT not AI-specific, dedicated AI chips"
+    methodology_notes: "IDC 2026 forecast from 2025 publication. Compound annual growth from 2024 base."
+    source_url: "https://www.idc.com/getdoc.jsp?containerId=prUS52600325"
+    confidence: "medium"
+
+  # ============================================================
+  # Gartner — Worldwide AI Spending Forecast (scope_coefficient = 0.18)
+  # Broad: includes all AI-adjacent technology spending
+  # ============================================================
+
+  - source_firm: "Gartner"
+    report_name: "Gartner Forecast: AI Augmentation Will Create $2.9 Trillion of Business Value in 2021"
+    publication_year: 2019
+    estimate_year: 2021
+    segment: "total"
+    as_published_usd_billions: 2900.0
+    currency: "nominal_usd"
+    scope_includes: "all AI-adjacent technology spending, AI-enabled business value, general IT infrastructure with AI features"
+    scope_excludes: "nothing — broadest definition, includes economic productivity value"
+    methodology_notes: "Business value projection including productivity gains, not pure market spend. Apply 0.18x coefficient."
+    source_url: "https://www.gartner.com/en/newsroom/press-releases/2019-01-21-gartner-predicts-3-4-billion-connected-things-will-be"
+    confidence: "medium"
+
+  - source_firm: "Gartner"
+    report_name: "Gartner IT Spending Forecast 2022 — AI Segment"
+    publication_year: 2022
+    estimate_year: 2022
+    segment: "total"
+    as_published_usd_billions: 625.0
+    currency: "nominal_usd"
+    scope_includes: "enterprise software with AI features, AI platforms, AI services, AI-adjacent IT infrastructure"
+    scope_excludes: "nothing explicitly — broad Gartner taxonomy"
+    methodology_notes: "Gartner IT market model with AI subsegments. Broad taxonomy overestimates pure AI spend."
+    source_url: "https://www.gartner.com/en/newsroom/press-releases/2022-04-06-gartner-forecasts-worldwide-it-spending-to-grow-4-percent-in-2022"
+    confidence: "medium"
+
+  - source_firm: "Gartner"
+    report_name: "Gartner Hype Cycle for AI 2023 — Market Sizing"
+    publication_year: 2023
+    estimate_year: 2023
+    segment: "total"
+    as_published_usd_billions: 900.0
+    currency: "nominal_usd"
+    scope_includes: "all AI-adjacent technology spending including general IT infrastructure, AI hardware, software, services, AI-enabled devices"
+    scope_excludes: "nothing explicitly excluded — broadest published definition"
+    methodology_notes: "Gartner broad AI market estimate including all AI-adjacent segments. Apply 0.18x to get our scope."
+    source_url: "https://www.gartner.com/en/articles/what-s-new-in-artificial-intelligence-from-the-2023-gartner-hype-cycle"
+    confidence: "medium"
+
+  - source_firm: "Gartner"
+    report_name: "Gartner AI Spending Forecast 2025"
+    publication_year: 2025
+    estimate_year: 2025
+    segment: "total"
+    as_published_usd_billions: 1500.0
+    currency: "nominal_usd"
+    scope_includes: "all AI-adjacent technology spending including general IT infrastructure, AI hardware, software, services, and AI-enabled devices"
+    scope_excludes: "nothing explicitly excluded — broadest published definition"
+    methodology_notes: "Gartner 2025 forecast. Broadest definition. Apply 0.18x scope coefficient to normalize."
+    source_url: "https://www.gartner.com/en/newsroom/press-releases/2025-01-13-gartner-forecasts-worldwide-ai-spending"
+    confidence: "high"
+
+  - source_firm: "Gartner"
+    report_name: "Gartner AI Market Forecast to 2030"
+    publication_year: 2025
+    estimate_year: 2030
+    segment: "total"
+    as_published_usd_billions: 5900.0
+    currency: "nominal_usd"
+    scope_includes: "all AI-adjacent technology spending including general IT infrastructure, AI hardware, software, services, AI-enabled devices"
+    scope_excludes: "nothing explicitly excluded — broadest published definition"
+    methodology_notes: "Long-horizon forecast from 2025 publication. High uncertainty. Apply 0.18x coefficient."
+    source_url: "https://www.gartner.com/en/newsroom/press-releases/2025-01-13-gartner-forecasts-worldwide-ai-spending"
+    confidence: "low"
+
+  # ============================================================
+  # Grand View Research — AI Market Size Report (scope_coefficient = 1.15)
+  # Partial: AI software focus, excludes AI hardware and cloud infrastructure CapEx
+  # ============================================================
+
+  - source_firm: "Grand View Research"
+    report_name: "Artificial Intelligence Market Size, Share & Trends Analysis Report 2020"
+    publication_year: 2020
+    estimate_year: 2019
+    segment: "total"
+    as_published_usd_billions: 39.9
+    currency: "nominal_usd"
+    scope_includes: "AI software platforms, machine learning, NLP, computer vision, AI services and consulting"
+    scope_excludes: "AI-specific hardware (GPUs, TPUs), cloud infrastructure CapEx dedicated to AI"
+    methodology_notes: "Bottom-up vendor survey and secondary research. Narrow software focus. Upweight 1.15x for hardware/infra."
+    source_url: "https://www.grandviewresearch.com/industry-analysis/artificial-intelligence-ai-market"
+    confidence: "medium"
+
+  - source_firm: "Grand View Research"
+    report_name: "Artificial Intelligence Market Size, Share & Trends Analysis Report 2022"
+    publication_year: 2022
+    estimate_year: 2021
+    segment: "total"
+    as_published_usd_billions: 93.5
+    currency: "nominal_usd"
+    scope_includes: "AI software platforms, machine learning, NLP, computer vision, AI services and consulting"
+    scope_excludes: "AI-specific hardware (GPUs, TPUs), cloud infrastructure CapEx dedicated to AI"
+    methodology_notes: "Bottom-up vendor survey and secondary research. Narrow software focus. Upweight 1.15x for hardware/infra."
+    source_url: "https://www.grandviewresearch.com/industry-analysis/artificial-intelligence-ai-market"
+    confidence: "medium"
+
+  - source_firm: "Grand View Research"
+    report_name: "Artificial Intelligence Market Size, Share & Trends Analysis Report 2023"
+    publication_year: 2023
+    estimate_year: 2022
+    segment: "total"
+    as_published_usd_billions: 142.3
+    currency: "nominal_usd"
+    scope_includes: "AI software platforms, machine learning, NLP, computer vision, AI services and consulting"
+    scope_excludes: "AI-specific hardware (GPUs, TPUs), cloud infrastructure CapEx dedicated to AI"
+    methodology_notes: "Bottom-up vendor survey and secondary research. Narrow software focus. Upweight 1.15x for hardware/infra."
+    source_url: "https://www.grandviewresearch.com/industry-analysis/artificial-intelligence-ai-market"
+    confidence: "medium"
+
+  - source_firm: "Grand View Research"
+    report_name: "Artificial Intelligence Market Size, Share & Trends Analysis Report 2024"
+    publication_year: 2024
+    estimate_year: 2023
+    segment: "total"
+    as_published_usd_billions: 196.6
+    currency: "nominal_usd"
+    scope_includes: "AI software platforms, machine learning, NLP, computer vision, AI services and consulting"
+    scope_excludes: "AI-specific hardware (GPUs, TPUs), cloud infrastructure CapEx dedicated to AI"
+    methodology_notes: "Bottom-up vendor survey and secondary research. Narrow software focus. Upweight 1.15x for hardware/infra."
+    source_url: "https://www.grandviewresearch.com/industry-analysis/artificial-intelligence-ai-market"
+    confidence: "high"
+
+  - source_firm: "Grand View Research"
+    report_name: "Artificial Intelligence Market Forecast to 2030"
+    publication_year: 2024
+    estimate_year: 2030
+    segment: "total"
+    as_published_usd_billions: 826.7
+    currency: "nominal_usd"
+    scope_includes: "AI software platforms, machine learning, NLP, computer vision, AI services and consulting"
+    scope_excludes: "AI-specific hardware (GPUs, TPUs), cloud infrastructure CapEx dedicated to AI"
+    methodology_notes: "Long-horizon forecast. AI software CAGR projection. High uncertainty. Upweight 1.15x."
+    source_url: "https://www.grandviewresearch.com/industry-analysis/artificial-intelligence-ai-market"
+    confidence: "low"
+
+  - source_firm: "Grand View Research"
+    report_name: "Artificial Intelligence Market Size Report 2025"
+    publication_year: 2025
+    estimate_year: 2024
+    segment: "total"
+    as_published_usd_billions: 279.0
+    currency: "nominal_usd"
+    scope_includes: "AI software platforms, machine learning, NLP, computer vision, AI services and consulting"
+    scope_excludes: "AI-specific hardware (GPUs, TPUs), cloud infrastructure CapEx dedicated to AI"
+    methodology_notes: "Bottom-up vendor survey. 2024 actual estimate. Upweight 1.15x for hardware/infra."
+    source_url: "https://www.grandviewresearch.com/industry-analysis/artificial-intelligence-ai-market"
+    confidence: "medium"
+
+  # ============================================================
+  # Statista — AI Market Outlook (scope_coefficient = 0.85)
+  # Partial: enterprise AI software + services + hardware, excludes pure cloud infra CapEx
+  # ============================================================
+
+  - source_firm: "Statista"
+    report_name: "Artificial Intelligence Market Outlook 2019"
+    publication_year: 2019
+    estimate_year: 2018
+    segment: "total"
+    as_published_usd_billions: 9.5
+    currency: "nominal_usd"
+    scope_includes: "enterprise AI software, AI services, AI hardware — aggregates multiple vendor surveys"
+    scope_excludes: "pure cloud infrastructure CapEx, some emerging market segments"
+    methodology_notes: "Statista aggregation of multiple published reports. Methodology varies by edition."
+    source_url: "https://www.statista.com/statistics/607716/worldwide-artificial-intelligence-market-revenues/"
+    confidence: "medium"
+
+  - source_firm: "Statista"
+    report_name: "Artificial Intelligence Market Outlook 2021"
+    publication_year: 2021
+    estimate_year: 2020
+    segment: "total"
+    as_published_usd_billions: 57.6
+    currency: "nominal_usd"
+    scope_includes: "enterprise AI software, AI services, AI hardware — aggregates multiple vendor surveys"
+    scope_excludes: "pure cloud infrastructure CapEx, some emerging market segments"
+    methodology_notes: "Statista aggregation. COVID-adjusted estimate. Multiple sources blended."
+    source_url: "https://www.statista.com/statistics/607716/worldwide-artificial-intelligence-market-revenues/"
+    confidence: "medium"
+
+  - source_firm: "Statista"
+    report_name: "Artificial Intelligence Market Outlook 2022"
+    publication_year: 2022
+    estimate_year: 2021
+    segment: "total"
+    as_published_usd_billions: 95.6
+    currency: "nominal_usd"
+    scope_includes: "enterprise AI software, AI services, AI hardware — aggregates multiple vendor surveys"
+    scope_excludes: "pure cloud infrastructure CapEx, some emerging market segments"
+    methodology_notes: "Statista aggregation of multiple published reports."
+    source_url: "https://www.statista.com/statistics/607716/worldwide-artificial-intelligence-market-revenues/"
+    confidence: "medium"
+
+  - source_firm: "Statista"
+    report_name: "Artificial Intelligence Market Outlook 2023"
+    publication_year: 2023
+    estimate_year: 2023
+    segment: "total"
+    as_published_usd_billions: 207.0
+    currency: "nominal_usd"
+    scope_includes: "enterprise AI software, AI services, AI hardware — aggregates multiple vendor surveys"
+    scope_excludes: "pure cloud infrastructure CapEx, some emerging market segments"
+    methodology_notes: "Statista 2023 market estimate. Aggregation of published vendor surveys and analyst reports."
+    source_url: "https://www.statista.com/statistics/607716/worldwide-artificial-intelligence-market-revenues/"
+    confidence: "medium"
+
+  - source_firm: "Statista"
+    report_name: "Artificial Intelligence Market Outlook 2024"
+    publication_year: 2024
+    estimate_year: 2024
+    segment: "total"
+    as_published_usd_billions: 305.9
+    currency: "nominal_usd"
+    scope_includes: "enterprise AI software, AI services, AI hardware — aggregates multiple vendor surveys"
+    scope_excludes: "pure cloud infrastructure CapEx, some emerging market segments"
+    methodology_notes: "Statista 2024 estimate. AI market growing faster than prior editions projected."
+    source_url: "https://www.statista.com/statistics/607716/worldwide-artificial-intelligence-market-revenues/"
+    confidence: "medium"
+
+  - source_firm: "Statista"
+    report_name: "Artificial Intelligence Market Forecast 2030"
+    publication_year: 2024
+    estimate_year: 2030
+    segment: "total"
+    as_published_usd_billions: 1847.0
+    currency: "nominal_usd"
+    scope_includes: "enterprise AI software, AI services, AI hardware — aggregates multiple vendor surveys"
+    scope_excludes: "pure cloud infrastructure CapEx, some emerging market segments"
+    methodology_notes: "Long-horizon forecast from 2024 edition. High uncertainty range. Apply 0.85x coefficient."
+    source_url: "https://www.statista.com/statistics/607716/worldwide-artificial-intelligence-market-revenues/"
+    confidence: "low"
+
+  - source_firm: "Statista"
+    report_name: "Artificial Intelligence Market Outlook 2025"
+    publication_year: 2025
+    estimate_year: 2025
+    segment: "total"
+    as_published_usd_billions: 391.0
+    currency: "nominal_usd"
+    scope_includes: "enterprise AI software, AI services, AI hardware — aggregates multiple vendor surveys"
+    scope_excludes: "pure cloud infrastructure CapEx, some emerging market segments"
+    methodology_notes: "Statista 2025 estimate. GenAI adoption driving rapid growth."
+    source_url: "https://www.statista.com/statistics/607716/worldwide-artificial-intelligence-market-revenues/"
+    confidence: "medium"
+
+  # ============================================================
+  # Goldman Sachs — GenAI Market Map (scope_coefficient = 0.70)
+  # Partial: generative AI infrastructure, GenAI software, AI services (GenAI subset)
+  # ============================================================
+
+  - source_firm: "Goldman Sachs"
+    report_name: "Generative AI: A Market Map 2023"
+    publication_year: 2023
+    estimate_year: 2023
+    segment: "total"
+    as_published_usd_billions: 90.0
+    currency: "nominal_usd"
+    scope_includes: "generative AI infrastructure (GPU compute), GenAI software platforms, AI services focused on generative models"
+    scope_excludes: "traditional ML/AI software pre-dating LLM era, enterprise AI tools not using generative models"
+    methodology_notes: "Goldman Sachs Research. Generative AI subset only. Not comparable to full AI market estimates."
+    source_url: "https://www.goldmansachs.com/intelligence/pages/generative-ai-a-market-map.html"
+    confidence: "high"
+
+  - source_firm: "Goldman Sachs"
+    report_name: "Generative AI: Too Much Spend, Too Little Benefit? 2024"
+    publication_year: 2024
+    estimate_year: 2024
+    segment: "total"
+    as_published_usd_billions: 130.0
+    currency: "nominal_usd"
+    scope_includes: "generative AI infrastructure (GPU compute), GenAI software, AI services for generative models"
+    scope_excludes: "traditional ML/AI software, enterprise AI tools not using generative models"
+    methodology_notes: "Goldman Sachs Research 2024 follow-up. Updated GenAI spend estimate. Apply 0.70x for full AI market."
+    source_url: "https://www.goldmansachs.com/intelligence/pages/gen-ai-too-much-spend-too-little-benefit.html"
+    confidence: "high"
+
+  - source_firm: "Goldman Sachs"
+    report_name: "Goldman Sachs AI Infrastructure Forecast 2025"
+    publication_year: 2024
+    estimate_year: 2025
+    segment: "total"
+    as_published_usd_billions: 150.0
+    currency: "nominal_usd"
+    scope_includes: "generative AI infrastructure (GPU compute), GenAI software, AI services"
+    scope_excludes: "traditional ML/AI software pre-dating LLM era"
+    methodology_notes: "Goldman 2025 forecast from 2024 publication. GenAI focus. Apply 0.70x for full scope."
+    source_url: "https://www.goldmansachs.com/intelligence/pages/gen-ai-too-much-spend-too-little-benefit.html"
+    confidence: "medium"
+
+  - source_firm: "Goldman Sachs"
+    report_name: "Goldman Sachs AI Hardware Market 2023"
+    publication_year: 2023
+    estimate_year: 2023
+    segment: "ai_hardware"
+    as_published_usd_billions: 45.0
+    currency: "nominal_usd"
+    scope_includes: "AI accelerators (NVIDIA H100, A100), AI-specific chip revenue for data center training/inference"
+    scope_excludes: "general-purpose GPUs for gaming, consumer GPU market"
+    methodology_notes: "Goldman hardware desk estimates. NVIDIA Data Center revenue proxy + AMD estimates."
+    source_url: "https://www.goldmansachs.com/intelligence/pages/generative-ai-a-market-map.html"
+    confidence: "high"
+
+  # ============================================================
+  # Bloomberg Intelligence — GenAI Market (scope_coefficient = 0.90)
+  # Partial: enterprise GenAI software/services + hyperscaler AI infra CapEx + AI chips
+  # ============================================================
+
+  - source_firm: "Bloomberg Intelligence"
+    report_name: "Generative AI: Too Much Spend, Too Little Benefit? 2024"
+    publication_year: 2024
+    estimate_year: 2024
+    segment: "total"
+    as_published_usd_billions: 185.0
+    currency: "nominal_usd"
+    scope_includes: "enterprise generative AI software and services, AI infrastructure CapEx by hyperscalers, AI chip revenue"
+    scope_excludes: "traditional analytics and ML tools, AI-adjacent software without generative components"
+    methodology_notes: "Bloomberg Intelligence estimate. GenAI-focused but broad infrastructure inclusion. Apply 0.90x."
+    source_url: "https://www.bloomberg.com/professional/blog/generative-ai-market-size/"
+    confidence: "high"
+
+  - source_firm: "Bloomberg Intelligence"
+    report_name: "Bloomberg Intelligence GenAI Forecast 2025"
+    publication_year: 2025
+    estimate_year: 2025
+    segment: "total"
+    as_published_usd_billions: 272.0
+    currency: "nominal_usd"
+    scope_includes: "enterprise generative AI software and services, AI infrastructure CapEx by hyperscalers, AI chip revenue"
+    scope_excludes: "traditional analytics and ML tools, AI-adjacent software without generative components"
+    methodology_notes: "Bloomberg 2025 update. GenAI adoption accelerating. Apply 0.90x coefficient."
+    source_url: "https://www.bloomberg.com/professional/blog/generative-ai-market-size/"
+    confidence: "medium"
+
+  - source_firm: "Bloomberg Intelligence"
+    report_name: "Bloomberg GenAI Long-term Forecast to 2032"
+    publication_year: 2024
+    estimate_year: 2032
+    segment: "total"
+    as_published_usd_billions: 1300.0
+    currency: "nominal_usd"
+    scope_includes: "enterprise generative AI software and services, AI infrastructure CapEx, AI chip revenue"
+    scope_excludes: "traditional analytics and ML tools without generative components"
+    methodology_notes: "Long-horizon forecast. Very high uncertainty. Apply 0.90x scope coefficient."
+    source_url: "https://www.bloomberg.com/professional/blog/generative-ai-market-size/"
+    confidence: "low"
+
+  # ============================================================
+  # McKinsey Global Institute — Economic Potential (scope_coefficient = 0.25)
+  # Broad economic value (not pure market size) — requires heavy normalization
+  # ============================================================
+
+  - source_firm: "McKinsey Global Institute"
+    report_name: "The Economic Potential of Generative AI 2023"
+    publication_year: 2023
+    estimate_year: 2023
+    segment: "total"
+    as_published_usd_billions: 4400.0
+    currency: "nominal_usd"
+    scope_includes: "generative AI economic value across all sectors: productivity gains, AI-enabled output, technology spend combined"
+    scope_excludes: "nothing — includes both direct technology spend AND broader economic value creation"
+    methodology_notes: "McKinsey economic potential estimate. NOT a market size estimate. Apply 0.25x to extract tech-spend component."
+    source_url: "https://www.mckinsey.com/capabilities/mckinsey-digital/our-insights/the-economic-potential-of-generative-ai"
+    confidence: "medium"
+
+  - source_firm: "McKinsey Global Institute"
+    report_name: "The State of AI in 2023"
+    publication_year: 2023
+    estimate_year: 2022
+    segment: "total"
+    as_published_usd_billions: 91.9
+    currency: "nominal_usd"
+    scope_includes: "AI technology spend, AI software adoption, AI services — narrower McKinsey market estimate (separate from economic value)"
+    scope_excludes: "broader economic productivity gains, speculative AI-enabled revenue uplift"
+    methodology_notes: "McKinsey State of AI survey-based estimate. Narrower than their economic potential figure. Apply 0.25x."
+    source_url: "https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai-in-2023-generative-ais-breakout-year"
+    confidence: "medium"
+
+  - source_firm: "McKinsey Global Institute"
+    report_name: "The Economic Potential of Generative AI — 2030 Forecast"
+    publication_year: 2023
+    estimate_year: 2030
+    segment: "total"
+    as_published_usd_billions: 7900.0
+    currency: "nominal_usd"
+    scope_includes: "generative AI economic value across all sectors including productivity gains and technology spend"
+    scope_excludes: "nothing — broadest economic value definition"
+    methodology_notes: "MGI 2030 economic value potential. Very high uncertainty. Apply 0.25x. Use as upper-bound sensitivity only."
+    source_url: "https://www.mckinsey.com/capabilities/mckinsey-digital/our-insights/the-economic-potential-of-generative-ai"
+    confidence: "low"
+
+  - source_firm: "McKinsey Global Institute"
+    report_name: "The State of AI 2024 — AI Adoption Report"
+    publication_year: 2024
+    estimate_year: 2024
+    segment: "total"
+    as_published_usd_billions: 1000.0
+    currency: "nominal_usd"
+    scope_includes: "AI technology spend and economic value capture — blended estimate from State of AI 2024"
+    scope_excludes: "broader speculative productivity gains"
+    methodology_notes: "McKinsey 2024 AI adoption report. Blended spend + value estimate. Apply 0.25x coefficient."
+    source_url: "https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai"
+    confidence: "medium"
+
+  # ============================================================
+  # CB Insights — State of AI Report (scope_coefficient = 0.95)
+  # Close to our scope: AI software companies + AI infrastructure + AI hardware
+  # ============================================================
+
+  - source_firm: "CB Insights"
+    report_name: "State of AI Report 2019"
+    publication_year: 2019
+    estimate_year: 2018
+    segment: "total"
+    as_published_usd_billions: 12.0
+    currency: "nominal_usd"
+    scope_includes: "AI software companies (SaaS, API), AI infrastructure providers, AI hardware — based on funding and revenue data"
+    scope_excludes: "consumer AI embedded products, large diversified tech companies counted on full revenue basis"
+    methodology_notes: "CB Insights company-level data aggregation. Bottom-up from disclosed revenues and funding data."
+    source_url: "https://www.cbinsights.com/research/artificial-intelligence-top-startups/"
+    confidence: "medium"
+
+  - source_firm: "CB Insights"
+    report_name: "State of AI Report 2021"
+    publication_year: 2021
+    estimate_year: 2020
+    segment: "total"
+    as_published_usd_billions: 37.5
+    currency: "nominal_usd"
+    scope_includes: "AI software companies (SaaS, API), AI infrastructure providers, AI hardware — based on funding and revenue data"
+    scope_excludes: "consumer AI embedded products, large diversified tech companies on full revenue basis"
+    methodology_notes: "CB Insights company-level aggregation. COVID year. Some segments show slower growth."
+    source_url: "https://www.cbinsights.com/research/report/ai-trends/"
+    confidence: "medium"
+
+  - source_firm: "CB Insights"
+    report_name: "State of AI Report 2022"
+    publication_year: 2022
+    estimate_year: 2021
+    segment: "total"
+    as_published_usd_billions: 62.5
+    currency: "nominal_usd"
+    scope_includes: "AI software companies (SaaS, API), AI infrastructure providers, AI hardware — based on funding and revenue data"
+    scope_excludes: "consumer AI embedded products, large diversified tech companies on full revenue basis"
+    methodology_notes: "CB Insights company-level aggregation. Strong VC/PE activity inflating 2021 cohort."
+    source_url: "https://www.cbinsights.com/research/report/ai-trends-q4-2021/"
+    confidence: "medium"
+
+  - source_firm: "CB Insights"
+    report_name: "State of AI Report 2023"
+    publication_year: 2023
+    estimate_year: 2023
+    segment: "total"
+    as_published_usd_billions: 94.5
+    currency: "nominal_usd"
+    scope_includes: "AI software companies (SaaS, API), AI infrastructure providers, AI hardware — based on funding and revenue data"
+    scope_excludes: "consumer AI embedded products, large diversified tech companies on full revenue basis"
+    methodology_notes: "CB Insights bottom-up from company disclosures. GenAI explosion captured."
+    source_url: "https://www.cbinsights.com/research/report/ai-trends-2023/"
+    confidence: "high"
+
+  - source_firm: "CB Insights"
+    report_name: "State of AI Report 2024"
+    publication_year: 2024
+    estimate_year: 2024
+    segment: "total"
+    as_published_usd_billions: 130.0
+    currency: "nominal_usd"
+    scope_includes: "AI software companies (SaaS, API), AI infrastructure providers, AI hardware — based on funding and revenue data"
+    scope_excludes: "consumer AI embedded products, large diversified tech companies on full revenue basis"
+    methodology_notes: "CB Insights 2024 estimate. Company-level aggregation from disclosed revenues."
+    source_url: "https://www.cbinsights.com/research/report/ai-trends-2024/"
+    confidence: "medium"
+
+  - source_firm: "CB Insights"
+    report_name: "State of AI Forecast 2025"
+    publication_year: 2024
+    estimate_year: 2025
+    segment: "total"
+    as_published_usd_billions: 200.0
+    currency: "nominal_usd"
+    scope_includes: "AI software companies (SaaS, API), AI infrastructure providers, AI hardware — based on company-level data"
+    scope_excludes: "consumer AI embedded products, large diversified tech companies on full revenue basis"
+    methodology_notes: "CB Insights 2025 forecast from 2024 publication. GenAI adoption driving estimate revision upward."
+    source_url: "https://www.cbinsights.com/research/report/ai-trends-2024/"
+    confidence: "medium"
+
+  - source_firm: "CB Insights"
+    report_name: "State of AI Report 2025"
+    publication_year: 2025
+    estimate_year: 2025
+    segment: "total"
+    as_published_usd_billions: 218.0
+    currency: "nominal_usd"
+    scope_includes: "AI software companies (SaaS, API), AI infrastructure providers, AI hardware — based on company-level data"
+    scope_excludes: "consumer AI embedded products, large diversified tech companies on full revenue basis"
+    methodology_notes: "CB Insights 2025 estimate. GenAI scale-up captured in company revenue data."
+    source_url: "https://www.cbinsights.com/research/report/ai-trends-2025/"
+    confidence: "medium"
+
+  # ============================================================
+  # Per-segment breakdown entries (where published explicitly)
+  # These supplement total market estimates with segment-level detail
+  # ============================================================
+
+  # AI Hardware segment entries
+  - source_firm: "IDC"
+    report_name: "Worldwide Semiconductor Tracker 2024 — AI GPU Segment"
+    publication_year: 2024
+    estimate_year: 2023
+    segment: "ai_hardware"
+    as_published_usd_billions: 49.5
+    currency: "nominal_usd"
+    scope_includes: "AI accelerators (NVIDIA H100/A100, AMD Instinct, Google TPUs, AWS Trainium)"
+    scope_excludes: "general-purpose CPUs, gaming GPUs, consumer electronics chips"
+    methodology_notes: "IDC semiconductor tracker AI GPU sub-segment. NVIDIA Data Center ~$40B + AMD + Google estimates."
+    source_url: "https://www.idc.com/getdoc.jsp?containerId=prUS52117524"
+    confidence: "high"
+
+  - source_firm: "Statista"
+    report_name: "AI Chips Market Size 2024"
+    publication_year: 2024
+    estimate_year: 2023
+    segment: "ai_hardware"
+    as_published_usd_billions: 42.0
+    currency: "nominal_usd"
+    scope_includes: "AI-specific chips including GPUs, TPUs, FPGAs, ASICs for AI workloads"
+    scope_excludes: "general-purpose chips, consumer GPU market"
+    methodology_notes: "Statista AI chip sub-segment estimate. Multiple vendor sources aggregated."
+    source_url: "https://www.statista.com/statistics/1006840/global-artificial-intelligence-chip-market-size/"
+    confidence: "medium"
+
+  - source_firm: "Grand View Research"
+    report_name: "AI Chip Market Size Report 2025"
+    publication_year: 2025
+    estimate_year: 2024
+    segment: "ai_hardware"
+    as_published_usd_billions: 87.0
+    currency: "nominal_usd"
+    scope_includes: "AI accelerators, AI-specific ASICs, GPUs for AI training and inference"
+    scope_excludes: "general-purpose CPUs, consumer GPUs not primarily used for AI"
+    methodology_notes: "Grand View AI chip sub-segment. NVIDIA Data Center dominates at ~65% share."
+    source_url: "https://www.grandviewresearch.com/industry-analysis/artificial-intelligence-chip-market"
+    confidence: "medium"
+
+  # AI Infrastructure segment entries
+  - source_firm: "IDC"
+    report_name: "Worldwide Cloud AI Infrastructure Tracker 2024"
+    publication_year: 2024
+    estimate_year: 2023
+    segment: "ai_infrastructure"
+    as_published_usd_billions: 71.5
+    currency: "nominal_usd"
+    scope_includes: "Cloud compute dedicated to AI workloads (hyperscaler GPU clusters, AI-specific data center build-out)"
+    scope_excludes: "general cloud compute not primarily AI, on-premise non-AI data center infrastructure"
+    methodology_notes: "IDC cloud tracker AI sub-segment. AWS/Azure/GCP AI-dedicated compute only."
+    source_url: "https://www.idc.com/getdoc.jsp?containerId=prUS52117524"
+    confidence: "medium"
+
+  - source_firm: "Goldman Sachs"
+    report_name: "AI Infrastructure CapEx Report 2024"
+    publication_year: 2024
+    estimate_year: 2024
+    segment: "ai_infrastructure"
+    as_published_usd_billions: 115.0
+    currency: "nominal_usd"
+    scope_includes: "Hyperscaler AI CapEx (data centers, networking, cooling for AI workloads), AI cloud compute revenue"
+    scope_excludes: "General-purpose data center CapEx not dedicated to AI, on-premise IT"
+    methodology_notes: "Goldman hyperscaler AI capex tracking. MSFT + Google + Amazon + Meta combined AI infra spend."
+    source_url: "https://www.goldmansachs.com/intelligence/pages/generative-ai-a-market-map.html"
+    confidence: "high"
+
+  # AI Software segment entries
+  - source_firm: "IDC"
+    report_name: "Worldwide AI Software Tracker 2024"
+    publication_year: 2024
+    estimate_year: 2023
+    segment: "ai_software"
+    as_published_usd_billions: 64.5
+    currency: "nominal_usd"
+    scope_includes: "AI software platforms, foundation model APIs, enterprise AI SaaS, AI development tools"
+    scope_excludes: "AI-adjacent enterprise software with AI features added post-hoc"
+    methodology_notes: "IDC AI software sub-segment from Spending Guide breakdown."
+    source_url: "https://www.idc.com/getdoc.jsp?containerId=prUS52117524"
+    confidence: "medium"
+
+  - source_firm: "CB Insights"
+    report_name: "Generative AI Software Market 2024"
+    publication_year: 2024
+    estimate_year: 2024
+    segment: "ai_software"
+    as_published_usd_billions: 70.0
+    currency: "nominal_usd"
+    scope_includes: "GenAI-native software companies, foundation model APIs (OpenAI, Anthropic, Google DeepMind), AI coding tools, AI enterprise SaaS"
+    scope_excludes: "Traditional ML platforms, BI/analytics tools with AI features"
+    methodology_notes: "CB Insights GenAI software sub-segment. Rapid growth driven by OpenAI/Anthropic API revenue."
+    source_url: "https://www.cbinsights.com/research/report/ai-trends-2024/"
+    confidence: "medium"
+
+  # AI Adoption segment entries
+  - source_firm: "IDC"
+    report_name: "Worldwide Enterprise AI Adoption Spending 2024"
+    publication_year: 2024
+    estimate_year: 2023
+    segment: "ai_adoption"
+    as_published_usd_billions: 21.5
+    currency: "nominal_usd"
+    scope_includes: "Enterprise AI deployment spend: integration, customization, AI consulting, change management for AI adoption"
+    scope_excludes: "Pure software licensing (counted in ai_software), hardware purchases (ai_hardware)"
+    methodology_notes: "IDC enterprise adoption sub-segment. Consulting + services for AI deployment only."
+    source_url: "https://www.idc.com/getdoc.jsp?containerId=prUS52117524"
+    confidence: "medium"
+
+  - source_firm: "McKinsey Global Institute"
+    report_name: "The State of AI 2024 — Enterprise Adoption"
+    publication_year: 2024
+    estimate_year: 2024
+    segment: "ai_adoption"
+    as_published_usd_billions: 35.0
+    currency: "nominal_usd"
+    scope_includes: "Enterprise AI deployment spend, AI integration costs, AI-specific IT consulting"
+    scope_excludes: "AI software licensing, AI hardware purchases, broader economic value from AI"
+    methodology_notes: "McKinsey enterprise adoption estimate from State of AI 2024. Survey-based with revenue extrapolation."
+    source_url: "https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai"
+    confidence: "medium"
