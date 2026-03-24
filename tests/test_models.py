@@ -381,3 +381,86 @@ class TestResiduals:
         assert sw_df["year"].min() == start_year, (
             f"Expected first year={start_year}, got {sw_df['year'].min()}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Task 3: TestLightGBMv11
+# ---------------------------------------------------------------------------
+
+
+class TestLightGBMv11:
+    """Tests for v1.1 LightGBM feature matrix update (MACRO_FEATURE_COLS, backward compat)."""
+
+    def test_lgbm_feature_cols_includes_macro(self):
+        """MACRO_FEATURE_COLS exists and has length <= 4 (9-obs constraint guard)."""
+        from src.models.ml.gradient_boost import MACRO_FEATURE_COLS
+
+        assert isinstance(MACRO_FEATURE_COLS, list), (
+            f"Expected MACRO_FEATURE_COLS to be a list, got {type(MACRO_FEATURE_COLS)}"
+        )
+        assert len(MACRO_FEATURE_COLS) >= 1, "MACRO_FEATURE_COLS must have at least 1 entry"
+        assert len(MACRO_FEATURE_COLS) <= 4, (
+            f"MACRO_FEATURE_COLS has {len(MACRO_FEATURE_COLS)} entries — exceeds 4-indicator "
+            "limit for N=9 observations (overfitting guard)"
+        )
+
+    def test_build_residual_features_backward_compat(self):
+        """build_residual_features without macro_df returns base FEATURE_COLS only."""
+        from src.models.ml.gradient_boost import build_residual_features, FEATURE_COLS
+
+        rng = np.random.default_rng(42)
+        df = pd.DataFrame({
+            "year": list(range(2010, 2020)) * 2,
+            "segment": ["ai_hardware"] * 10 + ["ai_software"] * 10,
+            "residual": rng.standard_normal(20),
+            "model_type": ["ARIMA"] * 20,
+        })
+
+        result = build_residual_features(df)
+
+        # All base FEATURE_COLS must be present
+        for col in FEATURE_COLS:
+            assert col in result.columns, (
+                f"Expected base feature column '{col}' in result, got: {list(result.columns)}"
+            )
+
+        # No macro columns should be present (macro_df was not passed)
+        from src.models.ml.gradient_boost import MACRO_FEATURE_COLS
+        for col in MACRO_FEATURE_COLS:
+            assert col not in result.columns, (
+                f"Macro column '{col}' should not be present when macro_df=None"
+            )
+
+    def test_build_residual_features_with_macro_df(self):
+        """build_residual_features merges macro_df columns into feature matrix."""
+        from src.models.ml.gradient_boost import build_residual_features, FEATURE_COLS
+
+        rng = np.random.default_rng(42)
+        years = list(range(2010, 2025))
+        df = pd.DataFrame({
+            "year": years * 2,
+            "segment": ["ai_hardware"] * len(years) + ["ai_software"] * len(years),
+            "residual": rng.standard_normal(len(years) * 2),
+            "model_type": ["Prophet"] * (len(years) * 2),
+        })
+
+        # Build synthetic macro_df indexed by year
+        macro_df = pd.DataFrame(
+            {"rd_pct_gdp": rng.standard_normal(len(years))},
+            index=pd.RangeIndex(start=2010, stop=2025),
+        )
+
+        result = build_residual_features(df, macro_df=macro_df)
+
+        # Base features still present
+        for col in FEATURE_COLS:
+            assert col in result.columns, f"Missing base feature column: {col}"
+
+        # Macro column merged
+        assert "rd_pct_gdp" in result.columns, (
+            "Expected 'rd_pct_gdp' in result after macro_df merge"
+        )
+        # No NaN in macro column after ffill/bfill
+        assert not result["rd_pct_gdp"].isna().any(), (
+            "NaN values in rd_pct_gdp after merge/fill"
+        )
