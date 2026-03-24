@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Model Credibility & Usability
 status: planning
-stopped_at: Completed 10-02-PLAN.md
-last_updated: "2026-03-24T14:45:47.383Z"
+stopped_at: Completed 10-03-PLAN.md
+last_updated: "2026-03-24T14:46:02.527Z"
 last_activity: 2026-03-23 — v1.1 roadmap created (Phases 8-11)
 progress:
   total_phases: 4
@@ -60,6 +60,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 09 P03 | 1200 | 3 tasks | 10 files |
 | Phase 10 P01 | 198 | 2 tasks | 8 files |
 | Phase 10 P02 | 6 | 2 tasks | 5 files |
+| Phase 10 P03 | 325 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,8 @@ Recent decisions affecting current work:
 - [Phase 10]: BUNDLED_SEGMENT_COMPANIES now 7 companies: both Accenture (AI consulting) and Salesforce (Einstein/Agentforce) included in Phase 10 attribution
 - [Phase 10]: attribution_subsegment_ratios in ai.yaml: cloud hyperscalers 90/10 infra/sw split; NVIDIA 80/20 chip/infra; Meta 85/15 adoption/sw
 - [Phase 10]: Registry has 15 companies not 14: ai.yaml edgar_companies has 15 CIKs (4 chip + 4 cloud including Oracle + 4 software + 3 adoption)
+- [Phase 10]: Private company valuation registry: 18 companies (6 HIGH/7 MEDIUM/5 LOW) with comparable EV/ARR multiples; implied_ev ordering invariant enforced programmatically before Parquet write
+- [Phase 10]: apply_comparable_multiples is a pure function for ARR re-estimation without full recompilation; pipeline Steps 8+9 both wired with try/except isolation
 
 ### Pending Todos
 
@@ -108,6 +111,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T14:45:42.738Z
-Stopped at: Completed 10-02-PLAN.md
+Last session: 2026-03-24T14:46:02.524Z
+Stopped at: Completed 10-03-PLAN.md
 Resume file: None
