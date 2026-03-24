@@ -88,12 +88,12 @@ class TestAttributionRegistry:
         with pytest.raises(Exception):  # pandera.errors.SchemaError
             ATTRIBUTION_SCHEMA.validate(df)
 
-    def test_yaml_has_14_entries(self):
-        """YAML registry must have exactly 14 entries for all EDGAR companies."""
+    def test_yaml_has_all_edgar_entries(self):
+        """YAML registry must have entries for all 15 EDGAR companies in ai.yaml."""
         with open(REGISTRY_PATH, "r") as f:
             registry = yaml.safe_load(f)
         entries = registry["entries"]
-        assert len(entries) == 14, f"Expected 14 entries, got {len(entries)}"
+        assert len(entries) == 15, f"Expected 15 entries (all EDGAR companies), got {len(entries)}"
 
 
 class TestLoadAttributionRegistry:
@@ -189,13 +189,13 @@ class TestCompileAttribution:
         assert output_path.exists(), f"Parquet file not found at {output_path}"
         assert output_path.name == "revenue_attribution_ai.parquet"
 
-    def test_compile_attribution_has_14_rows(self):
-        """Compiled Parquet has exactly 14 company rows."""
+    def test_compile_attribution_has_15_rows(self):
+        """Compiled Parquet has 15 company rows (all EDGAR companies in ai.yaml)."""
         from src.processing.revenue_attribution import compile_and_write_attribution
 
         output_path = compile_and_write_attribution("ai")
         df = pd.read_parquet(output_path)
-        assert len(df) == 14, f"Expected 14 rows, got {len(df)}"
+        assert len(df) == 15, f"Expected 15 rows, got {len(df)}"
 
     def test_compile_attribution_passes_schema(self):
         """Compiled Parquet DataFrame validates against ATTRIBUTION_SCHEMA."""
@@ -204,7 +204,7 @@ class TestCompileAttribution:
         output_path = compile_and_write_attribution("ai")
         df = pd.read_parquet(output_path)
         validated = ATTRIBUTION_SCHEMA.validate(df)
-        assert len(validated) == 14
+        assert len(validated) == 15
 
     def test_compile_attribution_no_null_uncertainty(self):
         """Compiled Parquet has no null uncertainty_low or uncertainty_high."""

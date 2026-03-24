@@ -49,6 +49,63 @@ entries:
     notes: "NVIDIA Data Center segment is effectively all AI GPU revenue in FY2025; includes HGX systems, DGX, networking (InfiniBand/NVLink). FY2025 = fiscal year ending Jan 2025."
 
   # ============================================================
+  # AMD — analogue_ratio (Data Center segment ~60% AI GPUs)
+  # Data Center segment is largest but includes non-AI server CPU/GPU.
+  # ============================================================
+
+  - company_name: "Advanced Micro Devices Inc."
+    cik: "0000002488"
+    value_chain_layer: "chip"
+    ai_revenue_usd_billions: 5.0
+    attribution_method: "analogue_ratio"
+    ratio_source: "AMD FY2024 earnings + analyst estimates (Data Center ~60% AI GPU mix)"
+    vintage_date: "2025-01-28"
+    uncertainty_low: 4.0
+    uncertainty_high: 6.5
+    segment: "ai_hardware"
+    year: 2024
+    estimated_flag: true
+    notes: "AMD Data Center segment ~$12.6B in FY2024. AI GPU (MI300X) portion estimated at ~40% of Data Center revenue based on EPYC/AI mix commentary from earnings; wide bounds reflect uncertainty in AI GPU vs. server CPU split."
+
+  # ============================================================
+  # TSMC — analogue_ratio (HPC/AI ~45% of wafer revenue)
+  # HPC platform includes AI accelerators (Apple M-series, NVIDIA A100/H100 wafers).
+  # ============================================================
+
+  - company_name: "Taiwan Semiconductor Manufacturing Co."
+    cik: "0001046179"
+    value_chain_layer: "chip"
+    ai_revenue_usd_billions: 35.0
+    attribution_method: "analogue_ratio"
+    ratio_source: "TSMC FY2024 earnings + Morgan Stanley estimate (HPC/AI ~45% of revenue)"
+    vintage_date: "2025-01-16"
+    uncertainty_low: 28.0
+    uncertainty_high: 42.0
+    segment: "ai_hardware"
+    year: 2024
+    estimated_flag: true
+    notes: "TSMC total revenue ~$87B FY2024. HPC platform (AI accelerators + high-performance CPUs) estimated at ~45% based on platform revenue disclosures. AI GPU portion (NVIDIA H100/H200, AMD MI300X) is subset of HPC; bounds reflect structural uncertainty in AI vs. non-AI HPC split."
+
+  # ============================================================
+  # Intel — analogue_ratio (DCAI AI portion ~30%)
+  # Data Center and AI group includes both Xeon (non-AI) and Gaudi (AI).
+  # ============================================================
+
+  - company_name: "Intel Corporation"
+    cik: "0000050863"
+    value_chain_layer: "chip"
+    ai_revenue_usd_billions: 4.0
+    attribution_method: "analogue_ratio"
+    ratio_source: "Intel FY2024 earnings, DCAI segment (~30% AI GPU/Gaudi portion estimate)"
+    vintage_date: "2025-01-30"
+    uncertainty_low: 3.0
+    uncertainty_high: 5.5
+    segment: "ai_hardware"
+    year: 2024
+    estimated_flag: true
+    notes: "Intel DCAI total ~$12.8B FY2024. Gaudi AI accelerator revenue + AI-specific Xeon workloads estimated at ~30%. Gaudi 3 ramp in H2 2024 increased AI mix; wide bounds reflect early-stage product ramp uncertainty."
+
+  # ============================================================
   # Microsoft — management_commentary (AI run rate disclosure)
   # Satya Nadella $13B AI annual run rate (FY2024 Q4 earnings).
   # ============================================================
@@ -68,6 +125,63 @@ entries:
     notes: "Azure AI + Copilot combined run rate. Does not separate Azure AI infrastructure from total Azure cloud. Sub-segment splits in attribution_subsegment_ratios: 85% infra / 15% software."
 
   # ============================================================
+  # Alphabet — management_commentary (Google Cloud AI)
+  # AI infrastructure includes Vertex AI, TPU rentals, Gemini APIs.
+  # ============================================================
+
+  - company_name: "Alphabet Inc."
+    cik: "0001652044"
+    value_chain_layer: "cloud"
+    ai_revenue_usd_billions: 8.0
+    attribution_method: "management_commentary"
+    ratio_source: "Alphabet FY2024 Q3 earnings + Bernstein estimate (Google Cloud AI portion)"
+    vintage_date: "2024-10-29"
+    uncertainty_low: 6.0
+    uncertainty_high: 11.0
+    segment: "ai_infrastructure"
+    year: 2024
+    estimated_flag: true
+    notes: "Google Cloud total revenue ~$36B FY2024. AI-specific portion (Vertex AI, TPU cloud, Gemini API) estimated at ~22% of Google Cloud based on Bernstein research. Sundar Pichai commentary on 'significant AI infrastructure demand' provides floor."
+
+  # ============================================================
+  # Amazon — management_commentary (AWS AI services)
+  # AWS AI includes SageMaker, Bedrock, Trainium/Inferentia cloud rentals.
+  # ============================================================
+
+  - company_name: "Amazon.com Inc."
+    cik: "0001018724"
+    value_chain_layer: "cloud"
+    ai_revenue_usd_billions: 10.0
+    attribution_method: "management_commentary"
+    ratio_source: "Amazon FY2024 earnings + UBS estimate (AWS AI services run rate)"
+    vintage_date: "2025-02-06"
+    uncertainty_low: 7.5
+    uncertainty_high: 14.0
+    segment: "ai_infrastructure"
+    year: 2024
+    estimated_flag: true
+    notes: "AWS total revenue ~$108B FY2024. AI-specific services (Bedrock, SageMaker, Trainium) estimated at ~9% of AWS. Andy Jassy commentary on accelerating AI investment. Wide bounds reflect opaque sub-service disclosure."
+
+  # ============================================================
+  # Oracle — analogue_ratio (OCI AI ~30% of cloud revenue)
+  # OCI GPU clusters and Oracle AI Services are disclosed in aggregate.
+  # ============================================================
+
+  - company_name: "Oracle Corporation"
+    cik: "0001341439"
+    value_chain_layer: "cloud"
+    ai_revenue_usd_billions: 6.0
+    attribution_method: "analogue_ratio"
+    ratio_source: "Oracle FY2024 earnings + Jefferies estimate (OCI AI ~30% of cloud)"
+    vintage_date: "2024-09-09"
+    uncertainty_low: 4.5
+    uncertainty_high: 8.0
+    segment: "ai_infrastructure"
+    year: 2024
+    estimated_flag: true
+    notes: "Oracle Cloud Infrastructure total ~$19B FY2024 (ending May 2024). AI GPU cluster bookings driving hyper-growth. Jefferies estimates AI-specific OCI at ~30% of total; backlog of AI contracts ($12B+) provides forward confidence but FY2024 recognition is partial."
+
+  # ============================================================
   # Palantir — direct_disclosure (full revenue = AI platform revenue)
   # Pure-play enterprise AI software; all revenue attributable to AI.
   # ============================================================
@@ -85,3 +199,117 @@ entries:
     year: 2024
     estimated_flag: false
     notes: "Palantir is a pure-play AI software company. 100% of revenue is enterprise AI (AIP, Gotham, Foundry). Uncertainty bounds reflect ±5% on exact AI attribution (some legacy non-AI contracts exist but are immaterial)."
+
+  # ============================================================
+  # C3.ai — direct_disclosure (full revenue = AI application revenue)
+  # Pure-play enterprise AI application vendor.
+  # ============================================================
+
+  - company_name: "C3.ai Inc."
+    cik: "0001577552"
+    value_chain_layer: "application"
+    ai_revenue_usd_billions: 0.31
+    attribution_method: "direct_disclosure"
+    ratio_source: "C3.ai FY2024 10-K, total revenue"
+    vintage_date: "2024-06-03"
+    uncertainty_low: 0.29
+    uncertainty_high: 0.33
+    segment: "ai_software"
+    year: 2024
+    estimated_flag: false
+    notes: "C3.ai is a pure-play enterprise AI application company. Revenue = AI application subscriptions and usage. Fiscal year ending April 2024. Uncertainty bounds reflect ±5% rounding on exact attribution."
+
+  # ============================================================
+  # ServiceNow — analogue_ratio (Pro Plus AI SKU adoption)
+  # AI-specific revenue from Now Assist and Pro Plus tier.
+  # ============================================================
+
+  - company_name: "ServiceNow Inc."
+    cik: "0001373715"
+    value_chain_layer: "application"
+    ai_revenue_usd_billions: 1.5
+    attribution_method: "analogue_ratio"
+    ratio_source: "ServiceNow FY2024 earnings + BMO estimate (Pro Plus AI SKU adoption)"
+    vintage_date: "2025-01-29"
+    uncertainty_low: 1.0
+    uncertainty_high: 2.0
+    segment: "ai_software"
+    year: 2024
+    estimated_flag: true
+    notes: "ServiceNow total revenue ~$10.9B FY2024. Pro Plus AI SKU (Now Assist) launched mid-2024; penetration of existing customer base estimated at ~14% of subscription revenue per BMO Capital Markets. Bounds reflect early-adoption ramp uncertainty."
+
+  # ============================================================
+  # Salesforce — analogue_ratio (Agentforce + Einstein AI)
+  # AI-specific revenue from Einstein AI features and Agentforce platform.
+  # ============================================================
+
+  - company_name: "Salesforce Inc."
+    cik: "0001108524"
+    value_chain_layer: "application"
+    ai_revenue_usd_billions: 2.0
+    attribution_method: "analogue_ratio"
+    ratio_source: "Salesforce FY2024 earnings + analyst consensus (Agentforce + Einstein AI)"
+    vintage_date: "2024-12-04"
+    uncertainty_low: 1.5
+    uncertainty_high: 3.0
+    segment: "ai_software"
+    year: 2024
+    estimated_flag: true
+    notes: "Salesforce total revenue ~$35B FY2025 (ending Jan 2025). Einstein AI features are embedded across clouds; Agentforce launched Q4 FY2025. AI-attributed revenue estimated at ~6% based on premium AI tier pricing uplift and analyst consensus. Wide bounds reflect early Agentforce commercialization stage."
+
+  # ============================================================
+  # Meta — analogue_ratio (AI-driven ad targeting + Llama inference)
+  # AI attribution covers incremental ad revenue from AI ranking + Llama API.
+  # ============================================================
+
+  - company_name: "Meta Platforms Inc."
+    cik: "0001326801"
+    value_chain_layer: "end_market"
+    ai_revenue_usd_billions: 8.0
+    attribution_method: "analogue_ratio"
+    ratio_source: "Meta FY2024 Q3 earnings + internal estimates (AI-driven ad targeting + Llama)"
+    vintage_date: "2024-10-30"
+    uncertainty_low: 5.5
+    uncertainty_high: 11.0
+    segment: "ai_adoption"
+    year: 2024
+    estimated_flag: true
+    notes: "Meta total revenue ~$161B FY2024. AI attribution covers: (1) incremental ad revenue from AI-powered ranking models (~5% uplift on ad revenue), (2) Llama API/inference revenue (nascent). Wide bounds reflect difficulty attributing ad revenue improvements specifically to AI vs. overall ad market recovery."
+
+  # ============================================================
+  # IBM — management_commentary (watsonx + AI consulting)
+  # IBM reports AI-related bookings run rate quarterly.
+  # ============================================================
+
+  - company_name: "International Business Machines Corp."
+    cik: "0000051143"
+    value_chain_layer: "end_market"
+    ai_revenue_usd_billions: 3.5
+    attribution_method: "management_commentary"
+    ratio_source: "IBM FY2024 earnings call (generative AI bookings run rate)"
+    vintage_date: "2025-01-29"
+    uncertainty_low: 2.5
+    uncertainty_high: 5.0
+    segment: "ai_adoption"
+    year: 2024
+    estimated_flag: true
+    notes: "IBM disclosed $5B+ generative AI business run rate by Q4 2024 (cumulative bookings, not pure revenue). Recognized revenue estimated at ~70% of run rate based on consulting engagement cycle. Bounds reflect bookings-to-revenue conversion uncertainty."
+
+  # ============================================================
+  # Accenture — management_commentary (AI consulting bookings run rate)
+  # Accenture reports AI bookings quarterly; revenue lags bookings.
+  # ============================================================
+
+  - company_name: "Accenture plc"
+    cik: "0001281761"
+    value_chain_layer: "end_market"
+    ai_revenue_usd_billions: 3.0
+    attribution_method: "management_commentary"
+    ratio_source: "Accenture FY2024 Q4 earnings call (AI consulting bookings run rate)"
+    vintage_date: "2024-09-26"
+    uncertainty_low: 2.0
+    uncertainty_high: 4.5
+    segment: "ai_adoption"
+    year: 2024
+    estimated_flag: true
+    notes: "Accenture reported $3B+ in AI bookings in FY2024 (ending August 2024). Recognized revenue estimated at ~100% of bookings for consulting engagements given typical 12-month delivery cycle. Bounds reflect FY2024 vs FY2025 recognition timing uncertainty and definition of 'AI consulting' boundary."
