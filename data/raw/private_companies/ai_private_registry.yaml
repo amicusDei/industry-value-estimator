@@ -1,0 +1,103 @@
+# AI Private Company Valuation Registry
+# Hand-curated valuation inputs for major private AI companies.
+#
+# Purpose: Provides inputs for Plan 10-03 private_valuations.py.
+#          Each entry captures one company's EV estimate via comparable multiples.
+#
+# Valuation method: Comparable EV/Revenue multiples only (no DCF).
+# Multiple range: low/mid/high per company reflecting uncertainty.
+#
+# Confidence tiers:
+#   HIGH   — Recent funding round with known post-money valuation (crosscheck available)
+#   MEDIUM — Revenue estimate from credible press + comparable multiple (no direct round)
+#   LOW    — Revenue unknown; valuation inferred from funding/market signals only
+#
+# Schema per entry (all fields required):
+#   company_name: str                        — Company display name
+#   confidence_tier: str                     — HIGH / MEDIUM / LOW
+#   last_funding_valuation_usd_billions: float — Post-money valuation at last round
+#   funding_date: str                        — ISO date of last funding round
+#   estimated_arr_usd_billions: float        — Estimated ARR (press/secondary sources)
+#   arr_source: str                          — Source for ARR estimate
+#   comparable_low_multiple: float           — Low EV/ARR multiple from peer group
+#   comparable_mid_multiple: float           — Mid EV/ARR multiple (anchored to peers)
+#   comparable_high_multiple: float          — High EV/ARR multiple
+#   comparable_peer_group: str              — Description of comparable peer group
+#   implied_ev_low: float                   — estimated_arr * comparable_low_multiple
+#   implied_ev_mid: float                   — estimated_arr * comparable_mid_multiple
+#   implied_ev_high: float                  — estimated_arr * comparable_high_multiple
+#   segment: str                            — One of: ai_hardware, ai_infrastructure, ai_software, ai_adoption
+#   vintage_date: str                        — ISO date for this valuation estimate
+#
+# Pitfall guard: Multiple ranges must be 2025-2026 vintage (not 2021-2022 era peaks).
+# Reference: PitchBook Q4 2025 AI Comp Sheet: ~33x for pure-plays, ~7x for conglomerates.
+#
+# DO NOT MODIFY without updating vintage_date per entry.
+
+entries:
+
+  # ============================================================
+  # OpenAI — HIGH confidence (recent funding round at $157B post-money)
+  # ARR sourced from The Information (Q3 2024 press reporting).
+  # ============================================================
+
+  - company_name: "OpenAI"
+    confidence_tier: "HIGH"
+    last_funding_valuation_usd_billions: 157.0
+    funding_date: "2024-10-01"
+    estimated_arr_usd_billions: 3.4
+    arr_source: "The Information, 2024-09"
+    comparable_low_multiple: 25.0
+    comparable_mid_multiple: 40.0
+    comparable_high_multiple: 60.0
+    comparable_peer_group: "ai_software_pure_play"
+    implied_ev_low: 85.0
+    implied_ev_mid: 136.0
+    implied_ev_high: 204.0
+    segment: "ai_software"
+    vintage_date: "2024-10-01"
+    notes: "Mid multiple anchored to funding round post-money valuation ($157B) as crosscheck. Low/high reflect market range. ChatGPT + API revenue growing rapidly."
+
+  # ============================================================
+  # Anthropic — HIGH confidence (recent $61.5B Series E round)
+  # ARR sourced from Reuters (Q4 2024 press reporting).
+  # ============================================================
+
+  - company_name: "Anthropic"
+    confidence_tier: "HIGH"
+    last_funding_valuation_usd_billions: 61.5
+    funding_date: "2024-12-01"
+    estimated_arr_usd_billions: 0.9
+    arr_source: "Reuters, 2024-10"
+    comparable_low_multiple: 30.0
+    comparable_mid_multiple: 50.0
+    comparable_high_multiple: 70.0
+    comparable_peer_group: "ai_software_pure_play"
+    implied_ev_low: 27.0
+    implied_ev_mid: 45.0
+    implied_ev_high: 63.0
+    segment: "ai_software"
+    vintage_date: "2024-12-01"
+    notes: "Claude API and Claude.ai subscription revenue. Mid multiple anchored against funding round ($61.5B). Strong enterprise adoption via AWS Bedrock channel."
+
+  # ============================================================
+  # Databricks — MEDIUM confidence (September 2023 round at $43B)
+  # ARR estimate from Forbes (Q1 2024); data platform serves AI workloads.
+  # ============================================================
+
+  - company_name: "Databricks"
+    confidence_tier: "MEDIUM"
+    last_funding_valuation_usd_billions: 43.0
+    funding_date: "2023-09-14"
+    estimated_arr_usd_billions: 1.6
+    arr_source: "Forbes, 2024-02"
+    comparable_low_multiple: 15.0
+    comparable_mid_multiple: 25.0
+    comparable_high_multiple: 35.0
+    comparable_peer_group: "data_platform"
+    implied_ev_low: 24.0
+    implied_ev_mid: 40.0
+    implied_ev_high: 56.0
+    segment: "ai_infrastructure"
+    vintage_date: "2024-02-01"
+    notes: "Data lakehouse platform heavily used for AI/ML workloads. MEDIUM because ARR is press estimate and last funding round is 2023. Multiple reflects data platform peers (not pure LLM play). Segment assigned to ai_infrastructure as compute/data layer."

@@ -1,0 +1,87 @@
+# AI Revenue Attribution Registry
+# Hand-curated per-company AI revenue estimates for mixed-tech public companies.
+#
+# Purpose: Provides attribution inputs for Plan 10-02 revenue_attribution.py.
+#          Each entry captures one company's AI revenue estimate with full provenance.
+#
+# Schema per entry (all fields required):
+#   company_name: str            — Company display name
+#   cik: str                     — SEC EDGAR CIK (must match BUNDLED_SEGMENT_COMPANIES)
+#   value_chain_layer: str       — One of: chip, cloud, application, end_market
+#   ai_revenue_usd_billions: float — AI-attributable revenue estimate in USD billions
+#   attribution_method: str      — One of: direct_disclosure, management_commentary, analogue_ratio
+#   ratio_source: str            — Source citation for the estimate
+#   vintage_date: str            — ISO date of the source (YYYY-MM-DD or YYYY-MM)
+#   uncertainty_low: float       — Lower bound of estimate range (USD billions)
+#   uncertainty_high: float      — Upper bound of estimate range (USD billions)
+#   segment: str                 — One of: ai_hardware, ai_infrastructure, ai_software, ai_adoption
+#   value_chain_layer: str       — One of: chip, cloud, application, end_market
+#   year: int                    — Fiscal year the estimate refers to (2017-2026)
+#   estimated_flag: bool         — false if directly disclosed, true if inferred
+#
+# Pitfall guard: Every ratio must have ratio_source, vintage_date, uncertainty_low,
+# uncertainty_high. DO NOT store bare float percentages without provenance.
+#
+# Sub-segment splits for multi-layer companies are in config/industries/ai.yaml
+# under attribution_subsegment_ratios. This registry stores company-level totals.
+#
+# DO NOT MODIFY without updating vintage_date per entry.
+
+entries:
+
+  # ============================================================
+  # NVIDIA — direct_disclosure (Data Center segment = AI hardware revenue)
+  # Most transparent AI hardware disclosure in the corpus.
+  # ============================================================
+
+  - company_name: "NVIDIA Corporation"
+    cik: "0001045810"
+    value_chain_layer: "chip"
+    ai_revenue_usd_billions: 47.5
+    attribution_method: "direct_disclosure"
+    ratio_source: "NVIDIA FY2025 10-K, Data Center segment revenue"
+    vintage_date: "2025-02-26"
+    uncertainty_low: 45.0
+    uncertainty_high: 50.0
+    segment: "ai_hardware"
+    year: 2024
+    estimated_flag: false
+    notes: "NVIDIA Data Center segment is effectively all AI GPU revenue in FY2025; includes HGX systems, DGX, networking (InfiniBand/NVLink). FY2025 = fiscal year ending Jan 2025."
+
+  # ============================================================
+  # Microsoft — management_commentary (AI run rate disclosure)
+  # Satya Nadella $13B AI annual run rate (FY2024 Q4 earnings).
+  # ============================================================
+
+  - company_name: "Microsoft Corporation"
+    cik: "0000789019"
+    value_chain_layer: "cloud"
+    ai_revenue_usd_billions: 13.0
+    attribution_method: "management_commentary"
+    ratio_source: "Microsoft FY2024 Q4 earnings call (Satya Nadella, July 30 2024)"
+    vintage_date: "2024-07-30"
+    uncertainty_low: 11.0
+    uncertainty_high: 16.0
+    segment: "ai_infrastructure"
+    year: 2024
+    estimated_flag: false
+    notes: "Azure AI + Copilot combined run rate. Does not separate Azure AI infrastructure from total Azure cloud. Sub-segment splits in attribution_subsegment_ratios: 85% infra / 15% software."
+
+  # ============================================================
+  # Palantir — direct_disclosure (full revenue = AI platform revenue)
+  # Pure-play enterprise AI software; all revenue attributable to AI.
+  # ============================================================
+
+  - company_name: "Palantir Technologies Inc."
+    cik: "0001321655"
+    value_chain_layer: "application"
+    ai_revenue_usd_billions: 2.87
+    attribution_method: "direct_disclosure"
+    ratio_source: "Palantir FY2024 10-K, total revenue"
+    vintage_date: "2025-02-05"
+    uncertainty_low: 2.73
+    uncertainty_high: 3.01
+    segment: "ai_software"
+    year: 2024
+    estimated_flag: false
+    notes: "Palantir is a pure-play AI software company. 100% of revenue is enterprise AI (AIP, Gotham, Foundry). Uncertainty bounds reflect ±5% on exact AI attribution (some legacy non-AI contracts exist but are immaterial)."
