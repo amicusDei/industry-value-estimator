@@ -246,4 +246,12 @@ def run_full_pipeline(
     except Exception as e:
         print(f"Private valuations failed: {e}")
 
+    # Step 10: Walk-forward backtesting (requires model outputs + actuals)
+    try:
+        from src.backtesting.walk_forward import run_backtesting
+        backtest_path = run_backtesting(industry_id)
+        processed_paths["backtesting_results"] = backtest_path
+    except Exception as e:
+        print(f"Backtesting failed: {e}")
+
     return processed_paths

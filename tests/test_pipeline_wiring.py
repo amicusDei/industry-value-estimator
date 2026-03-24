@@ -392,3 +392,33 @@ class TestAttributionWiring:
         assert "Step 8" in source, (
             "Step 8 comment not found in pipeline.py source"
         )
+
+
+# ---------------------------------------------------------------------------
+# Class 7: TestBacktestingWiring
+# Tests that Step 10 walk-forward backtesting is wired into pipeline.py
+# ---------------------------------------------------------------------------
+
+class TestBacktestingWiring:
+    """Tests that Step 10 walk-forward backtesting runs in the pipeline (Plan 10-04 wires this)."""
+
+    def test_backtesting_step_in_pipeline(self):
+        """run_backtesting('ai') returns a Path ending in backtesting_results.parquet."""
+        from src.backtesting.walk_forward import run_backtesting
+
+        result = run_backtesting("ai")
+        assert isinstance(result, Path), f"Expected Path, got {type(result)}"
+        assert str(result).endswith("backtesting_results.parquet"), (
+            f"Expected path ending in 'backtesting_results.parquet', got '{result}'"
+        )
+
+    def test_step_10_present_in_pipeline_source(self):
+        """pipeline.py source contains Step 10 and run_backtesting import."""
+        pipeline_source_path = (
+            Path(__file__).parent.parent / "src" / "ingestion" / "pipeline.py"
+        )
+        source = pipeline_source_path.read_text()
+        assert "Step 10" in source, "Expected 'Step 10' in pipeline.py source"
+        assert "run_backtesting" in source, (
+            "Expected 'run_backtesting' in pipeline.py source"
+        )
