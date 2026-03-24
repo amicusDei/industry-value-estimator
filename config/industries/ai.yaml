@@ -529,7 +529,7 @@ edgar_companies:
     notes: "AI Platform (AIP) revenue growing rapidly; most explicit pure-play enterprise AI software disclosure"
 
   - name: "C3.ai Inc."
-    cik: "0001577552"
+    cik: "0001577526"
     ticker: "AI"
     value_chain_layer: "ai_software"
     ai_disclosure_type: "direct"
@@ -556,10 +556,9 @@ edgar_companies:
     notes: "AI book-of-business (watsonx) reported in management commentary; growing but not XBRL-tagged separately"
 
   - name: "Accenture PLC"
-    cik: "0001281761"
+    cik: "0001467373"
     ticker: "ACN"
     value_chain_layer: "ai_adoption"
     ai_disclosure_type: "partial"
     primary_ai_segment: "Technology consulting and managed services"
-    form_types: ["20-F"]
     notes: "AI consulting revenues explicitly tracked ($3B+ in FY2024 management commentary); consulting-focused AI adoption benchmark"

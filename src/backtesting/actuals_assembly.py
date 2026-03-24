@@ -27,7 +27,7 @@ from config.settings import DATA_RAW, DATA_PROCESSED
 DIRECT_DISCLOSURE_CIKS = {
     "0001045810",  # NVIDIA Corporation
     "0001321655",  # Palantir Technologies Inc.
-    "0001577552",  # C3.ai Inc.
+    "0001577526",  # C3.ai Inc. (corrected CIK — 0001577552 was Alibaba Group Holding Ltd)
 }
 
 # Value chain layer -> market segment mapping (from ai.yaml taxonomy)

@@ -4,9 +4,11 @@ Tests for MODL-06: Walk-forward backtesting with hard and soft actuals.
 Covers:
 - assemble_actuals() returns proper DataFrame with actual_type column
 - Hard actuals only come from direct-disclosure companies (NVIDIA, Palantir, C3.ai)
-- run_walk_forward() produces 3 folds (2022, 2023, 2024) with correct actual_type labels
+- run_walk_forward() produces 2 folds (2023, 2024) with correct actual_type labels
 - run_backtesting() writes backtesting_results.parquet with required schema
 - label_mape() returns correct MAPE labels
+- circular_flag column present in output
+- hard actuals present and have non-zero MAPE (when EDGAR data available)
 """
 import pytest
 import pandas as pd
@@ -34,18 +36,26 @@ class TestBacktesting:
 
     def test_hard_actuals_source(self):
         """
-        Hard actuals must only come from companies with ai_disclosure_type 'direct':
-        NVIDIA (0001045810), Palantir (0001321655), C3.ai (0001577552).
+        Hard actuals must only come from direct-disclosure companies:
+        NVIDIA (0001045810), Palantir (0001321655), C3.ai (0001577526).
 
-        If no EDGAR data exists, test is skipped.
+        EDGAR data must exist (edgar_ai_raw.parquet) — this test is NOT skipped when
+        EDGAR data is present. The EDGAR fetch is run as part of Plan 10-05 setup.
         """
         from src.backtesting.actuals_assembly import assemble_actuals
+        from config.settings import DATA_RAW
+
+        edgar_path = DATA_RAW / "edgar" / "edgar_ai_raw.parquet"
+        if not edgar_path.exists():
+            pytest.skip("EDGAR parquet not found — run EDGAR fetch first")
 
         df = assemble_actuals("ai")
         hard_df = df[df["actual_type"] == "hard"]
 
-        if hard_df.empty:
-            pytest.skip("No hard actuals available (EDGAR data not present) — skipping")
+        assert not hard_df.empty, (
+            "Hard actuals must be present when edgar_ai_raw.parquet exists. "
+            f"Edgar path: {edgar_path}"
+        )
 
         # All hard actual sources should contain "EDGAR"
         sources_not_edgar = hard_df[~hard_df["source"].str.contains("EDGAR", case=False, na=False)]
@@ -69,7 +79,7 @@ class TestBacktesting:
         )
 
     def test_fold_count(self):
-        """run_walk_forward('ai') evaluation years are a subset of {2022, 2023, 2024}."""
+        """run_walk_forward('ai') evaluates >= 2 folds (2023, 2024 at minimum)."""
         from src.backtesting.walk_forward import run_walk_forward
 
         df = run_walk_forward("ai")
@@ -78,6 +88,58 @@ class TestBacktesting:
         valid_eval_years = {2022, 2023, 2024}
         assert eval_years.issubset(valid_eval_years), (
             f"Evaluation years must be subset of {valid_eval_years}, got {eval_years}"
+        )
+        assert len(eval_years) >= 2, (
+            f"Expected >= 2 evaluation folds, got {len(eval_years)} (years: {sorted(eval_years)}). "
+            "NOTE: 2022 fold is absent because forecasts_ensemble.parquet starts at 2023."
+        )
+
+    def test_circular_flag_column(self):
+        """backtesting_results.parquet has a circular_flag column after run_backtesting()."""
+        from src.backtesting.walk_forward import run_backtesting
+
+        output_path = run_backtesting("ai")
+        df = pd.read_parquet(output_path)
+        assert "circular_flag" in df.columns, (
+            f"Expected 'circular_flag' column in backtesting_results.parquet. "
+            f"Got columns: {df.columns.tolist()}"
+        )
+        # Soft actuals should have circular_flag=True (model calibrated against same anchors)
+        soft_df = df[df["actual_type"] == "soft"]
+        if not soft_df.empty:
+            assert soft_df["circular_flag"].any(), (
+                "Expected at least some soft actual rows to have circular_flag=True. "
+                "The ensemble model is calibrated against market anchor medians — "
+                "soft actuals should be flagged as circular."
+            )
+            # Circular rows should have mape_label='circular_not_validated'
+            circular_df = soft_df[soft_df["circular_flag"] == True]
+            if not circular_df.empty:
+                assert (circular_df["mape_label"] == "circular_not_validated").all(), (
+                    f"Circular rows must have mape_label='circular_not_validated'. "
+                    f"Got: {circular_df['mape_label'].unique().tolist()}"
+                )
+
+    def test_mape_not_all_zero(self):
+        """Hard actual rows (if present) have at least one non-zero MAPE."""
+        from src.backtesting.walk_forward import run_backtesting
+        from config.settings import DATA_RAW
+
+        edgar_path = DATA_RAW / "edgar" / "edgar_ai_raw.parquet"
+        if not edgar_path.exists():
+            pytest.skip("EDGAR parquet not found — run EDGAR fetch first")
+
+        output_path = run_backtesting("ai")
+        df = pd.read_parquet(output_path)
+        hard_df = df[df["actual_type"] == "hard"]
+
+        assert not hard_df.empty, (
+            "Expected hard actual rows in backtesting_results.parquet when EDGAR data exists."
+        )
+        assert (hard_df["mape"] > 0).any(), (
+            f"All hard actual MAPE values are zero — this indicates circular validation. "
+            f"Hard actuals must produce real (non-zero) forecast error.\n"
+            f"Hard rows:\n{hard_df[['year', 'segment', 'actual_usd', 'predicted_usd', 'mape']].to_string()}"
         )
 
     def test_parquet_schema(self):

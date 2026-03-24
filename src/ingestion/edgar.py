@@ -110,19 +110,41 @@ def fetch_company_filings(
                         )
                         continue
 
-                    # Priority fallback: first concept with data wins
+                    # Priority fallback: first concept with data wins.
+                    # API: facts.get_facts_by_concept(concept) returns a DataFrame
+                    # with columns including numeric_value, period_end, is_dimensioned.
+                    # We select non-dimensioned annual (duration) rows for total revenue.
                     for concept in XBRL_CONCEPTS:
                         try:
-                            facts_df = xbrl.facts.query(concept)
+                            facts_df = xbrl.facts.get_facts_by_concept(concept)
                             if facts_df is not None and len(facts_df) > 0:
-                                for _, fact_row in facts_df.iterrows():
+                                # Filter to non-dimensioned annual (duration) facts only
+                                # to get top-level total revenue, not segment sub-totals
+                                if "is_dimensioned" in facts_df.columns:
+                                    total_df = facts_df[~facts_df["is_dimensioned"]]
+                                else:
+                                    total_df = facts_df
+                                if "period_type" in total_df.columns:
+                                    total_df = total_df[total_df["period_type"] == "duration"]
+                                if total_df.empty:
+                                    total_df = facts_df  # fallback: use all rows if filter empties
+
+                                for _, fact_row in total_df.iterrows():
+                                    # Use numeric_value (float) or fall back to value (string)
+                                    raw_value = fact_row.get("numeric_value")
+                                    if raw_value is None or (hasattr(raw_value, '__float__') and pd.isna(raw_value)):
+                                        raw_str = fact_row.get("value")
+                                        try:
+                                            raw_value = float(raw_str) if raw_str not in (None, "") else None
+                                        except (ValueError, TypeError):
+                                            raw_value = None
                                     rows.append({
                                         "cik": cik,
                                         "company_name": company_name,
-                                        "period_end": str(fact_row.get("period", filing.period_of_report)),
+                                        "period_end": str(fact_row.get("period_end", filing.period_of_report)),
                                         "form_type": form_type,
                                         "xbrl_concept": concept,
-                                        "value_usd": float(fact_row["value"]) if pd.notna(fact_row.get("value")) else None,
+                                        "value_usd": float(raw_value) if raw_value is not None else None,
                                         "bundled_flag": bundled_flag,
                                         "value_chain_layer": value_chain_layer,
                                     })
