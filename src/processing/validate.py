@@ -305,3 +305,66 @@ MARKET_ANCHOR_SCHEMA = DataFrameSchema(
 )
 """Full schema for the post-deflation output of compile_and_write_market_anchors() (DATA-11).
 Includes both nominal and real_2020 columns, plus full year coverage 2017-2025."""
+
+
+# ============================================================
+# ATTRIBUTION SCHEMA (validate AI revenue attribution DataFrame)
+# Used by src/processing/revenue_attribution.py compile_and_write_attribution() output.
+# Validates the per-company AI revenue estimate DataFrame before Parquet write.
+# ============================================================
+
+ATTRIBUTION_SCHEMA = DataFrameSchema(
+    {
+        "company_name": Column(str, nullable=False),
+        "cik": Column(str, nullable=False),
+        "value_chain_layer": Column(
+            str,
+            Check.isin(["chip", "cloud", "application", "end_market"]),
+        ),
+        "attribution_method": Column(
+            str,
+            Check.isin(["direct_disclosure", "management_commentary", "analogue_ratio"]),
+        ),
+        "ai_revenue_usd_billions": Column(float, Check.greater_than_or_equal_to(0), nullable=False),
+        "uncertainty_low": Column(float, Check.greater_than_or_equal_to(0), nullable=False),
+        "uncertainty_high": Column(float, Check.greater_than(0), nullable=False),
+        "vintage_date": Column(str, nullable=False),
+        "ratio_source": Column(str, nullable=False),
+        "segment": Column(
+            str,
+            Check.isin(["ai_hardware", "ai_infrastructure", "ai_software", "ai_adoption"]),
+        ),
+        "year": Column(int, Check.in_range(2017, 2026)),
+    },
+    coerce=True,
+    strict=False,
+)
+"""Schema for AI revenue attribution output from compile_and_write_attribution().
+Validates per-company AI revenue estimates with uncertainty bounds and provenance."""
+
+
+# ============================================================
+# PRIVATE VALUATION SCHEMA (validate private company valuation DataFrame)
+# Used by src/processing/private_valuations.py compile_and_write_private_valuations() output.
+# Validates the private company EV estimate DataFrame before Parquet write.
+# ============================================================
+
+PRIVATE_VALUATION_SCHEMA = DataFrameSchema(
+    {
+        "company_name": Column(str, nullable=False),
+        "confidence_tier": Column(str, Check.isin(["HIGH", "MEDIUM", "LOW"])),
+        "implied_ev_low": Column(float, Check.greater_than(0)),
+        "implied_ev_mid": Column(float, Check.greater_than(0)),
+        "implied_ev_high": Column(float, Check.greater_than(0)),
+        "segment": Column(
+            str,
+            Check.isin(["ai_hardware", "ai_infrastructure", "ai_software", "ai_adoption"]),
+        ),
+        "vintage_date": Column(str, nullable=False),
+        "comparable_mid_multiple": Column(float, Check.in_range(1.0, 300.0)),
+    },
+    coerce=True,
+    strict=False,
+)
+"""Schema for private company valuation output from compile_and_write_private_valuations().
+Validates implied EV low/mid/high with confidence tier and comparable multiples."""

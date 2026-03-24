@@ -169,6 +169,58 @@ value_chain_layer_taxonomy:
     share of their AI-specific revenue originates. Secondary layer participation is
     noted in company notes but does not affect segment attribution in Phase 10.
 
+# ============================================================
+# ATTRIBUTION SUB-SEGMENT RATIOS (added in Plan 10-01)
+# Per-company AI revenue splits for companies that span multiple value chain layers.
+# Used by revenue_attribution.py to allocate revenue across segments.
+# DO NOT MODIFY ratios without updating vintage_date and rationale.
+# ============================================================
+attribution_subsegment_ratios:
+  - cik: "0001045810"
+    company_name: "NVIDIA Corporation"
+    primary_layer: "chip"
+    sub_segment_splits:
+      ai_hardware: 0.80
+      ai_infrastructure: 0.20
+    rationale: "~80% direct silicon (GPU die revenue), ~20% data center/infrastructure builds (networking, DGX systems)"
+    vintage_date: "2026-01"
+
+  - cik: "0000789019"
+    company_name: "Microsoft Corporation"
+    primary_layer: "cloud"
+    sub_segment_splits:
+      ai_infrastructure: 0.85
+      ai_software: 0.15
+    rationale: "Azure AI ~85% infrastructure (GPU compute, hyperscale data center), ~15% Copilot and Azure OpenAI software layer"
+    vintage_date: "2025-07"
+
+  - cik: "0001652044"
+    company_name: "Alphabet Inc."
+    primary_layer: "cloud"
+    sub_segment_splits:
+      ai_infrastructure: 0.90
+      ai_software: 0.10
+    rationale: "Google Cloud AI ~90% infrastructure (TPU, Vertex AI compute), ~10% AI software APIs and platform tools"
+    vintage_date: "2025-07"
+
+  - cik: "0001018724"
+    company_name: "Amazon.com Inc."
+    primary_layer: "cloud"
+    sub_segment_splits:
+      ai_infrastructure: 0.90
+      ai_software: 0.10
+    rationale: "AWS AI/ML ~90% infrastructure (GPU instances, SageMaker compute), ~10% Bedrock and managed AI software services"
+    vintage_date: "2025-07"
+
+  - cik: "0001326801"
+    company_name: "Meta Platforms Inc."
+    primary_layer: "end_market"
+    sub_segment_splits:
+      ai_adoption: 0.85
+      ai_software: 0.15
+    rationale: "Ad-driven AI ~85% adoption (AI recommendation/targeting in FoA revenue), ~15% AI platform tools (Llama, FAIR research products)"
+    vintage_date: "2025-07"
+
 # LEGACY — archived v1.0 multiplier approach. No longer read by pipeline after Phase 9.
 # LEGACY: value_chain:
 # LEGACY:   # Anchor: AI market estimated at ~$200B in 2023

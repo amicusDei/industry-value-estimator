@@ -35,6 +35,10 @@ XBRL_CONCEPTS = [
 ]
 
 # Companies where AI revenue is bundled into a larger segment
+# Phase 10 resolution: both Accenture ($3B+ AI consulting, FY2024) and Salesforce
+# (Einstein/Agentforce AI revenue, material and growing) are included. Accenture
+# stays because its AI consulting revenue is explicitly tracked in management commentary.
+# Salesforce added per CONTEXT.md locked decision — AI attribution required.
 BUNDLED_SEGMENT_COMPANIES = {
     "0000789019",  # Microsoft
     "0001018724",  # Amazon
@@ -42,6 +46,7 @@ BUNDLED_SEGMENT_COMPANIES = {
     "0001326801",  # Meta
     "0000051143",  # IBM
     "0001281761",  # Accenture
+    "0001108524",  # Salesforce (added Phase 10 — Einstein/Agentforce AI attribution required)
 }
 
 
