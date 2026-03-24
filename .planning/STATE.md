@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Model Credibility & Usability
 status: planning
-stopped_at: Phase 10 context gathered
-last_updated: "2026-03-24T13:40:54.926Z"
+stopped_at: Completed 10-01-PLAN.md
+last_updated: "2026-03-24T14:37:45.719Z"
 last_activity: 2026-03-23 — v1.1 roadmap created (Phases 8-11)
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 11
+  completed_plans: 8
   percent: 0
 ---
 
@@ -58,6 +58,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 09 P01 | 219 | 2 tasks | 5 files |
 | Phase 09 P02 | 420 | 2 tasks | 4 files |
 | Phase 09 P03 | 1200 | 3 tasks | 10 files |
+| Phase 10 P01 | 198 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,8 @@ Recent decisions affecting current work:
 - [Phase 09]: MACRO_FEATURE_COLS defined but fall back to residual-only features when world_bank_ai.parquet coverage < 80% in 2017-2025
 - [Phase 09]: CAGR divergence documented in forecast.py: root cause is 2-obs training window per segment; 25-40% target deferred to Phase 10 data enrichment
 - [Phase 09]: Forecast floor at max(last_y * 0.5, 1.5B) prevents negative USD forecasts from sparse-data Prophet extrapolation (ai_adoption 2023>2024 declining anchor)
+- [Phase 10]: BUNDLED_SEGMENT_COMPANIES now 7 companies: both Accenture (AI consulting) and Salesforce (Einstein/Agentforce) included in Phase 10 attribution
+- [Phase 10]: attribution_subsegment_ratios in ai.yaml: cloud hyperscalers 90/10 infra/sw split; NVIDIA 80/20 chip/infra; Meta 85/15 adoption/sw
 
 ### Pending Todos
 
@@ -103,6 +106,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T13:40:54.919Z
-Stopped at: Phase 10 context gathered
-Resume file: .planning/phases/10-revenue-attribution-and-private-company-valuation/10-CONTEXT.md
+Last session: 2026-03-24T14:37:45.715Z
+Stopped at: Completed 10-01-PLAN.md
+Resume file: None
