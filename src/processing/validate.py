@@ -239,6 +239,30 @@ def validate_processed(df):
 # it is passed downstream to Plan 08-04 reconciliation.
 # ============================================================
 
+# ============================================================
+# EDGAR RAW SCHEMA (validate XBRL filing DataFrame from edgar.py)
+# Used by src/ingestion/edgar.py fetch_all_edgar_companies() output.
+# ============================================================
+
+EDGAR_RAW_SCHEMA = DataFrameSchema(
+    {
+        "cik": Column(str, nullable=False),
+        "company_name": Column(str, nullable=False),
+        "period_end": Column(str, nullable=False),
+        "form_type": Column(str, Check.isin(["10-K", "10-Q", "20-F"])),
+        "xbrl_concept": Column(str, nullable=False),
+        "value_usd": Column(float, nullable=True),  # some filings lack tags
+        "bundled_flag": Column(bool, nullable=False),
+        "value_chain_layer": Column(
+            str,
+            Check.isin(["ai_hardware", "ai_infrastructure", "ai_software", "ai_adoption"]),
+        ),
+    },
+    coerce=True,
+    strict=False,
+)
+
+
 MARKET_ANCHOR_SCHEMA = DataFrameSchema(
     {
         "estimate_year": Column(int, Check.in_range(2017, 2035)),
