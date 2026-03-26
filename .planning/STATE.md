@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Model Credibility & Usability
 status: planning
-stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-03-26T09:54:09.765Z"
+stopped_at: Completed 11-02-PLAN.md
+last_updated: "2026-03-26T09:54:39.092Z"
 last_activity: 2026-03-23 — v1.1 roadmap created (Phases 8-11)
 progress:
   total_phases: 4
@@ -64,6 +64,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 10 P04 | 5 | 2 tasks | 6 files |
 | Phase 10-revenue-attribution-and-private-company-valuation P05 | 60 | 2 tasks | 6 files |
 | Phase 11 P01 | 7 | 2 tasks | 7 files |
+| Phase 11-dashboard-and-diagnostics P02 | 18 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -107,6 +108,8 @@ Recent decisions affecting current work:
 - [Phase 11]: Lazy imports in callbacks.py to break circular dependency (basic.py -> app.py -> callbacks.py)
 - [Phase 11]: Basic tab ignores mode toggle — build_basic_layout() always renders Basic view regardless of Normal/Expert
 - [Phase 11]: Confidence CI ratio computed on real_2020 USD even though Basic tier displays nominal — real USD gives correct relative uncertainty
+- [Phase 11-02]: DIAGNOSTICS dict uses mape/r2/mape_label/has_hard_actuals from backtesting_results.parquet hard rows; segments without hard actuals get mape=None
+- [Phase 11-02]: Alias removal: point_estimate_real_2020 kept as native column name — accurate description, no rename needed; usd_point/usd_ci* aliases fully deleted from app.py and all callsites
 
 ### Pending Todos
 
@@ -120,6 +123,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T09:54:09.763Z
-Stopped at: Completed 11-01-PLAN.md
+Last session: 2026-03-26T09:54:39.090Z
+Stopped at: Completed 11-02-PLAN.md
 Resume file: None
