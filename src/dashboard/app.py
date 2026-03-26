@@ -22,9 +22,6 @@ _project_root = str(Path(__file__).resolve().parent.parent.parent)
 if _project_root not in sys.path:
     sys.path.insert(0, _project_root)
 
-import os
-import time
-
 import numpy as np
 import pandas as pd
 import yaml
@@ -38,13 +35,7 @@ RESIDUALS_DF = pd.read_parquet(DATA_PROCESSED / "residuals_statistical.parquet")
 BACKTESTING_DF = pd.read_parquet(DATA_PROCESSED / "backtesting_results.parquet")
 ANCHORS_DF = pd.read_parquet(DATA_PROCESSED / "market_anchors_ai.parquet")
 
-# Data freshness check — warn if parquet files are stale
-for _path, _name in [(DATA_PROCESSED / "forecasts_ensemble.parquet", "Forecasts"),
-                      (DATA_PROCESSED / "backtesting_results.parquet", "Backtesting")]:
-    if _path.exists():
-        _age_days = (time.time() - os.path.getmtime(str(_path))) / 86400
-        if _age_days > 30:
-            print(f"WARNING: {_name} data is {_age_days:.0f} days old. Run pipeline to refresh.")
+# Data freshness check moved to UI banner in layout.py
 
 with open(Path(__file__).resolve().parent.parent.parent / "config" / "industries" / "ai.yaml") as f:
     AI_CONFIG = yaml.safe_load(f)

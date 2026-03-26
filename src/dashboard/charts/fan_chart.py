@@ -107,11 +107,11 @@ def make_fan_chart(
 
     fig = go.Figure()
 
-    # Build hover template based on mode
+    # Build hover template based on mode — always include units
     if usd_mode:
         hover_tpl = "<b>%{x}</b><br>$%{y:.1f}B<extra></extra>"
     else:
-        hover_tpl = "<b>%{x}</b><br>%{y:.2f}<extra></extra>"
+        hover_tpl = "<b>%{x}</b><br>%{y:.2f} (Real 2020 USD B)<extra></extra>"
 
     # --- 95% CI band (toself fill) — zorder=1 keeps fills behind lines ---
     if len(fore) > 0:

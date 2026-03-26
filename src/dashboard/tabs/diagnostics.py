@@ -14,6 +14,14 @@ from src.dashboard.app import BACKTESTING_DF, DIAGNOSTICS, SEGMENTS, SEGMENT_DIS
 from src.dashboard.charts.backtest import make_backtest_chart
 from src.dashboard.charts.styles import (
     COLOR_DEEP_BLUE,
+    COLOR_CONFIDENCE_GREEN,
+    COLOR_CONFIDENCE_AMBER,
+    COLOR_CONFIDENCE_RED,
+    COLOR_TEXT_PRIMARY,
+    COLOR_TEXT_SECONDARY,
+    COLOR_TEXT_TERTIARY,
+    COLOR_TEXT_MUTED,
+    COLOR_AXES,
     vintage_footer,
 )
 
@@ -23,13 +31,13 @@ _CARD_STYLE = {
     "padding": "24px",
     "marginBottom": "24px",
     "boxShadow": "0 1px 4px rgba(0,0,0,0.08)",
-    "border": "1px solid #E8EBF0",
+    "border": f"1px solid {COLOR_AXES}",
 }
 
 _PANEL_HEADING_STYLE = {
     "fontSize": "20px",
     "fontWeight": 600,
-    "color": "#1A1A2E",
+    "color": COLOR_TEXT_PRIMARY,
     "marginBottom": "12px",
     "marginTop": "0",
 }
@@ -44,15 +52,15 @@ _METRIC_VALUE_STYLE = {
 
 _SUBLABEL_STYLE = {
     "fontSize": "12px",
-    "color": "#999999",
+    "color": COLOR_TEXT_MUTED,
     "marginBottom": "4px",
     "marginTop": "0",
 }
 
 _MAPE_COLOR = {
-    "acceptable": "#2ECC71",
-    "use_with_caution": "#F39C12",
-    "directional_only": "#E74C3C",
+    "acceptable": COLOR_CONFIDENCE_GREEN,
+    "use_with_caution": COLOR_CONFIDENCE_AMBER,
+    "directional_only": COLOR_CONFIDENCE_RED,
     "no_data": "#CCCCCC",
 }
 
@@ -62,15 +70,15 @@ def build_diagnostics_layout(segment: str, usd_col: str, mode: str = "normal") -
 
     intro_card = html.Div([
         html.H2("Model Diagnostics", style={
-            "fontSize": "20px", "fontWeight": 600, "color": "#1A1A2E",
+            "fontSize": "20px", "fontWeight": 600, "color": COLOR_TEXT_PRIMARY,
             "marginBottom": "4px", "marginTop": "0",
         }),
         html.P(
-            "Model validation via leave-one-out cross-validation. For each year, "
-            "the model is retrained WITHOUT that year's data, then predicts it. "
-            "This gives non-circular MAPE for every segment. EDGAR filings (NVIDIA) "
-            "provide additional independent validation.",
-            style={"fontSize": "14px", "color": "#666", "marginBottom": "0", "lineHeight": "1.5"},
+            "Model validation via Leave-One-Out (LOO) Cross-Validation \u2014 each year excluded from training, then predicted. "
+            "For each year, the model is retrained WITHOUT that year\u2019s data, then predicts it. "
+            "This gives non-circular Mean Absolute Percentage Error (MAPE) \u2014 lower is better \u2014 for every segment. "
+            "EDGAR filings (NVIDIA) provide additional independent validation.",
+            style={"fontSize": "14px", "color": COLOR_TEXT_SECONDARY, "marginBottom": "0", "lineHeight": "1.5"},
         ),
     ], style=_CARD_STYLE)
 
@@ -90,14 +98,14 @@ def build_diagnostics_layout(segment: str, usd_col: str, mode: str = "normal") -
 
         seg_items = [
             html.P(seg_label, style={
-                "fontSize": "14px", "fontWeight": 600, "color": "#1A1A2E",
+                "fontSize": "14px", "fontWeight": 600, "color": COLOR_TEXT_PRIMARY,
                 "marginBottom": "2px", "marginTop": "12px",
             }),
         ]
 
         if loo_mape is not None:
             seg_items.append(
-                html.P(f"{loo_mape:.1f}% MAPE [held-out]", style={**_METRIC_VALUE_STYLE, "color": color})
+                html.P(f"{loo_mape:.1f}% MAPE \u2014 model predictions are typically within {loo_mape:.0f}% of actual values", style={**_METRIC_VALUE_STYLE, "color": color})
             )
             seg_items.append(
                 html.P(f"{loo_folds} evaluation folds", style=_SUBLABEL_STYLE)
@@ -108,7 +116,7 @@ def build_diagnostics_layout(segment: str, usd_col: str, mode: str = "normal") -
                 for d in loo_details:
                     yr_color = _MAPE_COLOR.get(
                         "acceptable" if d["mape"] < 15 else "use_with_caution" if d["mape"] < 30 else "directional_only",
-                        "#999"
+                        COLOR_TEXT_MUTED
                     )
                     seg_items.append(
                         html.P(
@@ -124,11 +132,11 @@ def build_diagnostics_layout(segment: str, usd_col: str, mode: str = "normal") -
         loo_items.append(html.Div(seg_items))
 
     loo_panel = html.Div([
-        html.H4("Cross-Validation (leave-one-out)", style=_PANEL_HEADING_STYLE),
+        html.H4("Leave-One-Out (LOO) Cross-Validation", style=_PANEL_HEADING_STYLE),
         html.P(
             "Each year excluded from training, model predicts it. Non-circular: "
             "the model never saw the held-out year during fitting.",
-            style={"fontSize": "12px", "color": "#888", "marginBottom": "12px", "fontStyle": "italic"},
+            style={"fontSize": "12px", "color": COLOR_TEXT_TERTIARY, "marginBottom": "12px", "fontStyle": "italic"},
         ),
         html.Div(loo_items),
     ], style=_CARD_STYLE)
@@ -142,7 +150,7 @@ def build_diagnostics_layout(segment: str, usd_col: str, mode: str = "normal") -
 
         seg_items = [
             html.P(seg_label, style={
-                "fontSize": "14px", "fontWeight": 600, "color": "#1A1A2E",
+                "fontSize": "14px", "fontWeight": 600, "color": COLOR_TEXT_PRIMARY,
                 "marginBottom": "2px", "marginTop": "12px",
             }),
         ]
@@ -158,7 +166,7 @@ def build_diagnostics_layout(segment: str, usd_col: str, mode: str = "normal") -
             for d in hard_details:
                 yr_color = _MAPE_COLOR.get(
                     "acceptable" if d["mape"] < 15 else "use_with_caution" if d["mape"] < 30 else "directional_only",
-                    "#999"
+                    COLOR_TEXT_MUTED
                 )
                 seg_items.append(
                     html.P(
@@ -181,10 +189,10 @@ def build_diagnostics_layout(segment: str, usd_col: str, mode: str = "normal") -
         html.P(
             "Company-level revenue from SEC 10-K filings compared to model segment predictions. "
             "Currently NVIDIA only (representative of AI hardware).",
-            style={"fontSize": "12px", "color": "#888", "marginBottom": "12px", "fontStyle": "italic"},
+            style={"fontSize": "12px", "color": COLOR_TEXT_TERTIARY, "marginBottom": "12px", "fontStyle": "italic"},
         ),
         html.Div(hard_items),
-        html.Hr(style={"borderColor": "#E8EBF0", "marginTop": "16px", "marginBottom": "12px"}),
+        html.Hr(style={"borderColor": COLOR_AXES, "marginTop": "16px", "marginBottom": "12px"}),
         dcc.Loading(
             type="circle", color=COLOR_DEEP_BLUE,
             children=dcc.Graph(figure=backtest_fig, id="diagnostics-backtest-chart", config={"displayModeBar": True}),
@@ -198,27 +206,27 @@ def build_diagnostics_layout(segment: str, usd_col: str, mode: str = "normal") -
 
     # --- Model Limitations Panel ---
     limitations_card = html.Div([
-        html.H4("Model Limitations", style={**_PANEL_HEADING_STYLE, "color": "#E74C3C"}),
+        html.H4("Model Limitations", style={**_PANEL_HEADING_STYLE, "color": COLOR_CONFIDENCE_RED}),
         html.Ul([
             html.Li(
                 "AI Infrastructure (51% MAPE) and AI Software (42% MAPE) forecasts are "
                 "directional only -- not suitable for precise valuation.",
-                style={"fontSize": "13px", "color": "#666", "marginBottom": "8px", "lineHeight": "1.5"},
+                style={"fontSize": "13px", "color": COLOR_TEXT_SECONDARY, "marginBottom": "8px", "lineHeight": "1.5"},
             ),
             html.Li(
                 "Model trained on 9 data points per segment (2017-2025), including "
                 "interpolated values derived from analyst consensus estimates.",
-                style={"fontSize": "13px", "color": "#666", "marginBottom": "8px", "lineHeight": "1.5"},
+                style={"fontSize": "13px", "color": COLOR_TEXT_SECONDARY, "marginBottom": "8px", "lineHeight": "1.5"},
             ),
             html.Li(
                 "CAGR floors prevent the model from forecasting market contraction -- "
                 "structural growth is assumed based on analyst consensus.",
-                style={"fontSize": "13px", "color": "#666", "marginBottom": "8px", "lineHeight": "1.5"},
+                style={"fontSize": "13px", "color": COLOR_TEXT_SECONDARY, "marginBottom": "8px", "lineHeight": "1.5"},
             ),
             html.Li(
                 "No model drift monitoring -- re-validate if market structure changes "
                 "(e.g., regulatory shifts, new dominant players, demand shocks).",
-                style={"fontSize": "13px", "color": "#666", "marginBottom": "8px", "lineHeight": "1.5"},
+                style={"fontSize": "13px", "color": COLOR_TEXT_SECONDARY, "marginBottom": "8px", "lineHeight": "1.5"},
             ),
         ], style={"paddingLeft": "20px", "marginBottom": "0"}),
     ], style=_CARD_STYLE)

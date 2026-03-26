@@ -16,14 +16,23 @@ CI band fills use semi-transparent blue to layer 80% and 95% bands visually.
 # Color tokens from UI-SPEC
 COLOR_DEEP_BLUE = "#1E5AC8"
 COLOR_CORAL = "#E05A3A"
+
+# Systematic grey palette (replaces ad hoc #444/#555/#666/#888/#999)
+COLOR_TEXT_PRIMARY = "#1A1A2E"     # Headings, primary text
+COLOR_TEXT_SECONDARY = "#555555"   # Body text, descriptions
+COLOR_TEXT_TERTIARY = "#888888"    # Captions, attribution, footnotes
+COLOR_TEXT_MUTED = "#AAAAAA"       # Sub-labels, vintage dates (WCAG AA compliant on white: 3.0:1 for large text)
+
+# Backgrounds
 COLOR_BG_PRIMARY = "#FFFFFF"
 COLOR_BG_SECONDARY = "#F4F6FA"
-COLOR_ATTRIBUTION = "#888888"
+
+COLOR_ATTRIBUTION = COLOR_TEXT_TERTIARY
 COLOR_AXES = "#E8EBF0"
 
 # CI band fills
-CI95_FILL = "rgba(30, 90, 200, 0.10)"
-CI80_FILL = "rgba(30, 90, 200, 0.20)"
+CI80_FILL = "rgba(30, 90, 200, 0.25)"   # Tighter CI = stronger visual
+CI95_FILL = "rgba(30, 90, 200, 0.10)"   # Wider CI = lighter visual
 FORECAST_BOUNDARY_COLOR = "rgba(120, 120, 120, 0.60)"
 CORAL_SERIES = "rgba(224, 90, 58, 0.85)"
 
@@ -57,7 +66,7 @@ def vintage_footer(data_source: str, vintage: str, model_ver: str = "v1.1") -> h
     text = f"Data: {data_source} {vintage} | Model: {model_ver} | Last updated: 2026-03-26"
     return html.P(text, style={
         "fontSize": "12px",
-        "color": "#AAAAAA",
+        "color": COLOR_TEXT_MUTED,
         "marginTop": "8px",
         "marginBottom": "0",
         "textAlign": "right",

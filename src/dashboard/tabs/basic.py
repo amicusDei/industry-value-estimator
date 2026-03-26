@@ -28,6 +28,9 @@ from src.dashboard.charts.styles import (
     COLOR_CONFIDENCE_AMBER,
     COLOR_CONFIDENCE_RED,
     COLOR_AXES,
+    COLOR_TEXT_PRIMARY,
+    COLOR_TEXT_TERTIARY,
+    COLOR_TEXT_MUTED,
     vintage_footer,
 )
 
@@ -77,13 +80,14 @@ def _kpi_card(label: str, value: str, sub: str, confidence_color: str) -> dbc.Ca
     confidence_color : str
         Hex color for the traffic-light confidence dot (●).
     """
+    _conf_text = "High" if confidence_color == COLOR_CONFIDENCE_GREEN else "Medium" if confidence_color == COLOR_CONFIDENCE_AMBER else "Low"
     return dbc.Card(
         dbc.CardBody([
             html.Div(
                 label,
                 style={
                     "fontSize": "12px",
-                    "color": "#888",
+                    "color": COLOR_TEXT_TERTIARY,
                     "marginBottom": "4px",
                     "fontWeight": 400,
                 },
@@ -94,7 +98,7 @@ def _kpi_card(label: str, value: str, sub: str, confidence_color: str) -> dbc.Ca
                     style={
                         "fontSize": "28px",
                         "fontWeight": 600,
-                        "color": "#1A1A2E",
+                        "color": COLOR_TEXT_PRIMARY,
                     },
                 ),
                 html.Span(
@@ -102,20 +106,20 @@ def _kpi_card(label: str, value: str, sub: str, confidence_color: str) -> dbc.Ca
                     style={"display": "inline-block", "width": "8px"},
                 ),
                 html.Span(
-                    "\u25cf",
+                    f"\u25cf {_conf_text}",
                     style={
                         "color": confidence_color,
                         "fontSize": "12px",
                         "verticalAlign": "middle",
                     },
-                    **{"aria-label": f"Confidence: {'high' if confidence_color == COLOR_CONFIDENCE_GREEN else 'moderate' if confidence_color == COLOR_CONFIDENCE_AMBER else 'low'}"},
+                    **{"aria-label": f"Confidence: {_conf_text.lower()}"},
                 ),
             ]),
             html.Div(
                 sub,
                 style={
                     "fontSize": "12px",
-                    "color": "#999",
+                    "color": COLOR_TEXT_MUTED,
                     "marginTop": "2px",
                     "fontWeight": 400,
                 },
@@ -273,21 +277,36 @@ def build_basic_layout(segment: str, usd_col: str, mode: str) -> html.Div:
         usd_mode=False,
     )
 
+    # --- Methodology note ---
+    methodology_note = html.P(
+        "Forecasts from hybrid statistical/ML model (Prophet + LightGBM) trained on analyst "
+        "consensus estimates from IDC, Gartner, Grand View Research, and 5 other firms.",
+        style={"fontSize": "12px", "color": COLOR_TEXT_TERTIARY, "textAlign": "center", "marginBottom": "8px"}
+    )
+
     # --- Chart row ---
     chart_row = dbc.Row([
         dbc.Col(
-            dcc.Graph(
-                figure=seg_fig,
-                style={"height": "calc(100vh - 320px)", "minHeight": "220px"},
-                config={"displayModeBar": False},
+            dcc.Loading(
+                type="circle",
+                color=COLOR_DEEP_BLUE,
+                children=dcc.Graph(
+                    figure=seg_fig,
+                    style={"height": "calc(100vh - 320px)", "minHeight": "220px"},
+                    config={"displayModeBar": False},
+                ),
             ),
             width=5,
         ),
         dbc.Col(
-            dcc.Graph(
-                figure=fan_fig,
-                style={"height": "calc(100vh - 320px)", "minHeight": "220px"},
-                config={"displayModeBar": False},
+            dcc.Loading(
+                type="circle",
+                color=COLOR_DEEP_BLUE,
+                children=dcc.Graph(
+                    figure=fan_fig,
+                    style={"height": "calc(100vh - 320px)", "minHeight": "220px"},
+                    config={"displayModeBar": False},
+                ),
             ),
             width=7,
         ),
@@ -307,23 +326,34 @@ def build_basic_layout(segment: str, usd_col: str, mode: str) -> html.Div:
             style={
                 "fontSize": "20px",
                 "fontWeight": 600,
-                "color": "#1A1A2E",
+                "color": COLOR_TEXT_PRIMARY,
                 "marginBottom": "4px",
                 "marginTop": "8px",
             },
         ),
-        dcc.Graph(
-            figure=bullet_fig,
-            config={"displayModeBar": False},
+        dcc.Loading(
+            type="circle",
+            color=COLOR_DEEP_BLUE,
+            children=dcc.Graph(
+                figure=bullet_fig,
+                config={"displayModeBar": False},
+            ),
         ),
         vintage_footer("Analyst corpus (8 firms)", "Latest vintage: 2025"),
     ])
 
+    nominal_note = html.P(
+        "Basic tier shows nominal USD. Switch to Overview for real/nominal comparison.",
+        style={"fontSize": "12px", "color": COLOR_TEXT_TERTIARY, "textAlign": "center", "marginTop": "8px", "marginBottom": "0"},
+    )
+
     return html.Div([
         kpi_row,
         kpi_footer,
+        methodology_note,
         chart_row,
         consensus_panel,
+        nominal_note,
     ], style={
         "height": "calc(100vh - 120px)",
         "overflow": "hidden",

@@ -12,14 +12,21 @@ from src.dashboard.app import FORECASTS_DF, SEGMENTS, SEGMENT_DISPLAY, SOURCE_AT
 
 _ATTRIBUTION_TEXT = "Sources: " + ", ".join(SOURCE_ATTRIBUTION.values())
 from src.dashboard.charts.fan_chart import make_fan_chart
-from src.dashboard.charts.styles import COLOR_DEEP_BLUE, ATTRIBUTION_STYLE, vintage_footer
+from src.dashboard.charts.styles import (
+    COLOR_DEEP_BLUE,
+    COLOR_TEXT_PRIMARY,
+    COLOR_TEXT_SECONDARY,
+    COLOR_AXES,
+    ATTRIBUTION_STYLE,
+    vintage_footer,
+)
 
 _CARD_STYLE = {
     "backgroundColor": "#FFFFFF",
     "borderRadius": "8px",
     "padding": "20px",
     "boxShadow": "0 1px 4px rgba(0,0,0,0.08)",
-    "border": "1px solid #E8EBF0",
+    "border": f"1px solid {COLOR_AXES}",
     "height": "100%",
 }
 
@@ -53,14 +60,14 @@ _SEGMENT_DESCRIPTIONS = {
 _SECTION_HEADING_STYLE = {
     "fontSize": "20px",
     "fontWeight": 600,
-    "color": "#1A1A2E",
+    "color": COLOR_TEXT_PRIMARY,
     "marginBottom": "4px",
     "marginTop": "0",
 }
 
 _SECTION_SUBTITLE_STYLE = {
     "fontSize": "14px",
-    "color": "#666",
+    "color": COLOR_TEXT_SECONDARY,
     "marginBottom": "16px",
     "marginTop": "0",
     "lineHeight": "1.5",
@@ -69,14 +76,14 @@ _SECTION_SUBTITLE_STYLE = {
 _SEGMENT_HEADING_STYLE = {
     "fontSize": "16px",
     "fontWeight": 600,
-    "color": "#1A1A2E",
+    "color": COLOR_TEXT_PRIMARY,
     "marginBottom": "4px",
     "marginTop": "0",
 }
 
 _SEGMENT_DESC_STYLE = {
     "fontSize": "13px",
-    "color": "#555",
+    "color": COLOR_TEXT_SECONDARY,
     "marginBottom": "12px",
     "marginTop": "0",
     "lineHeight": "1.5",
@@ -129,7 +136,7 @@ def build_segments_layout(segment: str, usd_col: str, mode: str = "normal") -> h
         "padding": "20px 24px 16px",
         "marginBottom": "20px",
         "boxShadow": "0 1px 4px rgba(0,0,0,0.08)",
-        "border": "1px solid #E8EBF0",
+        "border": f"1px solid {COLOR_AXES}",
     })
 
     # Expert mode: segment model type reference table
@@ -227,7 +234,7 @@ def build_segments_layout(segment: str, usd_col: str, mode: str = "normal") -> h
                 "borderRadius": "8px",
                 "padding": "24px",
                 "boxShadow": "0 1px 4px rgba(0,0,0,0.08)",
-                "border": "1px solid #E8EBF0",
+                "border": f"1px solid {COLOR_AXES}",
             }),
             vintage_footer("EDGAR/Analyst Corpus", FORECASTS_DF["data_vintage"].iloc[0]),
         ], style={"paddingTop": "8px"})

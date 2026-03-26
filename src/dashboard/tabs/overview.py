@@ -27,7 +27,13 @@ from src.dashboard.charts.fan_chart import make_fan_chart
 from src.dashboard.charts.bullet_chart import make_consensus_bullet_chart
 from src.dashboard.charts.styles import (
     COLOR_DEEP_BLUE,
+    COLOR_CORAL,
     COLOR_BG_SECONDARY,
+    COLOR_TEXT_PRIMARY,
+    COLOR_TEXT_SECONDARY,
+    COLOR_TEXT_TERTIARY,
+    COLOR_TEXT_MUTED,
+    COLOR_AXES,
     ATTRIBUTION_STYLE,
     vintage_footer,
 )
@@ -38,20 +44,20 @@ _CARD_STYLE = {
     "padding": "24px",
     "marginBottom": "24px",
     "boxShadow": "0 1px 4px rgba(0,0,0,0.08)",
-    "border": "1px solid #E8EBF0",
+    "border": f"1px solid {COLOR_AXES}",
 }
 
 _SECTION_HEADING_STYLE = {
     "fontSize": "20px",
     "fontWeight": 600,
-    "color": "#1A1A2E",
+    "color": COLOR_TEXT_PRIMARY,
     "marginBottom": "4px",
     "marginTop": "0",
 }
 
 _SECTION_SUBTITLE_STYLE = {
     "fontSize": "14px",
-    "color": "#666",
+    "color": COLOR_TEXT_SECONDARY,
     "marginBottom": "16px",
     "marginTop": "0",
     "lineHeight": "1.5",
@@ -164,7 +170,7 @@ def _build_revenue_multiples_table() -> html.Div:
             style={
                 "fontSize": "20px",
                 "fontWeight": 600,
-                "color": "#1A1A2E",
+                "color": COLOR_TEXT_PRIMARY,
                 "marginBottom": "16px",
                 "marginTop": "0",
             },
@@ -172,7 +178,7 @@ def _build_revenue_multiples_table() -> html.Div:
         table,
         html.P(
             "Source: PitchBook Q4 2025 AI Public Comp Sheet",
-            style={"fontSize": "12px", "color": "#AAAAAA", "marginTop": "8px", "marginBottom": "4px"},
+            style={"fontSize": "12px", "color": COLOR_TEXT_MUTED, "marginTop": "8px", "marginBottom": "4px"},
         ),
         vintage_footer("PitchBook", "2025-Q4"),
     ], style=_CARD_STYLE)
@@ -187,7 +193,7 @@ def _build_consensus_panel(segment: str) -> html.Div:
             style={
                 "fontSize": "20px",
                 "fontWeight": 600,
-                "color": "#1A1A2E",
+                "color": COLOR_TEXT_PRIMARY,
                 "marginBottom": "16px",
                 "marginTop": "0",
             },
@@ -213,7 +219,7 @@ def _build_expert_consensus_panel(segment: str) -> html.Div:
             style={
                 "fontSize": "20px",
                 "fontWeight": 600,
-                "color": "#1A1A2E",
+                "color": COLOR_TEXT_PRIMARY,
                 "marginBottom": "16px",
                 "marginTop": "0",
             },
@@ -222,13 +228,13 @@ def _build_expert_consensus_panel(segment: str) -> html.Div:
             figure=fig,
             config={"displayModeBar": False},
         ),
-        html.Hr(style={"margin": "16px 0", "borderColor": "#E8EBF0"}),
+        html.Hr(style={"margin": "16px 0", "borderColor": COLOR_AXES}),
         html.H4(
             "Consensus Divergence Rationale",
             style={
                 "fontSize": "16px",
                 "fontWeight": 600,
-                "color": "#444",
+                "color": COLOR_TEXT_SECONDARY,
                 "marginBottom": "8px",
                 "marginTop": "0",
             },
@@ -237,7 +243,7 @@ def _build_expert_consensus_panel(segment: str) -> html.Div:
             "Analyst corpus covers 8 firms. Divergence above 20% may reflect boundary "
             "differences (e.g. McKinsey economic-value scope vs. IDC market-size scope) "
             "rather than genuine forecast disagreement.",
-            style={"fontSize": "13px", "color": "#555", "lineHeight": "1.5", "marginBottom": "8px"},
+            style={"fontSize": "13px", "color": COLOR_TEXT_SECONDARY, "lineHeight": "1.5", "marginBottom": "8px"},
         ),
         firms_list,
         vintage_footer("Analyst corpus (8 firms)", "Latest vintage: 2025"),
@@ -295,7 +301,7 @@ def build_overview_layout(segment: str, usd_col: str, mode: str = "normal") -> h
     # ---------------------------------------------------------------------------
     headline_main = f"AI Industry: {_fmt_usd(usd_2030)} by 2030"
     headline_ci = f"80% CI: {_fmt_usd(usd_ci80_lo)} \u2013 {_fmt_usd(usd_ci80_hi)}"
-    cagr_text = f"{cagr:.1f}% CAGR (2024\u20132030)" if cagr is not None else "Growth rate N/A"
+    cagr_text = f"{cagr:.1f}% Compound Annual Growth Rate (CAGR) (2024\u20132030)" if cagr is not None else "Growth rate N/A"
 
     headline_children = [
         html.P(
@@ -311,23 +317,23 @@ def build_overview_layout(segment: str, usd_col: str, mode: str = "normal") -> h
         html.Div([
             html.Span(
                 headline_ci,
-                style={"fontSize": "16px", "color": "#555", "marginRight": "20px"},
+                style={"fontSize": "16px", "color": COLOR_TEXT_SECONDARY, "marginRight": "20px"},
             ),
             html.Span(
                 cagr_text,
-                style={"fontSize": "16px", "color": "#555"},
+                style={"fontSize": "16px", "color": COLOR_TEXT_SECONDARY},
             ),
         ], style={"marginBottom": "8px"}),
         html.P(
             f"2030 market size estimate \u00b7 {segment_label} \u00b7 95% CI: {_fmt_usd(usd_ci95_lo)} \u2013 {_fmt_usd(usd_ci95_hi)} \u00b7 2020 constant USD",
-            style={"fontSize": "12px", "color": "#888", "marginTop": "0", "marginBottom": "4px"},
+            style={"fontSize": "12px", "color": COLOR_TEXT_TERTIARY, "marginTop": "0", "marginBottom": "4px"},
         ),
         html.P(
             "Calibrated against industry consensus: ~$200B global AI market in 2023 "
             "(McKinsey Global Institute, Statista, Grand View Research). "
             "Forecasts use an ensemble of ARIMA and Prophet statistical models. "
             "Wide confidence intervals reflect genuine uncertainty in long-horizon forecasting.",
-            style={"fontSize": "13px", "color": "#666", "marginTop": "4px", "marginBottom": "0", "lineHeight": "1.5"},
+            style={"fontSize": "13px", "color": COLOR_TEXT_SECONDARY, "marginTop": "4px", "marginBottom": "0", "lineHeight": "1.5"},
         ),
     ]
 
@@ -529,7 +535,7 @@ def _build_normal_insights_card(
             "growth trends in R&D spend, patent filings, VC investment, and public-company revenues "
             "using statistical time-series models. Wide confidence intervals are normal for this "
             "forecast horizon \u2014 the honest message is directional, not precise.",
-        ], style={"fontSize": "14px", "color": "#555", "lineHeight": "1.6", "marginBottom": "0"}),
+        ], style={"fontSize": "14px", "color": COLOR_TEXT_SECONDARY, "lineHeight": "1.6", "marginBottom": "0"}),
     )
 
     return html.Div([
@@ -567,7 +573,7 @@ def _build_expert_methodology_card(segment: str) -> html.Div:
             style=_SECTION_SUBTITLE_STYLE,
         ),
 
-        html.Hr(style={"margin": "16px 0", "borderColor": "#E8EBF0"}),
+        html.Hr(style={"margin": "16px 0", "borderColor": COLOR_AXES}),
 
         # Ensemble composition + RMSE
         dbc.Row([
@@ -592,12 +598,12 @@ def _build_expert_methodology_card(segment: str) -> html.Div:
                         ])),
                         html.Tbody(rmse_rows),
                     ],
-                    style={"borderCollapse": "collapse", "width": "100%", "border": "1px solid #E8EBF0"},
+                    style={"borderCollapse": "collapse", "width": "100%", "border": f"1px solid {COLOR_AXES}"},
                 ),
             ], width=6),
         ]),
 
-        html.Hr(style={"margin": "16px 0", "borderColor": "#E8EBF0"}),
+        html.Hr(style={"margin": "16px 0", "borderColor": COLOR_AXES}),
         html.P([
             html.Strong("Assumptions reference: "),
             "See ",
@@ -609,7 +615,7 @@ def _build_expert_methodology_card(segment: str) -> html.Div:
             "(4) v1.1 models trained on real USD anchors from analyst corpus; "
             "(5) source disagreement bands from p25/p75 analyst spread encoded as "
             "anchor_p25_real_2020 / anchor_p75_real_2020 columns.",
-        ], style={"fontSize": "13px", "color": "#444", "lineHeight": "1.6", "marginBottom": "0"}),
+        ], style={"fontSize": "13px", "color": COLOR_TEXT_SECONDARY, "lineHeight": "1.6", "marginBottom": "0"}),
     ], style={
         **_CARD_STYLE,
         "border": "1px solid #C5B0FF",
@@ -652,12 +658,12 @@ def _build_segment_bar(segment: str, usd_col: str, usd_mode: bool = True) -> go.
             paper_bgcolor="white",
             xaxis=dict(
                 title=dict(text="AI Market Segment", font=dict(size=12)),
-                gridcolor="#E8EBF0",
+                gridcolor=COLOR_AXES,
                 tickfont=dict(size=11),
             ),
             yaxis=dict(
                 title=dict(text=y_title_2030, font=dict(size=12)),
-                gridcolor="#E8EBF0",
+                gridcolor=COLOR_AXES,
                 tickfont=dict(size=11),
             ),
             margin=dict(l=70, r=40, t=40, b=80),
@@ -669,9 +675,9 @@ def _build_segment_bar(segment: str, usd_col: str, usd_mode: bool = True) -> go.
             .sort_values("year")
             .reset_index(drop=True)
         )
-        # Color bars: historical vs forecast
+        # Color bars: historical (deep blue) vs forecast (coral for clear distinction)
         colors = [
-            COLOR_DEEP_BLUE if not is_fore else "rgba(30,90,200,0.45)"
+            COLOR_DEEP_BLUE if not is_fore else COLOR_CORAL
             for is_fore in seg_df["is_forecast"]
         ]
         fig = go.Figure(
@@ -687,13 +693,13 @@ def _build_segment_bar(segment: str, usd_col: str, usd_mode: bool = True) -> go.
             paper_bgcolor="white",
             xaxis=dict(
                 title=dict(text="Year", font=dict(size=12)),
-                gridcolor="#E8EBF0",
+                gridcolor=COLOR_AXES,
                 tickfont=dict(size=11),
                 dtick=1,
             ),
             yaxis=dict(
                 title=dict(text=y_title_ts, font=dict(size=12)),
-                gridcolor="#E8EBF0",
+                gridcolor=COLOR_AXES,
                 tickfont=dict(size=11),
             ),
             margin=dict(l=70, r=40, t=40, b=60),
