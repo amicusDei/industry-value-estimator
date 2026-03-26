@@ -70,9 +70,9 @@ def prepare_prophet_from_anchors(segment: str) -> pd.DataFrame:
     """
     from config.settings import DATA_PROCESSED
     anchors = pd.read_parquet(DATA_PROCESSED / "market_anchors_ai.parquet")
-    real = anchors[anchors["n_sources"] > 0].copy()
+    # Use ALL data (real + interpolated) for sufficient training points.
     seg = (
-        real[real["segment"] == segment]
+        anchors[anchors["segment"] == segment]
         .sort_values("estimate_year")
         [["estimate_year", _MEDIAN_COL]]
         .rename(columns={"estimate_year": "ds", _MEDIAN_COL: "y"})
@@ -81,8 +81,8 @@ def prepare_prophet_from_anchors(segment: str) -> pd.DataFrame:
     seg["ds"] = pd.to_datetime(seg["ds"].astype(str) + "-01-01")
     if len(seg) < 5:
         warnings.warn(
-            f"prepare_prophet_from_anchors: segment '{segment}' has only {len(seg)} real "
-            f"observations after filtering n_sources > 0. Forecasts may be unreliable.",
+            f"prepare_prophet_from_anchors: segment '{segment}' has only {len(seg)} "
+            f"observations. Forecasts may be unreliable.",
             UserWarning,
             stacklevel=2,
         )

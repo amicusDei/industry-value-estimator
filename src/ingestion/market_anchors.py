@@ -152,8 +152,15 @@ def compile_market_anchors(industry_id: str = "ai") -> pd.DataFrame:
     raw_df["scope_coefficient"] = raw_df["source_firm"].map(scope_map).fillna(1.0)
 
     # Step 4: Compute scope-normalized estimate
-    raw_df["scope_normalized_usd_billions"] = (
-        raw_df["as_published_usd_billions"] * raw_df["scope_coefficient"]
+    # IMPORTANT: Scope coefficients only apply to "total" market estimates.
+    # Segment-specific entries (ai_hardware, ai_software, etc.) already represent
+    # that specific segment's scope — applying a total-market coefficient would
+    # distort them (e.g., Gartner's $44B AI semiconductor estimate × 0.18 = $7.9B is wrong).
+    raw_df["scope_normalized_usd_billions"] = raw_df.apply(
+        lambda row: row["as_published_usd_billions"] * row["scope_coefficient"]
+        if row["segment"] == "total"
+        else row["as_published_usd_billions"],  # no scope adjustment for segment-specific entries
+        axis=1,
     )
 
     # Step 5: Determine estimated_flag — True if estimate_year > publication_year (forward forecast)

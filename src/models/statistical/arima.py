@@ -84,16 +84,18 @@ def load_segment_y_series(segment: str) -> pd.Series:
     """
     from config.settings import DATA_PROCESSED
     anchors = pd.read_parquet(DATA_PROCESSED / "market_anchors_ai.parquet")
-    real = anchors[anchors["n_sources"] > 0].copy()
+    # Use ALL data (real + interpolated) to give models enough training points.
+    # The interpolated rows are derived from analyst estimates and provide reasonable
+    # signal for 2017-2022. Filtering to n_sources > 0 only leaves 2 points per segment.
     seg = (
-        real[real["segment"] == segment]
+        anchors[anchors["segment"] == segment]
         .sort_values("estimate_year")
         .set_index("estimate_year")[_MEDIAN_COL]
     )
     if len(seg) < 5:
         warnings.warn(
-            f"load_segment_y_series: segment '{segment}' has only {len(seg)} real observations "
-            f"after filtering n_sources > 0. Forecasts may be unreliable.",
+            f"load_segment_y_series: segment '{segment}' has only {len(seg)} observations. "
+            f"Forecasts may be unreliable.",
             UserWarning,
             stacklevel=2,
         )

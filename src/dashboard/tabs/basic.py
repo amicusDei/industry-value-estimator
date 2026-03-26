@@ -32,8 +32,11 @@ from src.dashboard.charts.styles import (
 
 _ATTRIBUTION_TEXT = "Sources: EDGAR, Analyst Corpus | Basic tier — Nominal USD"
 
-# Current year for KPI display
-_CURRENT_YEAR = 2024
+# Current year for KPI display — dynamic from data
+_CURRENT_YEAR = int(FORECASTS_DF["year"].max()) if not FORECASTS_DF.empty else 2030
+# Use latest non-forecast year as "current" for KPI display
+_latest_historical = FORECASTS_DF[FORECASTS_DF.get("is_forecast", pd.Series([True] * len(FORECASTS_DF))) == False] if "is_forecast" in FORECASTS_DF.columns else FORECASTS_DF[FORECASTS_DF["year"] <= 2025]
+_CURRENT_YEAR = int(_latest_historical["year"].max()) if not _latest_historical.empty else int(FORECASTS_DF["year"].min())
 _PREV_YEAR = _CURRENT_YEAR - 1
 _FORECAST_YEAR = 2030
 

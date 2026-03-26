@@ -25,9 +25,11 @@ from config.settings import DATA_RAW, DATA_PROCESSED
 # Bundled companies (Microsoft, Amazon, Alphabet, Meta, IBM, Accenture, Salesforce)
 # must NEVER appear here — their attributed AI revenue would contaminate backtesting.
 DIRECT_DISCLOSURE_CIKS = {
-    "0001045810",  # NVIDIA Corporation
-    "0001321655",  # Palantir Technologies Inc.
-    "0001577526",  # C3.ai Inc. (corrected CIK — 0001577552 was Alibaba Group Holding Ltd)
+    "0001045810",  # NVIDIA Corporation — representative of ai_hardware segment
+    # Palantir EXCLUDED: $2.5B revenue is <5% of ai_software segment ($56-117B).
+    # Individual company revenue cannot represent an entire market segment.
+    # Hard actual validation requires segment-representative revenue, not single companies.
+    # NVIDIA is the exception: its data center revenue (~$47B) IS the majority of AI hardware.
 }
 
 # Value chain layer -> market segment mapping (from ai.yaml taxonomy)

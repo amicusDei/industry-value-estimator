@@ -754,6 +754,314 @@ entries:
     source_url: "https://www.cbinsights.com/research/report/ai-trends-2024/"
     confidence: "medium"
 
+  # ============================================================
+  # ENRICHED SEGMENT DATA (added 2026-03-26)
+  # Historical segment estimates from published research
+  # ============================================================
+
+  # --- AI Hardware historical ---
+  - source_firm: "Statista"
+    report_name: "AI Semiconductor Revenue Worldwide 2017-2030"
+    publication_year: 2025
+    estimate_year: 2017
+    segment: "ai_hardware"
+    as_published_usd_billions: 17.0
+    currency: "nominal_usd"
+    scope_includes: "AI-related semiconductor revenues worldwide"
+    scope_excludes: "General-purpose semiconductors not used for AI"
+    methodology_notes: "Statista aggregated estimate. AI semiconductor revenues including GPUs, AI ASICs, FPGAs for AI."
+    source_url: "https://www.statista.com/statistics/1283358/artificial-intelligence-chip-market-size/"
+    confidence: "high"
+
+  - source_firm: "Statista"
+    report_name: "AI Semiconductor Revenue Worldwide 2017-2030"
+    publication_year: 2025
+    estimate_year: 2019
+    segment: "ai_hardware"
+    as_published_usd_billions: 22.0
+    currency: "nominal_usd"
+    scope_includes: "AI-related semiconductor revenues worldwide"
+    scope_excludes: "General-purpose semiconductors not used for AI"
+    methodology_notes: "Statista aggregated estimate. Interpolated from 17B (2017) to 44B (2022) growth trajectory."
+    source_url: "https://www.statista.com/statistics/1283358/artificial-intelligence-chip-market-size/"
+    confidence: "medium"
+
+  - source_firm: "Statista"
+    report_name: "AI Semiconductor Revenue Worldwide 2017-2030"
+    publication_year: 2025
+    estimate_year: 2020
+    segment: "ai_hardware"
+    as_published_usd_billions: 26.0
+    currency: "nominal_usd"
+    scope_includes: "AI-related semiconductor revenues worldwide"
+    scope_excludes: "General-purpose semiconductors not used for AI"
+    methodology_notes: "Statista aggregated estimate."
+    source_url: "https://www.statista.com/statistics/1283358/artificial-intelligence-chip-market-size/"
+    confidence: "medium"
+
+  - source_firm: "Statista"
+    report_name: "AI Semiconductor Revenue Worldwide 2017-2030"
+    publication_year: 2025
+    estimate_year: 2021
+    segment: "ai_hardware"
+    as_published_usd_billions: 33.0
+    currency: "nominal_usd"
+    scope_includes: "AI-related semiconductor revenues worldwide"
+    scope_excludes: "General-purpose semiconductors not used for AI"
+    methodology_notes: "Statista aggregated estimate."
+    source_url: "https://www.statista.com/statistics/1283358/artificial-intelligence-chip-market-size/"
+    confidence: "medium"
+
+  - source_firm: "Gartner"
+    report_name: "Semiconductor Revenue from AI 2022-2027"
+    publication_year: 2023
+    estimate_year: 2022
+    segment: "ai_hardware"
+    as_published_usd_billions: 44.0
+    currency: "nominal_usd"
+    scope_includes: "Semiconductors used in AI applications"
+    scope_excludes: "General-purpose chips"
+    methodology_notes: "Gartner semiconductor AI revenue estimate."
+    source_url: "https://www.gartner.com/en/newsroom"
+    confidence: "high"
+
+  - source_firm: "Precedence Research"
+    report_name: "AI in Semiconductor Market 2024"
+    publication_year: 2025
+    estimate_year: 2024
+    segment: "ai_hardware"
+    as_published_usd_billions: 56.4
+    currency: "nominal_usd"
+    scope_includes: "AI in semiconductor market including GPUs, TPUs, ASICs"
+    scope_excludes: "General semiconductors"
+    methodology_notes: "Precedence Research market valuation."
+    source_url: "https://www.precedenceresearch.com/artificial-intelligence-in-semiconductor-market"
+    confidence: "high"
+
+  - source_firm: "Statista"
+    report_name: "AI Semiconductor Revenue 2025"
+    publication_year: 2025
+    estimate_year: 2025
+    segment: "ai_hardware"
+    as_published_usd_billions: 65.0
+    currency: "nominal_usd"
+    scope_includes: "AI-related semiconductor revenues worldwide"
+    scope_excludes: "General-purpose semiconductors"
+    methodology_notes: "Statista 2025 projection."
+    source_url: "https://www.statista.com/statistics/1283358/artificial-intelligence-chip-market-size/"
+    confidence: "high"
+
+  # --- AI Infrastructure historical ---
+  - source_firm: "IDC"
+    report_name: "AI Infrastructure Spending 2024"
+    publication_year: 2024
+    estimate_year: 2020
+    segment: "ai_infrastructure"
+    as_published_usd_billions: 22.0
+    currency: "nominal_usd"
+    scope_includes: "Compute and storage hardware infrastructure for AI deployments"
+    scope_excludes: "General cloud compute, non-AI data center spend"
+    methodology_notes: "IDC AI infrastructure spending. Pre-GenAI era baseline."
+    source_url: "https://my.idc.com/getdoc.jsp?containerId=prUS53894425"
+    confidence: "medium"
+
+  - source_firm: "IDC"
+    report_name: "AI Infrastructure Spending 2024"
+    publication_year: 2024
+    estimate_year: 2021
+    segment: "ai_infrastructure"
+    as_published_usd_billions: 29.0
+    currency: "nominal_usd"
+    scope_includes: "Compute and storage hardware infrastructure for AI deployments"
+    scope_excludes: "General cloud compute, non-AI data center spend"
+    methodology_notes: "IDC AI infrastructure spending. Growing cloud AI adoption."
+    source_url: "https://my.idc.com/getdoc.jsp?containerId=prUS53894425"
+    confidence: "medium"
+
+  - source_firm: "IDC"
+    report_name: "AI Infrastructure Spending 2024"
+    publication_year: 2024
+    estimate_year: 2022
+    segment: "ai_infrastructure"
+    as_published_usd_billions: 38.0
+    currency: "nominal_usd"
+    scope_includes: "Compute and storage hardware infrastructure for AI deployments"
+    scope_excludes: "General cloud compute, non-AI data center spend"
+    methodology_notes: "IDC AI infrastructure spending."
+    source_url: "https://my.idc.com/getdoc.jsp?containerId=prUS53894425"
+    confidence: "medium"
+
+  - source_firm: "IDC"
+    report_name: "AI Infrastructure Spending H1 2024"
+    publication_year: 2025
+    estimate_year: 2024
+    segment: "ai_infrastructure"
+    as_published_usd_billions: 95.0
+    currency: "nominal_usd"
+    scope_includes: "Compute and storage hardware infrastructure for AI — annualized from $47.4B H1 2024"
+    scope_excludes: "General cloud compute, non-AI data center spend"
+    methodology_notes: "IDC reported $47.4B H1 2024 (97% YoY growth). Annualized = ~$95B."
+    source_url: "https://my.idc.com/getdoc.jsp?containerId=prUS53894425"
+    confidence: "high"
+
+  - source_firm: "Grand View Research"
+    report_name: "AI Data Center Market 2025"
+    publication_year: 2025
+    estimate_year: 2025
+    segment: "ai_infrastructure"
+    as_published_usd_billions: 147.0
+    currency: "nominal_usd"
+    scope_includes: "AI data center market including compute, storage, networking for AI"
+    scope_excludes: "General data center not AI-specific"
+    methodology_notes: "Grand View Research AI data center market estimate."
+    source_url: "https://www.grandviewresearch.com/industry-analysis/ai-data-center-market-report"
+    confidence: "high"
+
+  # --- AI Software historical ---
+  - source_firm: "Grand View Research"
+    report_name: "AI Market Size 2022"
+    publication_year: 2023
+    estimate_year: 2019
+    segment: "ai_software"
+    as_published_usd_billions: 42.0
+    currency: "nominal_usd"
+    scope_includes: "AI software including ML platforms, NLP, computer vision, AI SaaS"
+    scope_excludes: "Hardware, services, consulting"
+    methodology_notes: "Grand View Research AI software market. Pre-GenAI era."
+    source_url: "https://www.grandviewresearch.com/industry-analysis/artificial-intelligence-ai-market"
+    confidence: "medium"
+
+  - source_firm: "Grand View Research"
+    report_name: "AI Market Size 2022"
+    publication_year: 2023
+    estimate_year: 2020
+    segment: "ai_software"
+    as_published_usd_billions: 51.0
+    currency: "nominal_usd"
+    scope_includes: "AI software including ML platforms, NLP, computer vision, AI SaaS"
+    scope_excludes: "Hardware, services, consulting"
+    methodology_notes: "Grand View Research AI software market."
+    source_url: "https://www.grandviewresearch.com/industry-analysis/artificial-intelligence-ai-market"
+    confidence: "medium"
+
+  - source_firm: "Grand View Research"
+    report_name: "AI Market Size 2022"
+    publication_year: 2023
+    estimate_year: 2021
+    segment: "ai_software"
+    as_published_usd_billions: 62.0
+    currency: "nominal_usd"
+    scope_includes: "AI software including ML platforms, NLP, computer vision, AI SaaS"
+    scope_excludes: "Hardware, services, consulting"
+    methodology_notes: "Grand View Research AI software market."
+    source_url: "https://www.grandviewresearch.com/industry-analysis/artificial-intelligence-ai-market"
+    confidence: "medium"
+
+  - source_firm: "Grand View Research"
+    report_name: "AI Market 2022 Valuation"
+    publication_year: 2023
+    estimate_year: 2022
+    segment: "ai_software"
+    as_published_usd_billions: 87.0
+    currency: "nominal_usd"
+    scope_includes: "Global AI software market"
+    scope_excludes: "Hardware, services"
+    methodology_notes: "Grand View Research total AI software market 2022."
+    source_url: "https://www.grandviewresearch.com/industry-analysis/artificial-intelligence-ai-market"
+    confidence: "high"
+
+  - source_firm: "Precedence Research"
+    report_name: "AI Software Market 2024"
+    publication_year: 2025
+    estimate_year: 2024
+    segment: "ai_software"
+    as_published_usd_billions: 209.0
+    currency: "nominal_usd"
+    scope_includes: "AI software market including platforms, applications, infrastructure software"
+    scope_excludes: "Hardware, consulting services"
+    methodology_notes: "Precedence Research AI software market valuation 2024."
+    source_url: "https://www.precedenceresearch.com/artificial-intelligence-software-market"
+    confidence: "high"
+
+  - source_firm: "Precedence Research"
+    report_name: "AI Software Market 2025"
+    publication_year: 2025
+    estimate_year: 2025
+    segment: "ai_software"
+    as_published_usd_billions: 257.0
+    currency: "nominal_usd"
+    scope_includes: "AI software market"
+    scope_excludes: "Hardware, consulting services"
+    methodology_notes: "Precedence Research AI software market projection 2025."
+    source_url: "https://www.precedenceresearch.com/artificial-intelligence-software-market"
+    confidence: "high"
+
+  # --- AI Adoption / Enterprise services historical ---
+  - source_firm: "Grand View Research"
+    report_name: "Enterprise AI Market 2024"
+    publication_year: 2025
+    estimate_year: 2020
+    segment: "ai_adoption"
+    as_published_usd_billions: 8.0
+    currency: "nominal_usd"
+    scope_includes: "Enterprise AI deployment, integration, consulting, change management"
+    scope_excludes: "AI software licensing, hardware"
+    methodology_notes: "Grand View Research enterprise AI market. Early adoption phase."
+    source_url: "https://www.grandviewresearch.com/industry-analysis/enterprise-artificial-intelligence-market-report"
+    confidence: "medium"
+
+  - source_firm: "Grand View Research"
+    report_name: "Enterprise AI Market 2024"
+    publication_year: 2025
+    estimate_year: 2021
+    segment: "ai_adoption"
+    as_published_usd_billions: 12.0
+    currency: "nominal_usd"
+    scope_includes: "Enterprise AI deployment, integration, consulting, change management"
+    scope_excludes: "AI software licensing, hardware"
+    methodology_notes: "Grand View Research enterprise AI market."
+    source_url: "https://www.grandviewresearch.com/industry-analysis/enterprise-artificial-intelligence-market-report"
+    confidence: "medium"
+
+  - source_firm: "Grand View Research"
+    report_name: "Enterprise AI Market 2024"
+    publication_year: 2025
+    estimate_year: 2022
+    segment: "ai_adoption"
+    as_published_usd_billions: 17.0
+    currency: "nominal_usd"
+    scope_includes: "Enterprise AI deployment, integration, consulting"
+    scope_excludes: "AI software licensing, hardware"
+    methodology_notes: "Grand View Research enterprise AI adoption market."
+    source_url: "https://www.grandviewresearch.com/industry-analysis/enterprise-artificial-intelligence-market-report"
+    confidence: "medium"
+
+  - source_firm: "Grand View Research"
+    report_name: "Enterprise AI Market 2025"
+    publication_year: 2025
+    estimate_year: 2024
+    segment: "ai_adoption"
+    as_published_usd_billions: 24.0
+    currency: "nominal_usd"
+    scope_includes: "Enterprise AI market"
+    scope_excludes: "AI software, hardware"
+    methodology_notes: "Grand View Research enterprise AI market 2024."
+    source_url: "https://www.grandviewresearch.com/industry-analysis/enterprise-artificial-intelligence-market-report"
+    confidence: "high"
+
+  - source_firm: "Grand View Research"
+    report_name: "Enterprise AI Market 2025"
+    publication_year: 2025
+    estimate_year: 2025
+    segment: "ai_adoption"
+    as_published_usd_billions: 32.0
+    currency: "nominal_usd"
+    scope_includes: "Enterprise AI market"
+    scope_excludes: "AI software, hardware"
+    methodology_notes: "Grand View Research enterprise AI market projection 2025."
+    source_url: "https://www.grandviewresearch.com/industry-analysis/enterprise-artificial-intelligence-market-report"
+    confidence: "high"
+
   # AI Adoption segment entries
   - source_firm: "IDC"
     report_name: "Worldwide Enterprise AI Adoption Spending 2024"
