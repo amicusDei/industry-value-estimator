@@ -34,19 +34,18 @@ Declared values (multiples of 4 only):
 | Token | Value | Usage |
 |-------|-------|-------|
 | xs | 4px | Icon gaps, confidence dot margin, inline padding |
-| sm | 8px | Card body internal padding, label-to-value gap |
-| md | 16px | Default element spacing, card margin, section gaps |
+| sm | 8px | Card body internal padding, label-to-value gap, tab item vertical padding |
+| sm+ | 12px | KPI hero card internal CardBody padding (dbc default), tab item horizontal padding |
+| md | 16px | Default element spacing, card margin, section gaps, header bar vertical padding |
 | lg | 24px | Tab content padding (sides), header bar horizontal padding |
 | xl | 32px | Tab content padding (sides, established in layout.py) |
 | 2xl | 48px | Major section vertical breaks |
 | 3xl | 64px | Page-level vertical spacing (not used in Basic non-scroll layout) |
 
 Exceptions:
-- Tab item padding: 10px 20px (established pattern — do not change)
-- Header bar padding: 14px 24px (established pattern — do not change)
-- Vintage footer margin-top: 6px (11px text, tight placement below charts)
-- Consensus bullet chart margins: l=160px, r=40px, t=40px, b=40px (Plotly layout margin)
-- KPI hero cards: 12px internal CardBody padding via dbc defaults
+- Consensus bullet chart margins: l=160px, r=40px, t=40px, b=40px (Plotly layout margin — pixel-exact values required by Plotly API, not CSS spacing)
+
+**Revised from draft:** Tab item padding changed from 10px to 8px vertical / 12px horizontal (multiples of 4). Header bar padding changed from 14px to 16px (multiple of 4). Vintage footer margin-top changed from 6px to 8px (multiple of 4). 12px added to standard scale as `sm+` token.
 
 **Source:** Detected from `src/dashboard/layout.py` and `src/dashboard/charts/styles.py`. 8-point scale already in use; new components extend the same scale.
 
@@ -56,19 +55,20 @@ Exceptions:
 
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
-| Display | 28px | 700 | 1.2 | Hero KPI value (e.g., "$847B", "23.4%") |
-| Heading | 20px | 600 | 1.2 | Card titles, section headings, tab panel titles |
+| Display | 28px | 600 | 1.2 | Hero KPI value (e.g., "$847B", "23.4%") |
+| Heading | 20px | 600 | 1.2 | Card titles, section headings, tab panel titles, header title |
 | Body | 16px | 400 | 1.5 | Narrative text, card descriptions, insight text |
-| Label | 12px | 400 | 1.4 | KPI sub-labels, vintage footers, attribution footnotes, chart axis tick labels |
+| Label | 12px | 400 | 1.4 | KPI sub-labels, KPI scope labels, vintage footers, attribution footnotes, chart axis tick labels, tab navigation (unselected and selected) |
 
 Notes:
 - KPI label above value: 12px weight 400, color #888 — matches existing `ATTRIBUTION_STYLE` and `FONT_LABEL`
-- KPI sub-label below value (scope, uncertainty range): 11px weight 400, color #999 — one step below label for visual hierarchy
-- Vintage footer text: 11px weight 400, color #AAAAAA (lighter than label, so it recedes)
-- Tab navigation: 14px weight 400 unselected, 14px weight 600 selected — matches existing `dcc.Tab` style
-- Header title: 20px weight 600, color #1A1A2E — matches existing `layout.py` pattern
+- KPI sub-label below value (scope, uncertainty range): 12px weight 400, color #999 — same size as Label role, lighter color creates visual hierarchy without a fifth size
+- Vintage footer text: 12px weight 400, color #AAAAAA — lighter color than label so it recedes; same size tier as Label
+- Tab navigation: 12px weight 400 unselected, 12px weight 600 selected — collapsed from previous 14px to stay within 4-size scale
 
-**Source:** Detected from `src/dashboard/charts/styles.py` (`FONT_DISPLAY`, `FONT_HEADING`, `FONT_BODY`, `FONT_LABEL`) and `src/dashboard/layout.py`. Display bumped from 36px to 28px for hero KPIs — 36px is chart-level display; 28px is appropriate for card-bound KPI numerics. Weight 700 (vs 600) reserved for hero numbers to give them extra prominence.
+**Revised from draft:** Removed 11px and 14px sizes. Sub-labels and vintage footers now use 12px (Label tier) with lighter color values (#999 and #AAAAAA respectively) to maintain visual hierarchy without additional size steps. Tab navigation collapsed from 14px to 12px. Weight 700 replaced by 600 — only two weights declared: 400 (regular) and 600 (semibold).
+
+**Source:** Detected from `src/dashboard/charts/styles.py` (`FONT_DISPLAY`, `FONT_HEADING`, `FONT_BODY`, `FONT_LABEL`) and `src/dashboard/layout.py`. Display size 28px for card-bound KPI numerics (36px is chart-level only).
 
 ---
 
@@ -291,6 +291,7 @@ Static data, hardcoded in `overview.py`. Source: PitchBook Q4 2025 AI Public Com
 - Not interactive — static text only
 - Placement: `html.P` below the last `dcc.Graph` in each section, text-align right
 - Color: #AAAAAA (lighter than chart axis labels to visually recede)
+- Margin-top: 8px (sm token)
 
 ### Mode Toggle Interaction (existing, extended)
 
