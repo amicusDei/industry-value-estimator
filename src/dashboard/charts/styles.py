@@ -27,6 +27,42 @@ CI80_FILL = "rgba(30, 90, 200, 0.20)"
 FORECAST_BOUNDARY_COLOR = "rgba(120, 120, 120, 0.60)"
 CORAL_SERIES = "rgba(224, 90, 58, 0.85)"
 
+# Confidence traffic-light colors (semantic — status/diagnostic use only)
+COLOR_CONFIDENCE_GREEN = "#2ECC71"
+COLOR_CONFIDENCE_AMBER = "#F39C12"
+COLOR_CONFIDENCE_RED = "#E74C3C"
+
+
+from dash import html  # noqa: E402 — imported here to keep styles.py self-contained
+
+
+def vintage_footer(data_source: str, vintage: str, model_ver: str = "v1.1") -> html.P:
+    """
+    Render a subtle vintage/attribution footer paragraph.
+
+    Parameters
+    ----------
+    data_source : str
+        Human-readable source description (e.g. "EDGAR/Analyst Corpus").
+    vintage : str
+        Vintage date string (e.g. "2024-Q4").
+    model_ver : str
+        Model version string, defaults to "v1.1".
+
+    Returns
+    -------
+    html.P
+        Dash paragraph component styled as a receding footnote.
+    """
+    text = f"Data: {data_source} {vintage} | Model: {model_ver} | Last updated: 2026-03-26"
+    return html.P(text, style={
+        "fontSize": "12px",
+        "color": "#AAAAAA",
+        "marginTop": "8px",
+        "marginBottom": "0",
+        "textAlign": "right",
+    })
+
 # Typography
 FONT_DISPLAY = {"size": 36, "weight": 600}
 FONT_HEADING = {"size": 20, "weight": 600}
