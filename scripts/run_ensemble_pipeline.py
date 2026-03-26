@@ -77,7 +77,7 @@ from src.inference.forecast import (
     get_data_vintage,
     verify_cagr_range,
 )
-from config.settings import DATA_PROCESSED, MODELS_DIR
+from config.settings import DATA_PROCESSED, MODELS_DIR, load_industry_config
 
 logging.basicConfig(
     level=logging.INFO,
@@ -192,6 +192,14 @@ def run_pipeline() -> None:
     9. Attach source disagreement columns
     10. Run contract assertions
     """
+    # Load model calibration config
+    _ai_cfg = load_industry_config("ai")
+    _cal = _ai_cfg["model_calibration"]
+    _cagr_floors = _cal["cagr_floors"]
+    _blend_cfg = _cal["calibration_blend"]
+    _ci_floors = _cal["ci_width_floors"]
+    _forecast_floor_cfg = _cal["forecast_floor"]
+
     # Ensure output directories exist
     models_ai_dir = MODELS_DIR / "ai_industry"
     models_ai_dir.mkdir(parents=True, exist_ok=True)
@@ -217,7 +225,7 @@ def run_pipeline() -> None:
     for seg in SEGMENTS:
         logger.info(f"--- Segment: {seg} ---")
 
-        # Load USD Y series (n_sources > 0 filter applied inside)
+        # Load USD Y series (all data: real + interpolated, with weights in attrs)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", UserWarning)
             y_series = load_segment_y_series(seg)
@@ -234,6 +242,11 @@ def run_pipeline() -> None:
             )
 
         # Fit Prophet (more robust for short series) — primary statistical model
+        # NOTE: Prophet does not support sample_weight in its .fit() method.
+        # Observation weights from load_segment_y_series (real=1.0, interpolated=0.3)
+        # are available in y_series.attrs["weights"] but cannot be passed to Prophet.
+        # This is a known limitation — interpolated points receive equal weight in Prophet fitting.
+        # Future: consider duplicating real observations or using a custom loss function.
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             prophet_model = fit_prophet_from_anchors(seg)
@@ -359,8 +372,10 @@ def run_pipeline() -> None:
         prophet_ci80_upper = future_prophet_rows["yhat_upper"].values
         # Prophet gives 80% CI by default (yhat_lower/upper); use symmetric for 95%
         prophet_half_80 = (prophet_ci80_upper - prophet_ci80_lower) / 2
-        prophet_ci95_lower = prophet_ci80_lower - 0.53 * prophet_half_80  # ~95% factor
-        prophet_ci95_upper = prophet_ci80_upper + 0.53 * prophet_half_80
+        # Expand 80% CI to 95% CI: z_95/z_80 = 1.96/1.28 ≈ 1.53
+        _ci_expansion_factor = 1.96 / 1.28  # ≈ 1.53 — 95% CI MUST be wider than 80% CI
+        prophet_ci95_lower = prophet_point - _ci_expansion_factor * prophet_half_80
+        prophet_ci95_upper = prophet_point + _ci_expansion_factor * prophet_half_80
 
         if arima_available:
             mean_col = [c for c in arima_forecast_df.columns if "mean" in str(c).lower()][0]
@@ -432,7 +447,6 @@ def run_pipeline() -> None:
             blended_point = blend_forecasts(
                 stat_pred=stat_point,
                 lgbm_correction=lgbm_correction,
-                stat_weight=stat_weight,
                 lgbm_weight=lgbm_weight,
             )
 
@@ -444,25 +458,21 @@ def run_pipeline() -> None:
                 blended_ci80_lower = blend_forecasts(
                     stat_pred=stat_ci80_lower,
                     lgbm_correction=q_preds["ci80_lower"],
-                    stat_weight=stat_weight,
                     lgbm_weight=lgbm_weight,
                 )
                 blended_ci80_upper = blend_forecasts(
                     stat_pred=stat_ci80_upper,
                     lgbm_correction=q_preds["ci80_upper"],
-                    stat_weight=stat_weight,
                     lgbm_weight=lgbm_weight,
                 )
                 blended_ci95_lower = blend_forecasts(
                     stat_pred=stat_ci95_lower,
                     lgbm_correction=q_preds["ci95_lower"],
-                    stat_weight=stat_weight,
                     lgbm_weight=lgbm_weight,
                 )
                 blended_ci95_upper = blend_forecasts(
                     stat_pred=stat_ci95_upper,
                     lgbm_correction=q_preds["ci95_upper"],
-                    stat_weight=stat_weight,
                     lgbm_weight=lgbm_weight,
                 )
             except Exception as exc:
@@ -500,13 +510,7 @@ def run_pipeline() -> None:
         # data, we calibrate using a minimum growth rate derived from analyst consensus.
         # Gartner/IDC/GVR consensus: total AI market CAGR ~20-35% through 2030.
         # Per-segment minimum CAGRs are conservative lower bounds.
-        _MIN_SEGMENT_CAGR = {
-            "ai_hardware": 0.15,       # AI chips: 15% floor (Statista/Gartner)
-            "ai_infrastructure": 0.25, # AI cloud/DC: 25% floor (IDC/GVR CAGR 24-32%)
-            "ai_software": 0.20,       # AI software: 20% floor (Precedence Research)
-            "ai_adoption": 0.15,       # Enterprise AI: 15% floor (GVR/Mordor Intelligence)
-        }
-        _min_cagr = _MIN_SEGMENT_CAGR.get(seg, 0.15)
+        _min_cagr = _cagr_floors.get(seg, 0.15)
         _last_real = float(y_series.iloc[-1])
         blended_point_arr = np.array(blended_point).ravel()
 
@@ -519,8 +523,10 @@ def run_pipeline() -> None:
                 logger.info(f"  Calibrating {seg}: model CAGR {_model_cagr:.1%} < floor {_min_cagr:.0%}, applying consensus growth rate")
                 # Generate a growth path at the minimum CAGR from the last real value
                 _calibrated = np.array([_last_real * (1 + _min_cagr) ** (i + 1) for i in range(_n_forecast_years)])
-                # Blend: weighted average of model (30%) and calibrated (70%) to preserve model signal
-                blended_point_arr = 0.3 * blended_point_arr + 0.7 * _calibrated
+                # Blend: weighted average of model and calibrated to preserve model signal
+                _model_w = _blend_cfg["model_weight"]
+                _consensus_w = _blend_cfg["consensus_weight"]
+                blended_point_arr = _model_w * blended_point_arr + _consensus_w * _calibrated
                 blended_point = blended_point_arr
 
         # Also adjust CI bounds to track the calibrated point estimates
@@ -530,15 +536,18 @@ def run_pipeline() -> None:
         blended_ci95_upper = np.array(blended_ci95_upper).ravel()
 
         # Ensure CIs are centered around calibrated point with reasonable width
-        _ci80_half_width = np.maximum(np.abs(blended_ci80_upper - blended_ci80_lower) / 2, blended_point_arr * 0.15)
-        _ci95_half_width = np.maximum(np.abs(blended_ci95_upper - blended_ci95_lower) / 2, blended_point_arr * 0.25)
+        _ci80_half_width = np.maximum(np.abs(blended_ci80_upper - blended_ci80_lower) / 2, blended_point_arr * _ci_floors["ci80_fraction"])
+        _ci95_half_width = np.maximum(np.abs(blended_ci95_upper - blended_ci95_lower) / 2, blended_point_arr * _ci_floors["ci95_fraction"])
         blended_ci80_lower = blended_point_arr - _ci80_half_width
         blended_ci80_upper = blended_point_arr + _ci80_half_width
         blended_ci95_lower = blended_point_arr - _ci95_half_width
         blended_ci95_upper = blended_point_arr + _ci95_half_width
 
         # Floor all values to prevent negative forecasts
-        _min_forecast_floor = max(_last_real * 0.5, 1.5)
+        _min_forecast_floor = max(
+            _last_real * _forecast_floor_cfg["last_value_fraction"],
+            _forecast_floor_cfg["absolute_minimum_usd_billions"],
+        )
         blended_point = np.maximum(np.array(blended_point).ravel(), _min_forecast_floor)
         blended_ci80_lower = np.maximum(blended_ci80_lower, _min_forecast_floor * 0.5)
         blended_ci95_lower = np.maximum(blended_ci95_lower, _min_forecast_floor * 0.25)

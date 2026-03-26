@@ -514,11 +514,12 @@ entries:
     segment: "total"
     as_published_usd_billions: 4400.0
     currency: "nominal_usd"
-    scope_includes: "generative AI economic value across all sectors: productivity gains, AI-enabled output, technology spend combined"
+    metric_type: "economic_value_potential"
+    scope_includes: "CAUTION: This is total economic value potential, NOT market size. Generative AI economic value across all sectors: productivity gains, AI-enabled output, technology spend combined"
     scope_excludes: "nothing — includes both direct technology spend AND broader economic value creation"
-    methodology_notes: "McKinsey economic potential estimate. NOT a market size estimate. Apply 0.25x to extract tech-spend component."
+    methodology_notes: "McKinsey economic potential estimate. NOT a market size estimate — not directly comparable to IDC/Gartner/GVR market size figures. Includes productivity gains across all sectors, not just AI technology spend. Apply 0.25x to extract tech-spend component."
     source_url: "https://www.mckinsey.com/capabilities/mckinsey-digital/our-insights/the-economic-potential-of-generative-ai"
-    confidence: "medium"
+    confidence: "low"
 
   - source_firm: "McKinsey Global Institute"
     report_name: "The State of AI in 2023"
@@ -527,11 +528,12 @@ entries:
     segment: "total"
     as_published_usd_billions: 91.9
     currency: "nominal_usd"
-    scope_includes: "AI technology spend, AI software adoption, AI services — narrower McKinsey market estimate (separate from economic value)"
+    metric_type: "economic_value_potential"
+    scope_includes: "CAUTION: This is total economic value potential, NOT market size. AI technology spend, AI software adoption, AI services — narrower McKinsey market estimate (separate from economic value)"
     scope_excludes: "broader economic productivity gains, speculative AI-enabled revenue uplift"
-    methodology_notes: "McKinsey State of AI survey-based estimate. Narrower than their economic potential figure. Apply 0.25x."
+    methodology_notes: "McKinsey State of AI survey-based estimate. Narrower than their economic potential figure but still broader than pure market size. Not directly comparable to IDC/Gartner/GVR market sizing."
     source_url: "https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai-in-2023-generative-ais-breakout-year"
-    confidence: "medium"
+    confidence: "low"
 
   - source_firm: "McKinsey Global Institute"
     report_name: "The Economic Potential of Generative AI — 2030 Forecast"
@@ -540,9 +542,10 @@ entries:
     segment: "total"
     as_published_usd_billions: 7900.0
     currency: "nominal_usd"
-    scope_includes: "generative AI economic value across all sectors including productivity gains and technology spend"
+    metric_type: "economic_value_potential"
+    scope_includes: "CAUTION: This is total economic value potential, NOT market size. Generative AI economic value across all sectors including productivity gains and technology spend"
     scope_excludes: "nothing — broadest economic value definition"
-    methodology_notes: "MGI 2030 economic value potential. Very high uncertainty. Apply 0.25x. Use as upper-bound sensitivity only."
+    methodology_notes: "MGI 2030 economic value potential. NOT a market size estimate — not directly comparable to IDC/Gartner/GVR market size figures. Very high uncertainty. Apply 0.25x to extract tech-spend component. Use as upper-bound sensitivity only."
     source_url: "https://www.mckinsey.com/capabilities/mckinsey-digital/our-insights/the-economic-potential-of-generative-ai"
     confidence: "low"
 
@@ -553,11 +556,12 @@ entries:
     segment: "total"
     as_published_usd_billions: 1000.0
     currency: "nominal_usd"
-    scope_includes: "AI technology spend and economic value capture — blended estimate from State of AI 2024"
+    metric_type: "economic_value_potential"
+    scope_includes: "CAUTION: This is total economic value potential, NOT market size. AI technology spend and economic value capture — blended estimate from State of AI 2024"
     scope_excludes: "broader speculative productivity gains"
-    methodology_notes: "McKinsey 2024 AI adoption report. Blended spend + value estimate. Apply 0.25x coefficient."
+    methodology_notes: "McKinsey 2024 AI adoption report. Blended spend + value estimate — not directly comparable to IDC/Gartner/GVR market size figures. Apply 0.25x coefficient."
     source_url: "https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai"
-    confidence: "medium"
+    confidence: "low"
 
   # ============================================================
   # CB Insights — State of AI Report (scope_coefficient = 0.95)
@@ -1083,8 +1087,9 @@ entries:
     segment: "ai_adoption"
     as_published_usd_billions: 35.0
     currency: "nominal_usd"
-    scope_includes: "Enterprise AI deployment spend, AI integration costs, AI-specific IT consulting"
+    metric_type: "economic_value_potential"
+    scope_includes: "CAUTION: This is total economic value potential, NOT market size. Enterprise AI deployment spend, AI integration costs, AI-specific IT consulting"
     scope_excludes: "AI software licensing, AI hardware purchases, broader economic value from AI"
-    methodology_notes: "McKinsey enterprise adoption estimate from State of AI 2024. Survey-based with revenue extrapolation."
+    methodology_notes: "McKinsey enterprise adoption estimate from State of AI 2024. Survey-based with revenue extrapolation. Not directly comparable to IDC/Gartner/GVR market size figures."
     source_url: "https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai"
-    confidence: "medium"
+    confidence: "low"

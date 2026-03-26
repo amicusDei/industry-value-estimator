@@ -59,7 +59,6 @@ class TestEnsembleCombiner:
         result = blend_forecasts(
             stat_pred=10.0,
             lgbm_correction=2.0,
-            stat_weight=0.4,
             lgbm_weight=0.6,
         )
         expected = 10.0 + 0.6 * 2.0  # = 11.2
@@ -72,7 +71,6 @@ class TestEnsembleCombiner:
         result = blend_forecasts(
             stat_pred=5.0,
             lgbm_correction=0.0,
-            stat_weight=0.6,
             lgbm_weight=0.4,
         )
         assert abs(result - 5.0) < 1e-10
@@ -83,7 +81,7 @@ class TestEnsembleCombiner:
 
         stat_pred = np.array([10.0, 20.0, 30.0])
         correction = np.array([1.0, 2.0, 3.0])
-        result = blend_forecasts(stat_pred, correction, 0.4, 0.6)
+        result = blend_forecasts(stat_pred, correction, lgbm_weight=0.6)
         expected = stat_pred + 0.6 * correction
         np.testing.assert_allclose(result, expected)
 
@@ -94,7 +92,6 @@ class TestEnsembleCombiner:
         result = blend_forecasts(
             stat_pred=10.0,
             lgbm_correction=-2.0,
-            stat_weight=0.5,
             lgbm_weight=0.5,
         )
         expected = 10.0 + 0.5 * (-2.0)  # = 9.0

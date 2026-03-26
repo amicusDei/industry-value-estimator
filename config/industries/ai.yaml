@@ -244,6 +244,45 @@ attribution_subsegment_ratios:
 # LEGACY:   # the model has no signal above baseline for that segment/year
 # LEGACY:   usd_floor_billions: 0.0
 
+# ============================================================
+# MODEL CALIBRATION PARAMETERS
+# All hardcoded constants used in the ensemble pipeline, dashboard,
+# and forecast engine are centralized here.
+# ============================================================
+model_calibration:
+  # CAGR calibration floors per segment (analyst consensus lower bounds)
+  cagr_floors:
+    ai_hardware: 0.15    # Statista/Gartner AI semiconductor CAGR
+    ai_infrastructure: 0.25  # IDC/GVR AI data center CAGR 24-32%
+    ai_software: 0.20    # Precedence Research AI software CAGR
+    ai_adoption: 0.15    # GVR/Mordor Intelligence enterprise AI CAGR
+
+  # Model vs consensus blend ratio when model CAGR < floor
+  calibration_blend:
+    model_weight: 0.50   # Was 0.30 — increased to preserve more model signal
+    consensus_weight: 0.50  # Was 0.70
+
+  # CI width floors (fraction of point estimate)
+  ci_width_floors:
+    ci80_fraction: 0.15   # 80% CI half-width minimum as fraction of point
+    ci95_fraction: 0.25   # 95% CI half-width minimum as fraction of point
+
+  # Forecast floor (prevents negative/near-zero forecasts)
+  forecast_floor:
+    last_value_fraction: 0.50  # Floor at 50% of last real value
+    absolute_minimum_usd_billions: 1.5  # Or $1.5B, whichever is higher
+
+  # MAPE interpretive thresholds
+  mape_thresholds:
+    acceptable: 15        # <15% MAPE
+    use_with_caution: 30  # 15-30% MAPE
+    # >30% = directional_only
+
+  # Inflation assumption for nominal USD conversion
+  inflation:
+    method: "constant_cagr"  # TODO: upgrade to "world_bank_deflator" when live
+    annual_cagr: 0.025       # 2.5% constant — ±1% changes 2030 nominal by ~±6%
+
 # Source metadata (for DATA-07 attribution downstream)
 source_attribution:
   world_bank: "World Bank Open Data (data.worldbank.org)"

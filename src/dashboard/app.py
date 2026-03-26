@@ -22,6 +22,9 @@ _project_root = str(Path(__file__).resolve().parent.parent.parent)
 if _project_root not in sys.path:
     sys.path.insert(0, _project_root)
 
+import os
+import time
+
 import numpy as np
 import pandas as pd
 import yaml
@@ -35,6 +38,14 @@ RESIDUALS_DF = pd.read_parquet(DATA_PROCESSED / "residuals_statistical.parquet")
 BACKTESTING_DF = pd.read_parquet(DATA_PROCESSED / "backtesting_results.parquet")
 ANCHORS_DF = pd.read_parquet(DATA_PROCESSED / "market_anchors_ai.parquet")
 
+# Data freshness check — warn if parquet files are stale
+for _path, _name in [(DATA_PROCESSED / "forecasts_ensemble.parquet", "Forecasts"),
+                      (DATA_PROCESSED / "backtesting_results.parquet", "Backtesting")]:
+    if _path.exists():
+        _age_days = (time.time() - os.path.getmtime(str(_path))) / 86400
+        if _age_days > 30:
+            print(f"WARNING: {_name} data is {_age_days:.0f} days old. Run pipeline to refresh.")
+
 with open(Path(__file__).resolve().parent.parent.parent / "config" / "industries" / "ai.yaml") as f:
     AI_CONFIG = yaml.safe_load(f)
 
@@ -42,9 +53,13 @@ SOURCE_ATTRIBUTION = AI_CONFIG["source_attribution"]
 SEGMENTS = [seg["id"] for seg in AI_CONFIG["segments"]]
 SEGMENT_DISPLAY = {seg["id"]: seg["display_name"] for seg in AI_CONFIG["segments"]}
 
+_MAPE_THRESHOLDS = AI_CONFIG.get("model_calibration", {}).get("mape_thresholds", {})
+_MAPE_ACCEPTABLE = _MAPE_THRESHOLDS.get("acceptable", 15)
+_MAPE_CAUTION = _MAPE_THRESHOLDS.get("use_with_caution", 30)
+
 def label_mape(v):
-    if v < 15: return "acceptable"
-    if v < 30: return "use_with_caution"
+    if v < _MAPE_ACCEPTABLE: return "acceptable"
+    if v < _MAPE_CAUTION: return "use_with_caution"
     return "directional_only"
 
 # Compute diagnostics at startup from backtesting results

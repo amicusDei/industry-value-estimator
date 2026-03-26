@@ -8,7 +8,7 @@ Additive blend vs. convex combination: Most ensemble methods use a convex combin
 (w1 * model1 + w2 * model2 = total, w1 + w2 = 1). Here we use an additive blend
 because LightGBM is trained on residuals — it does not produce a full forecast level,
 only a correction to the statistical baseline. Formula: stat_pred + lgbm_weight * correction.
-The stat_weight is accepted for API symmetry but is not used in the blend calculation.
+The stat_pred is always used at 100% (no separate stat_weight needed).
 
 Inverse-RMSE weighting: models with lower out-of-sample CV error receive higher weight.
 The epsilon guard (1e-10) prevents division by zero for a model with RMSE ≈ 0 (a
@@ -58,7 +58,6 @@ def compute_ensemble_weights(
 def blend_forecasts(
     stat_pred: "np.ndarray | float",
     lgbm_correction: "np.ndarray | float",
-    stat_weight: float,
     lgbm_weight: float,
 ) -> "np.ndarray | float":
     """
@@ -66,19 +65,17 @@ def blend_forecasts(
 
     This is an ADDITIVE blend, not a convex combination. LightGBM produces
     a residual correction term, not an independent full forecast. The stat_pred
-    provides the baseline level; lgbm_correction adjusts it.
+    provides the baseline level (always used at 100%); lgbm_correction adjusts it
+    scaled by lgbm_weight.
 
     Formula: stat_pred + lgbm_weight * lgbm_correction
-    (stat_weight is accepted for API symmetry but is not used in the blend)
 
     Parameters
     ----------
     stat_pred : np.ndarray or float
-        Statistical model forecast (full level, e.g. in trillions USD).
+        Statistical model forecast (full level, e.g. in USD billions).
     lgbm_correction : np.ndarray or float
         LightGBM predicted residual correction.
-    stat_weight : float
-        Weight for statistical model (accepted for API symmetry, not used).
     lgbm_weight : float
         Weight for LightGBM correction term.
 

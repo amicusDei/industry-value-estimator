@@ -196,6 +196,33 @@ def build_diagnostics_layout(segment: str, usd_col: str, mode: str = "normal") -
         dbc.Col(hard_panel, width=6),
     ])
 
+    # --- Model Limitations Panel ---
+    limitations_card = html.Div([
+        html.H4("Model Limitations", style={**_PANEL_HEADING_STYLE, "color": "#E74C3C"}),
+        html.Ul([
+            html.Li(
+                "AI Infrastructure (51% MAPE) and AI Software (42% MAPE) forecasts are "
+                "directional only -- not suitable for precise valuation.",
+                style={"fontSize": "13px", "color": "#666", "marginBottom": "8px", "lineHeight": "1.5"},
+            ),
+            html.Li(
+                "Model trained on 9 data points per segment (2017-2025), including "
+                "interpolated values derived from analyst consensus estimates.",
+                style={"fontSize": "13px", "color": "#666", "marginBottom": "8px", "lineHeight": "1.5"},
+            ),
+            html.Li(
+                "CAGR floors prevent the model from forecasting market contraction -- "
+                "structural growth is assumed based on analyst consensus.",
+                style={"fontSize": "13px", "color": "#666", "marginBottom": "8px", "lineHeight": "1.5"},
+            ),
+            html.Li(
+                "No model drift monitoring -- re-validate if market structure changes "
+                "(e.g., regulatory shifts, new dominant players, demand shocks).",
+                style={"fontSize": "13px", "color": "#666", "marginBottom": "8px", "lineHeight": "1.5"},
+            ),
+        ], style={"paddingLeft": "20px", "marginBottom": "0"}),
+    ], style=_CARD_STYLE)
+
     footer = vintage_footer("EDGAR filings 2024 | LOO cross-validation on analyst estimates", "")
 
-    return html.Div([intro_card, panels_row, footer], style={"paddingTop": "8px"})
+    return html.Div([intro_card, panels_row, limitations_card, footer], style={"paddingTop": "8px"})

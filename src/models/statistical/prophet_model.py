@@ -23,7 +23,10 @@ Design notes:
   (RESEARCH.md Pitfall 5)
 - Parquet schema: year (int), segment (str), residual (float), model_type (str)
 - v1.1 entry points (prepare_prophet_from_anchors, fit_prophet_from_anchors) load Y from
-  market_anchors_ai.parquet, filter n_sources > 0, and use median_usd_billions_real_2020
+  market_anchors_ai.parquet using ALL data (real + interpolated) and use
+  median_usd_billions_real_2020. With only 2-3 real observations per segment, models
+  require the full 9-year series including interpolated values to produce stable fits.
+  Interpolated values are derived from analyst consensus estimates.
 """
 
 import logging
@@ -49,8 +52,10 @@ _MEDIAN_COL = "median_usd_billions_real_2020"
 def prepare_prophet_from_anchors(segment: str) -> pd.DataFrame:
     """Prepare market anchors data in Prophet ds/y format for a segment.
 
-    Filters to real observations only (n_sources > 0) to exclude interpolated
-    fill rows (RESEARCH.md Pitfall 1: Training on Interpolated Anchor Rows).
+    Uses ALL data (real + interpolated) for sufficient training points. With only
+    2-3 real observations per segment, models require the full 9-year series
+    including interpolated values to produce stable fits. Interpolated values are
+    derived from analyst consensus estimates and provide reasonable signal.
 
     Parameters
     ----------
@@ -61,12 +66,12 @@ def prepare_prophet_from_anchors(segment: str) -> pd.DataFrame:
     -------
     pd.DataFrame
         DataFrame with columns: ds (datetime YYYY-01-01), y (USD billions).
-        Sorted by ds, indexed by RangeIndex.
+        Sorted by ds, indexed by RangeIndex. Includes both real and interpolated rows.
 
     Warns
     -----
     UserWarning
-        If fewer than 5 observations remain after filtering interpolated rows.
+        If fewer than 5 observations are available.
     """
     from config.settings import DATA_PROCESSED
     anchors = pd.read_parquet(DATA_PROCESSED / "market_anchors_ai.parquet")

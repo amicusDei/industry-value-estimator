@@ -79,7 +79,53 @@ def reflate_to_nominal(
     float
         Nominal USD value for the given year.
     """
-    factor = (1.025) ** (year - base_year)
+    # Upgrade path: try World Bank GDP deflator first, fall back to constant CAGR.
+    #
+    # When the World Bank deflator (NY.GDP.DEFL.ZS) is available in the processed
+    # pipeline output (world_bank_ai.parquet), use actual deflator ratios for
+    # historical years and the constant CAGR assumption only for forecast years
+    # beyond the deflator coverage. This provides more accurate nominal conversion
+    # for historical years where actual inflation data exists.
+    #
+    # To upgrade:
+    # 1. Load world_bank_ai.parquet and extract GDP deflator index for "USA"
+    # 2. Compute deflator_ratio = deflator[year] / deflator[base_year]
+    # 3. For years covered by deflator: factor = deflator_ratio
+    # 4. For years beyond deflator: factor = last_deflator_ratio * (1 + cagr)^(year - last_deflator_year)
+
+    _deflator_factor = None
+    try:
+        from config.settings import DATA_PROCESSED, load_industry_config
+        _cfg = load_industry_config("ai")
+        _method = _cfg.get("model_calibration", {}).get("inflation", {}).get("method", "constant_cagr")
+
+        if _method == "world_bank_deflator":
+            # Attempt to load actual deflator data
+            _wb_path = DATA_PROCESSED / "world_bank_ai.parquet"
+            if _wb_path.exists():
+                import pandas as _pd
+                _wb = _pd.read_parquet(_wb_path)
+                _defl = _wb[(_wb["indicator_code"] == "NY.GDP.DEFL.ZS") & (_wb["economy"] == "USA")]
+                if not _defl.empty and year in _defl["year"].values and base_year in _defl["year"].values:
+                    _val_year = float(_defl.loc[_defl["year"] == year, "value"].iloc[0])
+                    _val_base = float(_defl.loc[_defl["year"] == base_year, "value"].iloc[0])
+                    if _val_base > 0:
+                        _deflator_factor = _val_year / _val_base
+    except Exception:
+        pass  # Fall through to constant CAGR
+
+    if _deflator_factor is not None:
+        return value_real_2020 * _deflator_factor
+
+    # Fallback: constant CAGR assumption
+    try:
+        from config.settings import load_industry_config
+        _cfg = load_industry_config("ai")
+        _inflation_cagr = _cfg["model_calibration"]["inflation"]["annual_cagr"]
+    except Exception:
+        _inflation_cagr = 0.025  # fallback: 2.5% constant CAGR
+
+    factor = (1.0 + _inflation_cagr) ** (year - base_year)
     return value_real_2020 * factor
 
 

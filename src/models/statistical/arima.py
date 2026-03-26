@@ -19,7 +19,10 @@ Design notes:
 - CV reuses temporal_cv_generic from regression.py for consistent CV methodology
   across all model types (RESEARCH.md Pattern 7)
 - Y variable is median_usd_billions_real_2020 from market_anchors_ai.parquet (v1.1)
-- Training filters out interpolated rows (n_sources == 0) per RESEARCH.md Pitfall 1
+- Training uses ALL data (real + interpolated). With only 2-3 real observations per
+  segment, models require the full 9-year series including interpolated values to
+  produce stable fits. Interpolated values are derived from analyst consensus estimates
+  and provide reasonable signal.
 """
 
 import logging
@@ -64,8 +67,11 @@ def assert_model_version() -> None:
 def load_segment_y_series(segment: str) -> pd.Series:
     """Load USD billions Y series for a segment from market_anchors_ai.parquet.
 
-    Filters to real observations only (n_sources > 0) to exclude interpolated rows
-    (RESEARCH.md Pitfall 1: Training on Interpolated Anchor Rows).
+    Uses ALL data (real + interpolated) to give models enough training points.
+    With only 2-3 real observations per segment, models require the full 9-year
+    series including interpolated values to produce stable fits. Interpolated
+    values are derived from analyst consensus estimates and provide reasonable
+    signal.
 
     Parameters
     ----------
@@ -76,22 +82,34 @@ def load_segment_y_series(segment: str) -> pd.Series:
     -------
     pd.Series
         Series indexed by estimate_year (int), values in USD billions (median_usd_billions_real_2020).
+        Includes both real (n_sources > 0) and interpolated (n_sources == 0) rows.
 
     Warns
     -----
     UserWarning
-        If fewer than 5 observations remain after filtering interpolated rows.
+        If fewer than 5 observations are available.
     """
     from config.settings import DATA_PROCESSED
     anchors = pd.read_parquet(DATA_PROCESSED / "market_anchors_ai.parquet")
     # Use ALL data (real + interpolated) to give models enough training points.
     # The interpolated rows are derived from analyst estimates and provide reasonable
     # signal for 2017-2022. Filtering to n_sources > 0 only leaves 2 points per segment.
-    seg = (
+    seg_df = (
         anchors[anchors["segment"] == segment]
         .sort_values("estimate_year")
-        .set_index("estimate_year")[_MEDIAN_COL]
+        .set_index("estimate_year")
     )
+    seg = seg_df[_MEDIAN_COL]
+
+    # Attach observation weights: real data (n_sources > 0) gets weight 1.0,
+    # interpolated data (n_sources == 0) gets weight 0.3 to down-weight synthetic points.
+    if "n_sources" in seg_df.columns:
+        seg.attrs["weights"] = pd.Series(
+            [1.0 if ns > 0 else 0.3 for ns in seg_df["n_sources"]],
+            index=seg_df.index,
+            name="weight",
+        )
+
     if len(seg) < 5:
         warnings.warn(
             f"load_segment_y_series: segment '{segment}' has only {len(seg)} observations. "
