@@ -16,6 +16,7 @@ from dash import dcc, html
 
 from src.dashboard.app import (
     FORECASTS_DF,
+    ANCHORS_DF,
     SEGMENTS,
     SEGMENT_DISPLAY,
     SOURCE_ATTRIBUTION,
@@ -23,10 +24,12 @@ from src.dashboard.app import (
 
 _ATTRIBUTION_TEXT = "Sources: " + ", ".join(SOURCE_ATTRIBUTION.values())
 from src.dashboard.charts.fan_chart import make_fan_chart
+from src.dashboard.charts.bullet_chart import make_consensus_bullet_chart
 from src.dashboard.charts.styles import (
     COLOR_DEEP_BLUE,
     COLOR_BG_SECONDARY,
     ATTRIBUTION_STYLE,
+    vintage_footer,
 )
 
 _CARD_STYLE = {
@@ -54,6 +57,51 @@ _SECTION_SUBTITLE_STYLE = {
     "lineHeight": "1.5",
 }
 
+# Revenue multiples reference data — UI-SPEC Revenue Multiples Table Data section
+# Source: PitchBook Q4 2025 AI Public Comp Sheet
+_REVENUE_MULTIPLES = [
+    {
+        "category": "AI Pure-Play",
+        "ev_revenue": "~33x",
+        "example": "Palantir, C3.ai, UiPath",
+        "source": "PitchBook Q4 2025",
+        "vintage": "2025-Q4",
+    },
+    {
+        "category": "AI Semiconductors",
+        "ev_revenue": "~15\u201325x",
+        "example": "NVIDIA, AMD, Marvell",
+        "source": "PitchBook Q4 2025",
+        "vintage": "2025-Q4",
+    },
+    {
+        "category": "Hyperscaler / Cloud",
+        "ev_revenue": "~8\u201312x",
+        "example": "Microsoft, Alphabet, Amazon",
+        "source": "PitchBook Q4 2025",
+        "vintage": "2025-Q4",
+    },
+    {
+        "category": "AI Conglomerate",
+        "ev_revenue": "~7x",
+        "example": "IBM, Accenture, SAP",
+        "source": "PitchBook Q4 2025",
+        "vintage": "2025-Q4",
+    },
+]
+
+# Expert mode: 8 analyst firms used in consensus corpus
+_CONSENSUS_ANALYST_FIRMS = [
+    "Gartner",
+    "IDC",
+    "McKinsey Global Institute",
+    "Goldman Sachs",
+    "Morgan Stanley",
+    "Statista",
+    "Grand View Research",
+    "PitchBook",
+]
+
 
 def _fmt_usd(usd_billions: float) -> str:
     """Format a USD billions value as a human-readable string."""
@@ -67,6 +115,133 @@ def _compute_cagr(start_val: float, end_val: float, years: int) -> float | None:
     if start_val <= 0 or end_val <= 0 or years <= 0:
         return None
     return ((end_val / start_val) ** (1.0 / years) - 1.0) * 100.0
+
+
+def _build_revenue_multiples_table() -> html.Div:
+    """Build the EV/Revenue reference multiples card for Normal mode Overview."""
+    import dash_bootstrap_components as dbc
+
+    header_style = {
+        "backgroundColor": COLOR_BG_SECONDARY,
+        "fontSize": "12px",
+        "fontWeight": 600,
+        "padding": "8px 12px",
+    }
+    cell_style = {
+        "fontSize": "12px",
+        "fontWeight": 400,
+        "padding": "8px 12px",
+    }
+
+    thead = html.Thead(html.Tr([
+        html.Th("Category", style=header_style),
+        html.Th("EV/Revenue", style=header_style),
+        html.Th("Examples", style=header_style),
+        html.Th("Source", style=header_style),
+        html.Th("Vintage", style=header_style),
+    ]))
+
+    tbody_rows = []
+    for row in _REVENUE_MULTIPLES:
+        tbody_rows.append(html.Tr([
+            html.Td(row["category"], style=cell_style),
+            html.Td(row["ev_revenue"], style={**cell_style, "fontWeight": 600}),
+            html.Td(row["example"], style=cell_style),
+            html.Td(row["source"], style=cell_style),
+            html.Td(row["vintage"], style=cell_style),
+        ]))
+
+    table = dbc.Table(
+        [thead, html.Tbody(tbody_rows)],
+        bordered=True,
+        size="sm",
+        style={"marginBottom": "8px"},
+    )
+
+    return html.Div([
+        html.H4(
+            "EV/Revenue Reference Multiples",
+            style={
+                "fontSize": "20px",
+                "fontWeight": 600,
+                "color": "#1A1A2E",
+                "marginBottom": "16px",
+                "marginTop": "0",
+            },
+        ),
+        table,
+        html.P(
+            "Source: PitchBook Q4 2025 AI Public Comp Sheet",
+            style={"fontSize": "12px", "color": "#AAAAAA", "marginTop": "8px", "marginBottom": "4px"},
+        ),
+        vintage_footer("PitchBook", "2025-Q4"),
+    ], style=_CARD_STYLE)
+
+
+def _build_consensus_panel(segment: str) -> html.Div:
+    """Build the Model vs Analyst Consensus card for Normal mode Overview."""
+    fig = make_consensus_bullet_chart(FORECASTS_DF, ANCHORS_DF, 2024, SEGMENT_DISPLAY)
+    return html.Div([
+        html.H4(
+            "Model vs Analyst Consensus",
+            style={
+                "fontSize": "20px",
+                "fontWeight": 600,
+                "color": "#1A1A2E",
+                "marginBottom": "16px",
+                "marginTop": "0",
+            },
+        ),
+        dcc.Graph(
+            figure=fig,
+            config={"displayModeBar": False},
+        ),
+        vintage_footer("Analyst corpus (8 firms)", "Latest vintage: 2025"),
+    ], style=_CARD_STYLE)
+
+
+def _build_expert_consensus_panel(segment: str) -> html.Div:
+    """Build the consensus panel with divergence rationale for Expert mode Overview."""
+    fig = make_consensus_bullet_chart(FORECASTS_DF, ANCHORS_DF, 2024, SEGMENT_DISPLAY)
+    firms_list = html.Ul(
+        [html.Li(firm, style={"fontSize": "13px", "marginBottom": "2px"}) for firm in _CONSENSUS_ANALYST_FIRMS],
+        style={"paddingLeft": "20px", "marginBottom": "8px"},
+    )
+    return html.Div([
+        html.H4(
+            "Model vs Analyst Consensus",
+            style={
+                "fontSize": "20px",
+                "fontWeight": 600,
+                "color": "#1A1A2E",
+                "marginBottom": "16px",
+                "marginTop": "0",
+            },
+        ),
+        dcc.Graph(
+            figure=fig,
+            config={"displayModeBar": False},
+        ),
+        html.Hr(style={"margin": "16px 0", "borderColor": "#E8EBF0"}),
+        html.H4(
+            "Consensus Divergence Rationale",
+            style={
+                "fontSize": "16px",
+                "fontWeight": 600,
+                "color": "#444",
+                "marginBottom": "8px",
+                "marginTop": "0",
+            },
+        ),
+        html.P(
+            "Analyst corpus covers 8 firms. Divergence above 20% may reflect boundary "
+            "differences (e.g. McKinsey economic-value scope vs. IDC market-size scope) "
+            "rather than genuine forecast disagreement.",
+            style={"fontSize": "13px", "color": "#555", "lineHeight": "1.5", "marginBottom": "8px"},
+        ),
+        firms_list,
+        vintage_footer("Analyst corpus (8 firms)", "Latest vintage: 2025"),
+    ], style={**_CARD_STYLE, "border": "1px solid #C5B0FF", "borderLeft": "4px solid #7C4DFF"})
 
 
 def build_overview_layout(segment: str, usd_col: str, mode: str = "normal") -> html.Div:
@@ -285,6 +460,15 @@ def build_overview_layout(segment: str, usd_col: str, mode: str = "normal") -> h
     if insight_card:
         sections.append(insight_card)
     sections.append(bar_section)
+
+    # Normal mode: consensus panel + revenue multiples table after bar section
+    if mode == "normal":
+        sections.append(_build_consensus_panel(segment))
+        sections.append(_build_revenue_multiples_table())
+    # Expert mode: consensus panel with divergence rationale (no multiples table)
+    elif mode == "expert":
+        sections.append(_build_expert_consensus_panel(segment))
+
     return html.Div(sections, style={"paddingTop": "8px"})
 
 
