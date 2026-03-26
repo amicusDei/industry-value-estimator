@@ -118,7 +118,26 @@ def fit_prophet_from_anchors(segment: str, changepoint_year: int = 2022) -> Prop
     Prophet
         Fitted Prophet model. Use forecast_prophet() to generate predictions.
     """
-    seg_df = prepare_prophet_from_anchors(segment)
+    seg_df_clean = prepare_prophet_from_anchors(segment)
+
+    # Observation weighting via duplication: since Prophet does not support
+    # sample_weight in its .fit() method, we duplicate real observations
+    # (n_sources > 0) 3x in the training DataFrame while keeping interpolated
+    # observations (n_sources == 0) at 1x. This effectively gives real data
+    # 3x weight during model fitting.
+    from config.settings import DATA_PROCESSED as _DP
+    _anchors_raw = pd.read_parquet(_DP / "market_anchors_ai.parquet")
+    _seg_anchors = _anchors_raw[_anchors_raw["segment"] == segment].sort_values("estimate_year")
+    _n_sources_map = dict(zip(_seg_anchors["estimate_year"], _seg_anchors.get("n_sources", [0]*len(_seg_anchors))))
+    dupe_rows = []
+    for _, row in seg_df_clean.iterrows():
+        year_val = row["ds"].year
+        ns = _n_sources_map.get(year_val, 0)
+        n_copies = 3 if ns > 0 else 1
+        for _ in range(n_copies):
+            dupe_rows.append({"ds": row["ds"], "y": row["y"]})
+    seg_df = pd.DataFrame(dupe_rows).reset_index(drop=True)
+
     # Only include explicit changepoint if it falls within the training period
     min_year = seg_df["ds"].dt.year.min() if len(seg_df) > 0 else changepoint_year + 1
     max_year = seg_df["ds"].dt.year.max() if len(seg_df) > 0 else changepoint_year - 1
@@ -244,7 +263,9 @@ def get_prophet_residuals(model: Prophet, df_segment: pd.DataFrame) -> pd.Series
     pd.Series
         Residuals indexed by integer year. name="residual".
     """
-    in_sample = model.predict(model.history)
+    # Predict on the clean (non-duplicated) segment data rather than
+    # model.history which may contain duplicated rows from observation weighting.
+    in_sample = model.predict(df_segment)
     residuals = df_segment["y"].values - in_sample["yhat"].values
     year_index = df_segment["ds"].dt.year.values
     return pd.Series(residuals, index=year_index, name="residual")

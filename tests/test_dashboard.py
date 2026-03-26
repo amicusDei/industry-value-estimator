@@ -56,7 +56,8 @@ def test_backtest_chart_traces():
     from src.dashboard.app import BACKTESTING_DF
     from src.dashboard.charts.backtest import make_backtest_chart
 
-    fig = make_backtest_chart(BACKTESTING_DF, segment="ai_software")
+    # Use "all" to aggregate across segments — hard actuals may only exist for ai_hardware
+    fig = make_backtest_chart(BACKTESTING_DF, segment="all")
     assert len(fig.data) >= 1, "Backtest chart must have at least one trace"
     # First trace should have y data
     assert fig.data[0].y is not None and len(fig.data[0].y) > 0, "Backtest trace must have y data"

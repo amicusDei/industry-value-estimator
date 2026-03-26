@@ -11,6 +11,8 @@ import dash_bootstrap_components as dbc
 from dash import dcc, html
 
 from src.dashboard.app import BACKTESTING_DF, DIAGNOSTICS, SEGMENTS, SEGMENT_DISPLAY, SOURCE_ATTRIBUTION
+
+_ATTRIBUTION_TEXT = "Sources: " + ", ".join(SOURCE_ATTRIBUTION.values())
 from src.dashboard.charts.backtest import make_backtest_chart
 from src.dashboard.charts.styles import (
     COLOR_DEEP_BLUE,
@@ -205,6 +207,62 @@ def build_diagnostics_layout(segment: str, usd_col: str, mode: str = "normal") -
     ])
 
     # --- Model Limitations Panel ---
+    # --- Benchmark Comparison Panel (Finding 8) ---
+    benchmark_items = []
+    benchmark_models = ["prophet_loo", "naive", "random_walk", "consensus"]
+    # Build a table: rows = segments, columns = models
+    bench_header = html.Tr(
+        [html.Th("Segment", style={"fontSize": "13px", "padding": "6px 12px", "color": COLOR_TEXT_PRIMARY})]
+        + [html.Th(m.replace("_", " ").title(), style={"fontSize": "13px", "padding": "6px 12px", "color": COLOR_TEXT_PRIMARY}) for m in benchmark_models]
+        + [html.Th("Best", style={"fontSize": "13px", "padding": "6px 12px", "color": COLOR_TEXT_PRIMARY})]
+    )
+    bench_rows = []
+    for seg in display_segments:
+        seg_label = SEGMENT_DISPLAY.get(seg, seg)
+        cells = [html.Td(seg_label, style={"fontSize": "12px", "padding": "4px 12px"})]
+        best_model = None
+        best_mape = float("inf")
+        for model_name in benchmark_models:
+            model_seg = BACKTESTING_DF[
+                (BACKTESTING_DF["segment"] == seg)
+                & (BACKTESTING_DF["model"] == model_name)
+                & (BACKTESTING_DF["actual_type"] == "held_out")
+            ]
+            if not model_seg.empty:
+                mean_mape = float(model_seg["mape"].mean())
+                color = _MAPE_COLOR.get(
+                    "acceptable" if mean_mape < 15 else "use_with_caution" if mean_mape < 30 else "directional_only",
+                    COLOR_TEXT_MUTED,
+                )
+                cells.append(html.Td(f"{mean_mape:.1f}%", style={"fontSize": "12px", "padding": "4px 12px", "color": color, "fontWeight": 600}))
+                if mean_mape < best_mape:
+                    best_mape = mean_mape
+                    best_model = model_name
+            else:
+                cells.append(html.Td("--", style={"fontSize": "12px", "padding": "4px 12px", "color": "#CCC"}))
+        # Highlight winner
+        winner_label = best_model.replace("_", " ").title() if best_model else "--"
+        cells.append(html.Td(winner_label, style={
+            "fontSize": "12px", "padding": "4px 12px", "fontWeight": 700,
+            "color": COLOR_CONFIDENCE_GREEN,
+        }))
+        bench_rows.append(html.Tr(cells))
+
+    benchmark_table = html.Table(
+        [html.Thead(bench_header), html.Tbody(bench_rows)],
+        style={"width": "100%", "borderCollapse": "collapse", "marginTop": "8px"},
+    )
+
+    benchmark_panel = html.Div([
+        html.H4("Benchmark Comparison", style=_PANEL_HEADING_STYLE),
+        html.P(
+            "Mean LOO MAPE per segment across Prophet, Naive (last-year growth), Random Walk, "
+            "and Analyst Consensus benchmarks. Lower is better.",
+            style={"fontSize": "12px", "color": COLOR_TEXT_TERTIARY, "marginBottom": "8px", "fontStyle": "italic"},
+        ),
+        benchmark_table,
+    ], style=_CARD_STYLE)
+
     limitations_card = html.Div([
         html.H4("Model Limitations", style={**_PANEL_HEADING_STYLE, "color": COLOR_CONFIDENCE_RED}),
         html.Ul([
@@ -233,4 +291,4 @@ def build_diagnostics_layout(segment: str, usd_col: str, mode: str = "normal") -
 
     footer = vintage_footer("EDGAR filings 2024 | LOO cross-validation on analyst estimates", "")
 
-    return html.Div([intro_card, panels_row, limitations_card, footer], style={"paddingTop": "8px"})
+    return html.Div([intro_card, panels_row, benchmark_panel, limitations_card, footer], style={"paddingTop": "8px"})

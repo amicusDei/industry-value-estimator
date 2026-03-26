@@ -259,12 +259,26 @@ def fit_lgbm_point(X: np.ndarray, y: np.ndarray) -> lgb.LGBMRegressor:
         learning_rate=0.05,
         num_leaves=7,
         min_child_samples=3,
+        min_child_weight=1,      # Explicit (was implicit default)
         subsample=0.8,
         colsample_bytree=0.8,
+        reg_alpha=0.1,           # L1 regularization to reduce overfitting
+        reg_lambda=1.0,          # L2 regularization to reduce overfitting
         random_state=42,
         verbose=-1,
     )
-    model.fit(X, y)
+    # Early stopping: use a validation set if enough samples, otherwise fit on all data.
+    if len(X) >= 8:
+        split_idx = int(len(X) * 0.75)
+        X_train, X_val = X[:split_idx], X[split_idx:]
+        y_train, y_val = y[:split_idx], y[split_idx:]
+        model.fit(
+            X_train, y_train,
+            eval_set=[(X_val, y_val)],
+            callbacks=[lgb.early_stopping(stopping_rounds=10, verbose=False)],
+        )
+    else:
+        model.fit(X, y)
     return model
 
 

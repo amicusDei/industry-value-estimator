@@ -103,12 +103,17 @@ def load_segment_y_series(segment: str) -> pd.Series:
 
     # Attach observation weights: real data (n_sources > 0) gets weight 1.0,
     # interpolated data (n_sources == 0) gets weight 0.3 to down-weight synthetic points.
+    # Note: ARIMA and Prophet do not support sample_weight natively. Weighting is
+    # implemented via observation duplication in fit_arima_segment and
+    # prepare_prophet_from_anchors respectively. This attribute is kept for reference.
     if "n_sources" in seg_df.columns:
         seg.attrs["weights"] = pd.Series(
             [1.0 if ns > 0 else 0.3 for ns in seg_df["n_sources"]],
             index=seg_df.index,
             name="weight",
         )
+        # Store n_sources for downstream duplication in fit_arima_segment
+        seg.attrs["n_sources"] = seg_df["n_sources"]
 
     if len(seg) < 5:
         warnings.warn(
@@ -179,9 +184,33 @@ def select_arima_order(series: pd.Series) -> tuple[int, int, int]:
     return model.order
 
 
+def _duplicate_for_weighting(series: pd.Series) -> pd.Series:
+    """Duplicate real observations 3x for effective weighting in ARIMA.
+
+    Since statsmodels ARIMA does not support sample_weight, we duplicate
+    real observations (n_sources > 0) 3x in the training series while
+    keeping interpolated observations (n_sources == 0) at 1x. This
+    effectively gives real data 3x weight during model fitting.
+
+    If n_sources metadata is not available, returns the series unchanged.
+    """
+    n_sources = getattr(series, 'attrs', {}).get('n_sources')
+    if n_sources is None:
+        return series
+    values = []
+    for year_idx, val in series.items():
+        ns = n_sources.get(year_idx, 0) if hasattr(n_sources, 'get') else 0
+        n_copies = 3 if ns > 0 else 1
+        values.extend([val] * n_copies)
+    return pd.Series(values, name=series.name)
+
+
 def fit_arima_segment(series: pd.Series, order: tuple[int, int, int]) -> object:
     """
     Fit ARIMA(p, d, q) on a pandas Series using statsmodels.
+
+    Applies observation weighting via duplication: real observations
+    (n_sources > 0) are duplicated 3x, interpolated ones kept at 1x.
 
     Parameters
     ----------
@@ -196,7 +225,8 @@ def fit_arima_segment(series: pd.Series, order: tuple[int, int, int]) -> object:
         Fitted statsmodels ARIMAResults object. Has .resid, .fittedvalues,
         .aic, .bic attributes and .get_forecast() method.
     """
-    model = ARIMA(series, order=order)
+    train_series = _duplicate_for_weighting(series)
+    model = ARIMA(train_series, order=order)
     return model.fit()
 
 

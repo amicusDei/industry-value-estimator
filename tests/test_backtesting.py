@@ -64,7 +64,7 @@ class TestBacktesting:
         )
 
     def test_actual_type_labels(self):
-        """run_walk_forward('ai') actual_type column has only 'hard' and/or 'soft' values."""
+        """run_walk_forward('ai') actual_type column has only valid values."""
         from src.backtesting.walk_forward import run_walk_forward
 
         df = run_walk_forward("ai")
@@ -72,26 +72,27 @@ class TestBacktesting:
         assert "actual_type" in df.columns, (
             f"Expected 'actual_type' column, got columns: {df.columns.tolist()}"
         )
-        valid_types = {"hard", "soft"}
+        # held_out = LOO cross-validation, hard = EDGAR filings, soft = soft actuals
+        valid_types = {"hard", "soft", "held_out"}
         actual_types = set(df["actual_type"].unique())
         assert actual_types.issubset(valid_types), (
             f"actual_type must be subset of {valid_types}, got {actual_types}"
         )
 
     def test_fold_count(self):
-        """run_walk_forward('ai') evaluates >= 2 folds (2023, 2024 at minimum)."""
+        """run_walk_forward('ai') evaluates >= 2 folds."""
         from src.backtesting.walk_forward import run_walk_forward
 
         df = run_walk_forward("ai")
         assert "year" in df.columns, f"Expected 'year' column, got columns: {df.columns.tolist()}"
         eval_years = set(df["year"].unique())
-        valid_eval_years = {2022, 2023, 2024}
+        # LOO cross-validation evaluates years 2020-2024; EDGAR hard actuals may include 2018-2024
+        valid_eval_years = {2018, 2019, 2020, 2021, 2022, 2023, 2024}
         assert eval_years.issubset(valid_eval_years), (
             f"Evaluation years must be subset of {valid_eval_years}, got {eval_years}"
         )
         assert len(eval_years) >= 2, (
-            f"Expected >= 2 evaluation folds, got {len(eval_years)} (years: {sorted(eval_years)}). "
-            "NOTE: 2022 fold is absent because forecasts_ensemble.parquet starts at 2023."
+            f"Expected >= 2 evaluation folds, got {len(eval_years)} (years: {sorted(eval_years)})"
         )
 
     def test_circular_flag_column(self):
@@ -160,7 +161,8 @@ class TestBacktesting:
             )
         # No null actual_type
         assert df["actual_type"].notna().all(), "actual_type column contains null values"
-        valid_types = {"hard", "soft"}
+        # held_out = LOO cross-validation, hard = EDGAR filings, soft = soft actuals
+        valid_types = {"hard", "soft", "held_out"}
         assert set(df["actual_type"].unique()).issubset(valid_types), (
             f"actual_type must be subset of {valid_types}, got {set(df['actual_type'].unique())}"
         )

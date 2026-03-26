@@ -280,8 +280,8 @@ model_calibration:
 
   # Inflation assumption for nominal USD conversion
   inflation:
-    method: "constant_cagr"  # TODO: upgrade to "world_bank_deflator" when live
-    annual_cagr: 0.025       # 2.5% constant — ±1% changes 2030 nominal by ~±6%
+    method: "world_bank_deflator"  # Uses World Bank GDP deflator; falls back to CAGR if unavailable
+    annual_cagr: 0.025       # Fallback only if deflator unavailable — 2.5% constant
 
 # Source metadata (for DATA-07 attribution downstream)
 source_attribution:

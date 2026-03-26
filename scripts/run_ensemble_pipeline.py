@@ -42,6 +42,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 import numpy as np
 import pandas as pd
 import joblib
+from scipy.stats import shapiro
 
 from src.models.statistical.arima import (
     assert_model_version,
@@ -221,6 +222,7 @@ def run_pipeline() -> None:
     segment_arima_results = {}
     segment_y_series = {}
     summary_rows = []
+    normality_results: dict[str, dict] = {}  # segment -> {stat, p_val, label}
 
     for seg in SEGMENTS:
         logger.info(f"--- Segment: {seg} ---")
@@ -268,6 +270,18 @@ def run_pipeline() -> None:
             f"  Prophet residuals: {len(prophet_residuals)} obs, "
             f"abs_max={prophet_residuals.abs().max():.2f}B"
         )
+
+        # Shapiro-Wilk normality test on Prophet residuals (Finding 2)
+        if len(prophet_residuals) >= 3:
+            stat, p_val = shapiro(prophet_residuals.values)
+            normality_label = "normal" if p_val >= 0.05 else "non_normal"
+            logger.info(f"  Shapiro-Wilk normality: W={stat:.3f}, p={p_val:.3f} -> {normality_label}")
+            if p_val < 0.05:
+                logger.warning(f"  Residuals are non-normal (p={p_val:.3f}) -- z-score CIs may be miscalibrated")
+            normality_results[seg] = {"stat": float(stat), "p_val": float(p_val), "label": normality_label}
+        else:
+            logger.info(f"  Shapiro-Wilk: skipped (need >= 3 residuals, have {len(prophet_residuals)})")
+            normality_results[seg] = {"stat": float("nan"), "p_val": float("nan"), "label": "insufficient_data"}
 
     # ---------------------------------------------------------------------------
     # Step 3: Regenerate residuals_statistical.parquet
@@ -695,6 +709,17 @@ def run_pipeline() -> None:
             f"{lgbm_str:>10}"
         )
     print("=" * 75)
+    # Normality test summary
+    print("\n" + "=" * 75)
+    print("Residual Normality Tests (Shapiro-Wilk)")
+    print("-" * 75)
+    for seg, nres in normality_results.items():
+        if nres["label"] == "insufficient_data":
+            print(f"  {seg:<22} insufficient data")
+        else:
+            print(f"  {seg:<22} W={nres['stat']:.3f}  p={nres['p_val']:.3f}  {nres['label']}")
+    print("=" * 75)
+
     print(f"\nOutputs:")
     print(f"  Forecast parquet:   {forecast_path}")
     print(f"  Residuals parquet:  {residuals_path}")
