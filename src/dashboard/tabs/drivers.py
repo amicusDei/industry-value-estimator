@@ -7,8 +7,8 @@ from __future__ import annotations
 
 from dash import html
 
-from src.dashboard.app import SOURCE_ATTRIBUTION
-from src.dashboard.charts.styles import COLOR_DEEP_BLUE, ATTRIBUTION_STYLE
+from src.dashboard.app import FORECASTS_DF, SOURCE_ATTRIBUTION
+from src.dashboard.charts.styles import COLOR_DEEP_BLUE, ATTRIBUTION_STYLE, vintage_footer
 
 _ATTRIBUTION_TEXT = "Sources: " + ", ".join(SOURCE_ATTRIBUTION.values())
 
@@ -201,4 +201,5 @@ def build_drivers_layout(segment: str, usd_col: str, mode: str = "normal") -> ht
         sections.append(expert_card)
 
     sections.append(methodology_card)
+    sections.append(vintage_footer("World Bank, OECD, LSEG", FORECASTS_DF["data_vintage"].iloc[0]))
     return html.Div(sections, style={"paddingTop": "8px"})

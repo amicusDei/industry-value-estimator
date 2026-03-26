@@ -12,7 +12,7 @@ from src.dashboard.app import FORECASTS_DF, SEGMENTS, SEGMENT_DISPLAY, SOURCE_AT
 
 _ATTRIBUTION_TEXT = "Sources: " + ", ".join(SOURCE_ATTRIBUTION.values())
 from src.dashboard.charts.fan_chart import make_fan_chart
-from src.dashboard.charts.styles import COLOR_DEEP_BLUE, ATTRIBUTION_STYLE
+from src.dashboard.charts.styles import COLOR_DEEP_BLUE, ATTRIBUTION_STYLE, vintage_footer
 
 _CARD_STYLE = {
     "backgroundColor": "#FFFFFF",
@@ -193,7 +193,10 @@ def build_segments_layout(segment: str, usd_col: str, mode: str = "normal") -> h
                 cols.append(col)
             rows.append(dbc.Row(cols))
         extra = [expert_note] if expert_note else []
-        return html.Div([tab_intro] + extra + rows, style={"paddingTop": "8px"})
+        return html.Div(
+            [tab_intro] + extra + rows + [vintage_footer("EDGAR/Analyst Corpus", FORECASTS_DF["data_vintage"].iloc[0])],
+            style={"paddingTop": "8px"},
+        )
     else:
         # Single segment full-width
         fig = make_fan_chart(FORECASTS_DF, segment, usd_col, usd_mode=usd_mode)
@@ -226,4 +229,5 @@ def build_segments_layout(segment: str, usd_col: str, mode: str = "normal") -> h
                 "boxShadow": "0 1px 4px rgba(0,0,0,0.08)",
                 "border": "1px solid #E8EBF0",
             }),
+            vintage_footer("EDGAR/Analyst Corpus", FORECASTS_DF["data_vintage"].iloc[0]),
         ], style={"paddingTop": "8px"})
