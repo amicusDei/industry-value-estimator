@@ -314,30 +314,40 @@ def test_revenue_multiples_in_overview():
     )
 
 
-@pytest.mark.skip(reason="Plan 11-02 — alias columns removed in that plan")
 def test_no_alias_columns():
     """DASH-04: FORECASTS_DF must not contain usd_point alias column after alias removal."""
     from src.dashboard.app import FORECASTS_DF
-    assert "usd_point" not in FORECASTS_DF.columns, (
-        "Alias column 'usd_point' still present — alias removal not complete"
-    )
+    assert "usd_point" not in FORECASTS_DF.columns
+    assert "usd_ci80_lower" not in FORECASTS_DF.columns
+    assert "usd_ci80_upper" not in FORECASTS_DF.columns
+    assert "usd_ci95_lower" not in FORECASTS_DF.columns
+    assert "usd_ci95_upper" not in FORECASTS_DF.columns
 
 
-@pytest.mark.skip(reason="Plan 11-02 — PCA strings removed in that plan")
 def test_no_pca_strings():
     """DASH-04: No PCA/composite index strings in Normal mode display."""
     import inspect
-    from src.dashboard.tabs.overview import build_overview_layout
-    source = inspect.getsource(build_overview_layout)
-    assert "PCA" not in source, "PCA string still present in overview layout"
+    from src.dashboard.tabs import overview, segments, diagnostics
+    from src.dashboard.charts import fan_chart
+    for mod_name, mod in [("overview", overview), ("segments", segments), ("diagnostics", diagnostics), ("fan_chart", fan_chart)]:
+        source = inspect.getsource(mod)
+        # Check display strings only (not comments)
+        for line in source.split("\n"):
+            stripped = line.strip()
+            if stripped.startswith("#"):
+                continue
+            assert "Composite Index" not in stripped, f"{mod_name} still has 'Composite Index' in non-comment line: {stripped}"
+        assert '"PCA' not in source.replace("# ", ""), f"{mod_name} still has PCA in display string"
 
 
-@pytest.mark.skip(reason="Plan 11-04 — diagnostics rewrite in that plan")
 def test_diagnostics_real_mape():
     """DASH-04: Diagnostics tab shows real MAPE from backtesting_results."""
-    from src.dashboard.tabs.diagnostics import build_diagnostics_layout
-    layout = build_diagnostics_layout("all", "point_estimate_real_2020", "normal")
-    # Will verify MAPE values from backtesting_results are displayed
+    from src.dashboard.app import BACKTESTING_DF
+    assert "mape" in BACKTESTING_DF.columns
+    assert "actual_type" in BACKTESTING_DF.columns
+    hard = BACKTESTING_DF[BACKTESTING_DF["actual_type"] == "hard"]
+    assert not hard.empty, "No hard actuals in backtesting results"
+    assert hard["mape"].notna().all(), "Hard MAPE values should not be NaN"
 
 
 def test_vintage_footer_present():
