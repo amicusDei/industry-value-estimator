@@ -46,11 +46,17 @@ SEGMENT_DISPLAY = {seg["id"]: seg["display_name"] for seg in AI_CONFIG["segments
 DIAGNOSTICS = {}
 for segment, grp in BACKTESTING_DF.groupby("segment"):
     hard_rows = grp[grp["actual_type"] == "hard"]
+    # Filter out -inf R² values (occur with single-sample folds)
+    valid_r2 = hard_rows["r2"][hard_rows["r2"] > -1e10] if not hard_rows.empty else pd.Series(dtype=float)
     DIAGNOSTICS[segment] = {
         "mape": float(hard_rows["mape"].mean()) if not hard_rows.empty else None,
-        "r2": float(hard_rows["r2"].mean()) if not hard_rows.empty else None,
+        "r2": float(valid_r2.mean()) if not valid_r2.empty else None,
         "mape_label": hard_rows["mape_label"].iloc[0] if not hard_rows.empty else "no_hard_actuals",
         "has_hard_actuals": not hard_rows.empty,
+        "hard_details": [
+            {"year": int(r["year"]), "mape": float(r["mape"]), "actual": float(r["actual_usd"]), "predicted": float(r["predicted_usd"])}
+            for _, r in hard_rows.iterrows()
+        ] if not hard_rows.empty else [],
     }
 
 # Resolve the project root so assets/ is always served correctly regardless

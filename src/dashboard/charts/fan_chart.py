@@ -62,12 +62,19 @@ def make_fan_chart(
     go.Figure
         Plotly figure with 4+ traces and forecast boundary annotations.
     """
-    # Both modes use native column names — aliases removed in v1.1
-    point_col = "point_estimate_real_2020" if usd_mode else usd_col
-    ci80_lower_col = "ci80_lower"
-    ci80_upper_col = "ci80_upper"
-    ci95_lower_col = "ci95_lower"
-    ci95_upper_col = "ci95_upper"
+    # Select real or nominal columns based on mode
+    if usd_col == "point_estimate_nominal" or usd_mode:
+        point_col = "point_estimate_nominal"
+        ci80_lower_col = "ci80_lower_nominal" if "ci80_lower_nominal" in df.columns else "ci80_lower"
+        ci80_upper_col = "ci80_upper_nominal" if "ci80_upper_nominal" in df.columns else "ci80_upper"
+        ci95_lower_col = "ci95_lower_nominal" if "ci95_lower_nominal" in df.columns else "ci95_lower"
+        ci95_upper_col = "ci95_upper_nominal" if "ci95_upper_nominal" in df.columns else "ci95_upper"
+    else:
+        point_col = "point_estimate_real_2020"
+        ci80_lower_col = "ci80_lower"
+        ci80_upper_col = "ci80_upper"
+        ci95_lower_col = "ci95_lower"
+        ci95_upper_col = "ci95_upper"
 
     # --- Aggregate or filter ---
     if segment == "all":

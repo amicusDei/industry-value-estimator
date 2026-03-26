@@ -163,10 +163,14 @@ def build_forecast_dataframe(
             # Enforce monotonic CI ordering
             row = clip_ci_bounds(row)
 
-            # Compute nominal USD value using 2.5% CAGR from base year 2020
+            # Compute nominal USD values using 2.5% CAGR from base year 2020
             row["point_estimate_nominal"] = reflate_to_nominal(
                 row["point_estimate_real_2020"], year=int(year)
             )
+            row["ci80_lower_nominal"] = reflate_to_nominal(row["ci80_lower"], year=int(year))
+            row["ci80_upper_nominal"] = reflate_to_nominal(row["ci80_upper"], year=int(year))
+            row["ci95_lower_nominal"] = reflate_to_nominal(row["ci95_lower"], year=int(year))
+            row["ci95_upper_nominal"] = reflate_to_nominal(row["ci95_upper"], year=int(year))
 
             rows.append(row)
 
@@ -179,6 +183,10 @@ def build_forecast_dataframe(
         "ci80_upper",
         "ci95_lower",
         "ci95_upper",
+        "ci80_lower_nominal",
+        "ci80_upper_nominal",
+        "ci95_lower_nominal",
+        "ci95_upper_nominal",
         "is_forecast",
         "data_vintage",
     ])
