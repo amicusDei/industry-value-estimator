@@ -113,8 +113,7 @@ def build_segments_layout(segment: str, usd_col: str, mode: str = "normal") -> h
         )
     else:
         tab_subtitle = (
-            "Expert mode: Y-axis shows raw composite index values (PCA scores). "
-            "Negative values are valid \u2014 they represent below-baseline activity for that segment/year. "
+            "Expert mode: Y-axis shows real 2020 USD market size values. "
             "Segments are modeled independently using the best-fitting model per segment (ARIMA or Prophet)."
         )
 
@@ -145,7 +144,7 @@ def build_segments_layout(segment: str, usd_col: str, mode: str = "normal") -> h
                 html.Li("Each segment uses the model with lower CV MAPE: ARIMA(p,d,q) via auto_arima AICc or Facebook Prophet.", style={"fontSize": "13px"}),
                 html.Li("ARIMA order selection: max_p=2, max_q=2, seasonal=False, information_criterion='aicc'.", style={"fontSize": "13px"}),
                 html.Li("Prophet: single explicit changepoint at 2022-01-01, changepoint_prior_scale=0.1, no weekly/daily seasonality.", style={"fontSize": "13px"}),
-                html.Li("CV folds: expanding-window TimeSeriesSplit, n_splits=3. Preprocessing (StandardScaler for PCA) fit on training fold only.", style={"fontSize": "13px"}),
+                html.Li("CV folds: expanding-window cross-validation, n_splits=3. Preprocessing fit on training fold only \u2014 no data leakage.", style={"fontSize": "13px"}),
                 html.Li("CI bands: 80% and 95% bootstrap intervals derived from model residuals (500 resamples).", style={"fontSize": "13px"}),
                 html.Li([
                     "Independence assumption: segments modeled separately, aggregate = sum. ",

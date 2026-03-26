@@ -97,29 +97,20 @@ def build_overview_layout(segment: str, usd_col: str, mode: str = "normal") -> h
     df_2030 = FORECASTS_DF[FORECASTS_DF["year"] == 2030]
 
     if segment == "all":
-        usd_2024 = float(df_2024["usd_point"].sum())
-        usd_2030 = float(df_2030["usd_point"].sum())
-        usd_ci80_lo = float(df_2030["usd_ci80_lower"].sum())
-        usd_ci80_hi = float(df_2030["usd_ci80_upper"].sum())
-        usd_ci95_lo = float(df_2030["usd_ci95_lower"].sum())
-        usd_ci95_hi = float(df_2030["usd_ci95_upper"].sum())
-        # Raw index for expert mode
-        idx_2023_anchor = float(FORECASTS_DF[FORECASTS_DF["year"] == 2023]["point_estimate_real_2020"].sum())
-        idx_2030 = float(df_2030["point_estimate_real_2020"].sum())
+        usd_2024 = float(df_2024["point_estimate_real_2020"].sum())
+        usd_2030 = float(df_2030["point_estimate_real_2020"].sum())
+        usd_ci80_lo = float(df_2030["ci80_lower"].sum())
+        usd_ci80_hi = float(df_2030["ci80_upper"].sum())
+        usd_ci95_lo = float(df_2030["ci95_lower"].sum())
+        usd_ci95_hi = float(df_2030["ci95_upper"].sum())
     else:
         _get_val = lambda df, col: float(df[df["segment"] == segment][col].iloc[0]) if len(df[df["segment"] == segment]) > 0 else 0.0
-        usd_2024 = _get_val(df_2024, "usd_point")
-        usd_2030 = _get_val(df_2030, "usd_point")
-        usd_ci80_lo = _get_val(df_2030, "usd_ci80_lower")
-        usd_ci80_hi = _get_val(df_2030, "usd_ci80_upper")
-        usd_ci95_lo = _get_val(df_2030, "usd_ci95_lower")
-        usd_ci95_hi = _get_val(df_2030, "usd_ci95_upper")
-        idx_2023_anchor = float(
-            FORECASTS_DF[(FORECASTS_DF["year"] == 2023) & (FORECASTS_DF["segment"] == segment)]["point_estimate_real_2020"].iloc[0]
-            if len(FORECASTS_DF[(FORECASTS_DF["year"] == 2023) & (FORECASTS_DF["segment"] == segment)]) > 0
-            else 0.0
-        )
-        idx_2030 = _get_val(df_2030, "point_estimate_real_2020")
+        usd_2024 = _get_val(df_2024, "point_estimate_real_2020")
+        usd_2030 = _get_val(df_2030, "point_estimate_real_2020")
+        usd_ci80_lo = _get_val(df_2030, "ci80_lower")
+        usd_ci80_hi = _get_val(df_2030, "ci80_upper")
+        usd_ci95_lo = _get_val(df_2030, "ci95_lower")
+        usd_ci95_hi = _get_val(df_2030, "ci95_upper")
 
     cagr = _compute_cagr(usd_2024, usd_2030, 6)
     segment_label = "All Segments Combined" if segment == "all" else SEGMENT_DISPLAY.get(segment, segment)
@@ -165,14 +156,14 @@ def build_overview_layout(segment: str, usd_col: str, mode: str = "normal") -> h
         ),
     ]
 
-    # Expert mode adds raw index value note to the headline card (v1.1: no multiplier)
+    # Expert mode adds model note to the headline card
     if expert:
         expert_headline_note = html.Div([
             html.Hr(style={"margin": "12px 0", "borderColor": "#EDE9FF"}),
             html.P([
                 html.Strong("Expert: "),
-                f"Raw composite index at 2030 = {idx_2030:.4f} \u00b7 ",
-                f"Anchor year 2023 index = {idx_2023_anchor:.4f}",
+                "2030 market size forecast \u00b7 "
+                "Anchor-calibrated USD model (v1.1) \u2014 trained on real USD market size series 2017\u20132024",
             ], style={"fontSize": "13px", "color": "#7C4DFF", "marginBottom": "4px"}),
         ], style={})
         headline_children.append(expert_headline_note)
@@ -194,12 +185,10 @@ def build_overview_layout(segment: str, usd_col: str, mode: str = "normal") -> h
 
     if expert:
         fan_desc = (
-            "Expert mode: Y-axis shows the raw composite index (PCA first principal component "
-            "of six proxy indicators). Negative values are valid PCA scores \u2014 they indicate "
-            "below-baseline activity for that segment/year. The index is centered at 0 by construction. "
-            "Switch to Normal mode to see USD estimates."
+            "Expert mode: Y-axis shows real 2020 USD market size. "
+            "Anchor-calibrated USD model (v1.1) \u2014 trained on real USD market size series 2017\u20132024."
         )
-        fan_title = "Forecast Fan Chart \u2014 Raw Composite Index"
+        fan_title = "Forecast Fan Chart \u2014 USD Market Size"
     else:
         fan_desc = (
             "This chart traces estimated AI industry market size from 2010 through the historical record, "
@@ -234,28 +223,26 @@ def build_overview_layout(segment: str, usd_col: str, mode: str = "normal") -> h
     bar_fig = _build_segment_bar(segment, usd_col, usd_mode=not expert)
 
     if segment == "all":
-        bar_heading = "Segment Breakdown \u2014 2030 Forecast" if not expert else "Segment Breakdown \u2014 2030 Raw Index"
+        bar_heading = "Segment Breakdown \u2014 2030 Forecast" if not expert else "Segment Breakdown \u2014 2030 USD Market Size"
         bar_subtitle = (
             "How the 2030 aggregate forecast is distributed across the four AI market segments: "
             "hardware (chips and semiconductors enabling AI compute), infrastructure (cloud platforms "
             "and data centers), software (AI applications and platforms), and adoption (enterprise "
             "and consumer deployment)."
             if not expert else
-            "Raw composite index values at 2030 per segment (before USD conversion). "
-            "These are PCA scores \u2014 negative values are valid and indicate below-baseline activity."
+            "2030 USD market size forecast per segment. Values in real 2020 USD billions."
         )
     else:
         display_name = SEGMENT_DISPLAY.get(segment, segment)
         bar_heading = (
             f"{display_name} \u2014 Annual Market Size (USD Billions)" if not expert
-            else f"{display_name} \u2014 Annual Raw Index"
+            else f"{display_name} \u2014 Annual Market Size (USD Billions)"
         )
         bar_subtitle = (
             f"Year-by-year market size estimate for the {display_name} segment from 2010 to 2030, "
             "in USD billions (2020 constant)."
             if not expert else
-            f"Year-by-year raw composite index for the {display_name} segment. "
-            "PCA scores centered at 0 \u2014 negative values indicate below-baseline activity."
+            f"Year-by-year USD market size forecast for the {display_name} segment. Values in real 2020 USD billions."
         )
 
     bar_section = html.Div([
@@ -285,7 +272,7 @@ def build_overview_layout(segment: str, usd_col: str, mode: str = "normal") -> h
         insight_card = None
 
     # ---------------------------------------------------------------------------
-    # Expert mode: raw index + multiplier derivation panel
+    # Expert mode: model methodology panel
     # ---------------------------------------------------------------------------
     if expert:
         expert_card = _build_expert_methodology_card(segment)
@@ -320,7 +307,7 @@ def _build_normal_insights_card(
         for seg in SEGMENTS:
             seg_rows = df_2030[df_2030["segment"] == seg]
             if len(seg_rows) > 0:
-                seg_usd = float(seg_rows["usd_point"].iloc[0])
+                seg_usd = float(seg_rows["point_estimate_real_2020"].iloc[0])
                 bullets.append(
                     html.Li(
                         f"{SEGMENT_DISPLAY.get(seg, seg)}: {_fmt_usd(seg_usd)}",
@@ -449,15 +436,15 @@ def _build_expert_methodology_card(segment: str) -> html.Div:
 def _build_segment_bar(segment: str, usd_col: str, usd_mode: bool = True) -> go.Figure:
     """Build a bar chart for segment breakdown or time-series for a single segment."""
     if usd_mode:
-        point_col = "usd_point"
+        point_col = "point_estimate_real_2020"
         y_title_2030 = "USD Billions (2030 Estimate)"
         y_title_ts = "USD Billions (2020 constant)"
         hover_tpl = "<b>%{x}</b><br>$%{y:.1f}B<extra></extra>"
     else:
         point_col = usd_col
-        y_title_2030 = "Composite Index (2030)"
-        y_title_ts = "Composite Index (PCA score)"
-        hover_tpl = "<b>%{x}</b><br>Index: %{y:.2f}<extra></extra>"
+        y_title_2030 = "USD Billions (2030)"
+        y_title_ts = "USD Billions (Real 2020)"
+        hover_tpl = "<b>%{x}</b><br>$%{y:.1f}B<extra></extra>"
 
     if segment == "all":
         # Grouped bar: all 4 segments' 2030 forecast values

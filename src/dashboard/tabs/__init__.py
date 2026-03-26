@@ -9,5 +9,5 @@ Modules:
 
 All tab builders are pure functions: (segment, usd_col, mode) -> html.Div.
 Normal mode shows USD estimates with plain-language narrative.
-Expert mode shows raw composite index values, multiplier derivation, and ASSUMPTIONS.md refs.
+Expert mode shows real USD market size values, model methodology, and ASSUMPTIONS.md refs.
 """

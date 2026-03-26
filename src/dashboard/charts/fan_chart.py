@@ -9,8 +9,8 @@ Produces a Plotly figure with:
 - Vertical forecast boundary line
 - Shaded forecast region
 
-In normal mode (usd_mode=True), all axes show USD billions.
-In expert mode (usd_mode=False), the raw composite index is shown.
+In normal mode (usd_mode=True), all axes show USD billions (real 2020).
+In expert mode (usd_mode=False), real 2020 USD is shown using the provided usd_col.
 """
 from __future__ import annotations
 
@@ -46,35 +46,28 @@ def make_fan_chart(
     ----------
     df : pd.DataFrame
         Full forecasts DataFrame (forecasts_ensemble.parquet schema),
-        must include usd_point/usd_ci80_lower/usd_ci80_upper/usd_ci95_lower/usd_ci95_upper
+        must include point_estimate_real_2020/ci80_lower/ci80_upper/ci95_lower/ci95_upper
         columns if usd_mode=True.
     segment : str
         Segment ID (e.g. "ai_software") or "all" to aggregate all segments.
     usd_col : str
-        Column name for the raw index point line. Either "point_estimate_real_2020" or
-        "point_estimate_nominal". Used only when usd_mode=False.
+        Column name for the point line. Either "point_estimate_real_2020" or
+        "point_estimate_nominal". Used for both usd_mode=True and usd_mode=False.
     usd_mode : bool
-        If True, plot the USD columns (usd_point, usd_ci*) on the Y-axis with
-        USD billion labels. If False, plot the raw index (usd_col) with index labels.
+        If True, plot real 2020 USD columns with USD billion labels.
+        If False, plot the provided usd_col with USD billion labels.
 
     Returns
     -------
     go.Figure
         Plotly figure with 4+ traces and forecast boundary annotations.
     """
-    # Choose which columns to plot based on mode
-    if usd_mode:
-        point_col = "usd_point"
-        ci80_lower_col = "usd_ci80_lower"
-        ci80_upper_col = "usd_ci80_upper"
-        ci95_lower_col = "usd_ci95_lower"
-        ci95_upper_col = "usd_ci95_upper"
-    else:
-        point_col = usd_col
-        ci80_lower_col = "ci80_lower"
-        ci80_upper_col = "ci80_upper"
-        ci95_lower_col = "ci95_lower"
-        ci95_upper_col = "ci95_upper"
+    # Both modes use native column names — aliases removed in v1.1
+    point_col = "point_estimate_real_2020" if usd_mode else usd_col
+    ci80_lower_col = "ci80_lower"
+    ci80_upper_col = "ci80_upper"
+    ci95_lower_col = "ci95_lower"
+    ci95_upper_col = "ci95_upper"
 
     # --- Aggregate or filter ---
     if segment == "all":
@@ -211,9 +204,9 @@ def make_fan_chart(
     if usd_mode:
         y_label = "USD Billions (2020 constant)"
     elif usd_col == "point_estimate_nominal":
-        y_label = "Nominal USD (Index)"
+        y_label = "USD Billions (Nominal)"
     else:
-        y_label = "Composite Index (PCA score)"
+        y_label = "USD Billions (Real 2020)"
 
     fig.update_layout(
         plot_bgcolor="white",

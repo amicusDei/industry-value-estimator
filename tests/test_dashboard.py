@@ -145,7 +145,6 @@ def test_tab_attribution_from_config():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skip(reason="Plan 11-01 — basic.py created in that plan")
 def test_basic_tab_renders():
     """DASH-01: Basic tab layout renders without error and returns an html.Div."""
     from dash import html

@@ -359,7 +359,7 @@ def build_diagnostics_layout(segment: str, usd_col: str, mode: str = "normal") -
             html.Ul([
                 html.Li("Strategy: sklearn TimeSeriesSplit expanding-window (chronological order preserved)", style={"fontSize": "13px"}),
                 html.Li("n_splits = 3 folds. Training windows: ~9 obs \u2192 ~11 obs \u2192 ~13 obs. Test: 1 year per fold.", style={"fontSize": "13px"}),
-                html.Li("No leakage: StandardScaler for PCA composites is fit on training fold only (train_end_idx parameter).", style={"fontSize": "13px"}),
+                html.Li("No leakage: preprocessing fit on training fold only (train_end_idx parameter) \u2014 no data leakage.", style={"fontSize": "13px"}),
                 html.Li("Prophet CV: manual TimeSeriesSplit refits (not Prophet's built-in cross_validation \u2014 incompatible with 15-year annual panels).", style={"fontSize": "13px"}),
             ], style={"paddingLeft": "20px", "marginBottom": "12px"}),
             html.H4("Metric Formulas", style={"fontSize": "14px", "fontWeight": 600, "marginBottom": "6px"}),
