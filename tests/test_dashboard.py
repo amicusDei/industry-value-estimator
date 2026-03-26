@@ -52,11 +52,11 @@ def test_fan_chart_usd_toggle():
 
 
 def test_backtest_chart_traces():
-    """PRES-03: Backtest chart renders residual data."""
-    from src.dashboard.app import RESIDUALS_DF
+    """PRES-03: Backtest chart renders actual-vs-predicted scatter for hard rows only."""
+    from src.dashboard.app import BACKTESTING_DF
     from src.dashboard.charts.backtest import make_backtest_chart
 
-    fig = make_backtest_chart(RESIDUALS_DF, segment="ai_software")
+    fig = make_backtest_chart(BACKTESTING_DF, segment="ai_software")
     assert len(fig.data) >= 1, "Backtest chart must have at least one trace"
     # First trace should have y data
     assert fig.data[0].y is not None and len(fig.data[0].y) > 0, "Backtest trace must have y data"
@@ -276,12 +276,42 @@ def test_consensus_divergence_color():
     )
 
 
-@pytest.mark.skip(reason="Plan 11-03 — revenue multiples added to overview in that plan")
 def test_revenue_multiples_in_overview():
     """DASH-03: Revenue multiples table present in Normal mode overview."""
     from src.dashboard.tabs.overview import build_overview_layout
+
     layout = build_overview_layout("all", "point_estimate_real_2020", "normal")
-    # Will verify presence of EV/Revenue table component
+
+    # Walk the component tree, collecting all string text found in children
+    def collect_text(component, results=None):
+        if results is None:
+            results = []
+        if isinstance(component, str):
+            results.append(component)
+            return results
+        children = getattr(component, "children", None)
+        if children is None:
+            return results
+        if isinstance(children, list):
+            for child in children:
+                collect_text(child, results)
+        elif isinstance(children, str):
+            results.append(children)
+        else:
+            collect_text(children, results)
+        return results
+
+    all_text = " ".join(collect_text(layout))
+
+    assert "EV/Revenue Reference Multiples" in all_text, (
+        "Heading 'EV/Revenue Reference Multiples' not found in Normal mode overview"
+    )
+    assert "~33x" in all_text, (
+        "'~33x' (AI Pure-Play multiple) not found in Normal mode overview"
+    )
+    assert "PitchBook Q4 2025" in all_text, (
+        "'PitchBook Q4 2025' source attribution not found in Normal mode overview"
+    )
 
 
 @pytest.mark.skip(reason="Plan 11-02 — alias columns removed in that plan")
