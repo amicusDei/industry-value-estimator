@@ -8,12 +8,6 @@ from __future__ import annotations
 
 from dash import Input, Output, callback
 
-from src.dashboard.tabs.overview import build_overview_layout
-from src.dashboard.tabs.segments import build_segments_layout
-from src.dashboard.tabs.drivers import build_drivers_layout
-from src.dashboard.tabs.diagnostics import build_diagnostics_layout
-
-
 @callback(
     Output("tab-content", "children"),
     Input("main-tabs", "value"),
@@ -25,10 +19,14 @@ def render_tab(active_tab: str, segment: str, usd_col: str, mode: str):
     """
     Render the content area for the currently active tab.
 
+    Tab modules are imported lazily (inside the function body) to avoid circular
+    import cycles: tab modules import from app.py, and app.py imports callbacks.py.
+    Top-level imports in callbacks.py would create a circular dependency.
+
     Parameters
     ----------
     active_tab : str
-        Currently selected tab value ("overview", "segments", "drivers", "diagnostics").
+        Currently selected tab value ("basic", "overview", "segments", "drivers", "diagnostics").
     segment : str
         Global segment filter value ("all" or segment ID).
     usd_col : str
@@ -41,8 +39,18 @@ def render_tab(active_tab: str, segment: str, usd_col: str, mode: str):
     dash component
         Layout component tree for the selected tab.
     """
+    # Lazy imports prevent circular import: tab modules import from app.py, which
+    # imports callbacks.py at module level. Lazy import breaks the cycle.
+    from src.dashboard.tabs.basic import build_basic_layout
+    from src.dashboard.tabs.overview import build_overview_layout
+    from src.dashboard.tabs.segments import build_segments_layout
+    from src.dashboard.tabs.drivers import build_drivers_layout
+    from src.dashboard.tabs.diagnostics import build_diagnostics_layout
+
     mode = mode or "normal"
-    if active_tab == "overview":
+    if active_tab == "basic":
+        return build_basic_layout(segment, usd_col, mode)
+    elif active_tab == "overview":
         return build_overview_layout(segment, usd_col, mode)
     elif active_tab == "segments":
         return build_segments_layout(segment, usd_col, mode)

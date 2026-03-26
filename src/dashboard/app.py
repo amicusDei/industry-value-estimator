@@ -33,6 +33,7 @@ from config.settings import DATA_PROCESSED, MODELS_DIR
 FORECASTS_DF = pd.read_parquet(DATA_PROCESSED / "forecasts_ensemble.parquet")
 RESIDUALS_DF = pd.read_parquet(DATA_PROCESSED / "residuals_statistical.parquet")
 BACKTESTING_DF = pd.read_parquet(DATA_PROCESSED / "backtesting_results.parquet")
+ANCHORS_DF = pd.read_parquet(DATA_PROCESSED / "market_anchors_ai.parquet")
 
 with open(Path(__file__).resolve().parent.parent.parent / "config" / "industries" / "ai.yaml") as f:
     AI_CONFIG = yaml.safe_load(f)

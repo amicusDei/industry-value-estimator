@@ -127,8 +127,14 @@ def create_layout() -> html.Div:
         # TABS
         dcc.Tabs(
             id="main-tabs",
-            value="overview",
+            value="basic",
             children=[
+                dcc.Tab(
+                    label="Basic",
+                    value="basic",
+                    style={"padding": "8px 16px", "fontSize": "12px"},
+                    selected_style={"padding": "8px 16px", "fontSize": "12px", "fontWeight": 600, "borderTop": f"3px solid {COLOR_DEEP_BLUE}"},
+                ),
                 dcc.Tab(
                     label="Overview",
                     value="overview",

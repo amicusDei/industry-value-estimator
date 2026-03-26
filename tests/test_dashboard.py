@@ -157,7 +157,6 @@ def test_basic_tab_renders():
     )
 
 
-@pytest.mark.skip(reason="Plan 11-01 — basic.py created in that plan")
 def test_basic_kpi_cards():
     """DASH-01: Basic tab hero row contains exactly 3 dbc.Card instances."""
     import dash_bootstrap_components as dbc
@@ -193,7 +192,6 @@ def test_basic_kpi_cards():
     assert len(cards) == 3, f"Expected 3 KPI cards in first dbc.Row, found {len(cards)}"
 
 
-@pytest.mark.skip(reason="Plan 11-01 — basic.py created in that plan")
 def test_basic_fan_chart_traces():
     """DASH-01: Basic tab fan chart has required forecast traces."""
     from dash import dcc
@@ -201,18 +199,20 @@ def test_basic_fan_chart_traces():
 
     layout = build_basic_layout("all", "point_estimate_nominal", "normal")
 
-    # Walk tree to find dcc.Graph components
+    # Walk tree to find dcc.Graph components (handles list, single-component, and leaf children)
     def collect_graphs(component):
         graphs = []
         if isinstance(component, dcc.Graph):
             graphs.append(component)
+            return graphs  # Graph has no meaningful children to recurse into
         children = getattr(component, "children", None)
         if children is None:
             return graphs
         if isinstance(children, list):
             for child in children:
                 graphs.extend(collect_graphs(child))
-        elif hasattr(children, "children"):
+        elif hasattr(children, "__class__"):
+            # Single child component (e.g. dcc.Graph inside dbc.Col)
             graphs.extend(collect_graphs(children))
         return graphs
 
@@ -236,7 +236,6 @@ def test_basic_fan_chart_traces():
     assert "Forecast" in trace_names, f"Fan chart missing 'Forecast' trace. Found: {trace_names}"
 
 
-@pytest.mark.skip(reason="Plan 11-03 — bullet_chart.py and ANCHORS_DF created in that plan")
 def test_consensus_panel_segments():
     """DASH-02: Consensus bullet chart renders and has traces."""
     from src.dashboard.app import FORECASTS_DF, ANCHORS_DF, SEGMENT_DISPLAY
@@ -247,7 +246,6 @@ def test_consensus_panel_segments():
     assert len(fig.data) > 0, "Consensus bullet chart has no traces"
 
 
-@pytest.mark.skip(reason="Plan 11-03 — bullet_chart.py created in that plan")
 def test_consensus_divergence_color():
     """DASH-02: Consensus marker is amber (#F39C12) when model is outside p25-p75."""
     import pandas as pd
@@ -312,7 +310,6 @@ def test_diagnostics_real_mape():
     # Will verify MAPE values from backtesting_results are displayed
 
 
-@pytest.mark.skip(reason="Plan 11-03 — vintage_footer added to styles.py in that plan")
 def test_vintage_footer_present():
     """DASH-05: vintage_footer() returns html.P with expected text content."""
     from dash import html
