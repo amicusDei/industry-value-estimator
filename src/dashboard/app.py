@@ -42,6 +42,11 @@ SOURCE_ATTRIBUTION = AI_CONFIG["source_attribution"]
 SEGMENTS = [seg["id"] for seg in AI_CONFIG["segments"]]
 SEGMENT_DISPLAY = {seg["id"]: seg["display_name"] for seg in AI_CONFIG["segments"]}
 
+def label_mape(v):
+    if v < 15: return "acceptable"
+    if v < 30: return "use_with_caution"
+    return "directional_only"
+
 # Compute diagnostics at startup from backtesting results
 DIAGNOSTICS = {}
 for segment, grp in BACKTESTING_DF.groupby("segment"):
@@ -72,11 +77,6 @@ for segment, grp in BACKTESTING_DF.groupby("segment"):
         "mape": loo_mape if loo_mape is not None else hard_mape,
         "mape_label": label_mape(loo_mape) if loo_mape is not None else (label_mape(hard_mape) if hard_mape is not None else "no_data"),
     }
-
-def label_mape(v):
-    if v < 15: return "acceptable"
-    if v < 30: return "use_with_caution"
-    return "directional_only"
 
 # Resolve the project root so assets/ is always served correctly regardless
 # of which directory the app module lives in.
