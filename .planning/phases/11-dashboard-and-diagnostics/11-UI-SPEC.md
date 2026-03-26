@@ -35,17 +35,19 @@ Declared values (multiples of 4 only):
 |-------|-------|-------|
 | xs | 4px | Icon gaps, confidence dot margin, inline padding |
 | sm | 8px | Card body internal padding, label-to-value gap, tab item vertical padding |
-| sm+ | 12px | KPI hero card internal CardBody padding (dbc default), tab item horizontal padding |
-| md | 16px | Default element spacing, card margin, section gaps, header bar vertical padding |
+| md | 16px | Default element spacing, card margin, section gaps, header bar vertical padding, tab item horizontal padding |
 | lg | 24px | Tab content padding (sides), header bar horizontal padding |
 | xl | 32px | Tab content padding (sides, established in layout.py) |
 | 2xl | 48px | Major section vertical breaks |
 | 3xl | 64px | Page-level vertical spacing (not used in Basic non-scroll layout) |
 
+Notes:
+- KPI hero card CardBody padding: dbc framework default (not a declared token)
+
 Exceptions:
 - Consensus bullet chart margins: l=160px, r=40px, t=40px, b=40px (Plotly layout margin — pixel-exact values required by Plotly API, not CSS spacing)
 
-**Revised from draft:** Tab item padding changed from 10px to 8px vertical / 12px horizontal (multiples of 4). Header bar padding changed from 14px to 16px (multiple of 4). Vintage footer margin-top changed from 6px to 8px (multiple of 4). 12px added to standard scale as `sm+` token.
+**Revised from draft:** Tab item padding changed from 10px to 8px vertical / 16px horizontal (multiples of 4). Header bar padding changed from 14px to 16px (multiple of 4). Vintage footer margin-top changed from 6px to 8px (multiple of 4). 12px (sm+) removed from standard scale; KPI hero card internal CardBody padding deferred to dbc framework default.
 
 **Source:** Detected from `src/dashboard/layout.py` and `src/dashboard/charts/styles.py`. 8-point scale already in use; new components extend the same scale.
 
@@ -268,7 +270,7 @@ Static data, hardcoded in `overview.py`. Source: PitchBook Q4 2025 AI Public Com
 
 ### Confidence Traffic Light
 
-- Rendered as `html.Span("●", style={"color": confidence_color})` — 14px, verticalAlign middle
+- Rendered as `html.Span("●", style={"color": confidence_color})` — 12px (Label role), verticalAlign middle
 - Computed at render time from CI width ratio (see Color section for thresholds)
 - No interactivity — read-only indicator, no tooltip on dot itself
 
