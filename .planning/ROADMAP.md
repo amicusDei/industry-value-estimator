@@ -89,13 +89,13 @@ Plans:
   3. A revenue multiples reference table exists showing EV/Revenue multiples for AI pure-plays (~33x), semiconductors, and conglomerates (~7x) with source attribution and vintage date
   4. Normal and Expert modes display real USD figures throughout; all composite index references and multiplier derivation blocks are removed from the UI; the Diagnostics tab shows real out-of-sample MAPE and R² with explicit [in-sample] / [out-of-sample] labels
   5. Every data source and segment in the UI carries a per-source, per-segment "last updated" timestamp and scope label — no data point is presented without vintage date
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 11-01: Basic dashboard tier (basic.py, KPI cards, fan chart)
-- [ ] 11-02: Analyst consensus panel and revenue multiples table
-- [ ] 11-03: Normal/Expert mode updates and multiplier block removal
-- [ ] 11-04: Data vintage display and diagnostics tab real metrics
+- [ ] 11-01-PLAN.md — Basic dashboard tier (basic.py, bullet_chart.py, KPI cards, fan chart, consensus panel, test scaffolds)
+- [ ] 11-02-PLAN.md — Alias removal, PCA/composite cleanup, app.py new data loads (BACKTESTING_DF, ANCHORS_DF)
+- [ ] 11-03-PLAN.md — Consensus panel and revenue multiples table in Normal mode Overview
+- [ ] 11-04-PLAN.md — Diagnostics tab rewrite (Hard/Soft panels, backtest scatter) and vintage footers
 
 ## Progress
 
