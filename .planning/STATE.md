@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Model Credibility & Usability
 status: planning
-stopped_at: Phase 11 UI-SPEC approved
-last_updated: "2026-03-26T09:33:14.155Z"
+stopped_at: Completed 11-01-PLAN.md
+last_updated: "2026-03-26T09:54:09.765Z"
 last_activity: 2026-03-23 — v1.1 roadmap created (Phases 8-11)
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 12
-  completed_plans: 12
+  total_plans: 16
+  completed_plans: 14
   percent: 0
 ---
 
@@ -63,6 +63,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 10 P03 | 325 | 2 tasks | 6 files |
 | Phase 10 P04 | 5 | 2 tasks | 6 files |
 | Phase 10-revenue-attribution-and-private-company-valuation P05 | 60 | 2 tasks | 6 files |
+| Phase 11 P01 | 7 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -103,6 +104,9 @@ Recent decisions affecting current work:
 - [Phase 10]: MAPE labels for walk-forward backtesting are interpretive only (not gates) — 3 folds insufficient for statistical significance; hard actuals limited to DIRECT_DISCLOSURE_CIKS (NVIDIA/Palantir/C3.ai) to prevent circular validation; custom walk-forward loop over skforecast for 3-fold audibility
 - [Phase 10]: edgartools API: get_facts_by_concept() is correct (not facts.query(concept) which is a 0-arg builder); C3.ai CIK corrected to 0001577526; Accenture CIK corrected to 0001467373 (10-K filer); EDGAR deduplication required before aggregation (37x duplicates from comparative-year reporting)
 - [Phase 10]: Circular soft-actual MAPE transparency: circular_flag=True + mape_label=circular_not_validated exposes the limitation rather than hiding behind 0% MAPE; hard MAPE from EDGAR is non-circular but high for ai_software (C3.ai alone vs full-segment forecast)
+- [Phase 11]: Lazy imports in callbacks.py to break circular dependency (basic.py -> app.py -> callbacks.py)
+- [Phase 11]: Basic tab ignores mode toggle — build_basic_layout() always renders Basic view regardless of Normal/Expert
+- [Phase 11]: Confidence CI ratio computed on real_2020 USD even though Basic tier displays nominal — real USD gives correct relative uncertainty
 
 ### Pending Todos
 
@@ -116,6 +120,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T09:33:14.149Z
-Stopped at: Phase 11 UI-SPEC approved
-Resume file: .planning/phases/11-dashboard-and-diagnostics/11-UI-SPEC.md
+Last session: 2026-03-26T09:54:09.763Z
+Stopped at: Completed 11-01-PLAN.md
+Resume file: None

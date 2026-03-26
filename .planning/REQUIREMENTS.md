@@ -25,8 +25,8 @@ Requirements for Model Credibility & Usability milestone. Each maps to roadmap p
 
 ### Dashboard & UX
 
-- [ ] **DASH-01**: Basic dashboard tier — 3 hero numbers (total AI market size, YoY growth rate, 2030 forecast), segment breakdown chart, growth fan chart on a single non-scrolling screen
-- [ ] **DASH-02**: Analyst consensus panel — model output vs published estimate range displayed side-by-side in Basic and Normal tiers
+- [x] **DASH-01**: Basic dashboard tier — 3 hero numbers (total AI market size, YoY growth rate, 2030 forecast), segment breakdown chart, growth fan chart on a single non-scrolling screen
+- [x] **DASH-02**: Analyst consensus panel — model output vs published estimate range displayed side-by-side in Basic and Normal tiers
 - [ ] **DASH-03**: Revenue multiples reference table — EV/Revenue multiples for AI pure-plays (~33x), semiconductors, and conglomerates (~7x) with source attribution
 - [ ] **DASH-04**: Normal/Expert modes updated — real USD figures replace composite indices, recalibrated narrative text, all existing tabs functional with new model outputs
 - [ ] **DASH-05**: Data vintage and methodology transparency — per-source, per-segment "last updated" timestamp and scope label displayed in UI
@@ -79,8 +79,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MODL-02 | Phase 10 | Complete |
 | MODL-03 | Phase 10 | Complete |
 | MODL-06 | Phase 10 | Complete |
-| DASH-01 | Phase 11 | Pending |
-| DASH-02 | Phase 11 | Pending |
+| DASH-01 | Phase 11 | Complete |
+| DASH-02 | Phase 11 | Complete |
 | DASH-03 | Phase 11 | Pending |
 | DASH-04 | Phase 11 | Pending |
 | DASH-05 | Phase 11 | Pending |
