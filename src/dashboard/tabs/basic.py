@@ -9,6 +9,7 @@ This tab ignores the mode argument — Basic is always Basic (no Normal/Expert d
 """
 from __future__ import annotations
 
+import pandas as pd
 import plotly.graph_objects as go
 import dash_bootstrap_components as dbc
 from dash import dcc, html
