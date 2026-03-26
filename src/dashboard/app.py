@@ -45,19 +45,38 @@ SEGMENT_DISPLAY = {seg["id"]: seg["display_name"] for seg in AI_CONFIG["segments
 # Compute diagnostics at startup from backtesting results
 DIAGNOSTICS = {}
 for segment, grp in BACKTESTING_DF.groupby("segment"):
+    # LOO cross-validation results (non-circular, real held-out validation)
+    loo_rows = grp[grp["actual_type"] == "held_out"]
+    # EDGAR hard actuals (independent validation from company filings)
     hard_rows = grp[grp["actual_type"] == "hard"]
-    # Filter out -inf R² values (occur with single-sample folds)
-    valid_r2 = hard_rows["r2"][hard_rows["r2"] > -1e10] if not hard_rows.empty else pd.Series(dtype=float)
+
+    loo_mape = float(loo_rows["mape"].mean()) if not loo_rows.empty else None
+    hard_mape = float(hard_rows["mape"].mean()) if not hard_rows.empty else None
+
     DIAGNOSTICS[segment] = {
-        "mape": float(hard_rows["mape"].mean()) if not hard_rows.empty else None,
-        "r2": float(valid_r2.mean()) if not valid_r2.empty else None,
-        "mape_label": hard_rows["mape_label"].iloc[0] if not hard_rows.empty else "no_hard_actuals",
+        "loo_mape": loo_mape,
+        "loo_label": label_mape(loo_mape) if loo_mape is not None else "no_data",
+        "loo_folds": len(loo_rows),
+        "loo_details": [
+            {"year": int(r["year"]), "mape": float(r["mape"]), "actual": float(r["actual_usd"]), "predicted": float(r["predicted_usd"])}
+            for _, r in loo_rows.iterrows()
+        ] if not loo_rows.empty else [],
+        "hard_mape": hard_mape,
+        "hard_label": label_mape(hard_mape) if hard_mape is not None else "no_data",
         "has_hard_actuals": not hard_rows.empty,
         "hard_details": [
             {"year": int(r["year"]), "mape": float(r["mape"]), "actual": float(r["actual_usd"]), "predicted": float(r["predicted_usd"])}
             for _, r in hard_rows.iterrows()
         ] if not hard_rows.empty else [],
+        # Legacy keys for backward compat
+        "mape": loo_mape if loo_mape is not None else hard_mape,
+        "mape_label": label_mape(loo_mape) if loo_mape is not None else (label_mape(hard_mape) if hard_mape is not None else "no_data"),
     }
+
+def label_mape(v):
+    if v < 15: return "acceptable"
+    if v < 30: return "use_with_caution"
+    return "directional_only"
 
 # Resolve the project root so assets/ is always served correctly regardless
 # of which directory the app module lives in.
