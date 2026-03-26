@@ -47,7 +47,7 @@ class TestMarketAnchorsSnapshot:
 
     def test_segment_values(self, anchors_df):
         """Segments must be from the expected set."""
-        expected_segments = {"ai_hardware", "ai_infrastructure", "ai_software", "ai_adoption"}
+        expected_segments = {"ai_hardware", "ai_infrastructure", "ai_software", "ai_adoption", "total"}
         actual_segments = set(anchors_df["segment"].unique())
         unexpected = actual_segments - expected_segments
         assert not unexpected, f"Unexpected segments: {unexpected}"
