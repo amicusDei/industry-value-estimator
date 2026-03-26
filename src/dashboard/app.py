@@ -2,14 +2,13 @@
 Dash application entry point and module-level data loading.
 
 This module initializes the Dash app and pre-loads all data at startup. Data is read
-once from Parquet files and stored as module globals (FORECASTS_DF, RESIDUALS_DF) for
-efficient reuse across callback invocations — Dash callbacks are called on every user
-interaction, so data loading inside callbacks would create unacceptable latency.
+once from Parquet files and stored as module globals (FORECASTS_DF, RESIDUALS_DF,
+BACKTESTING_DF) for efficient reuse across callback invocations — Dash callbacks are
+called on every user interaction, so data loading inside callbacks would create
+unacceptable latency.
 
 v1.1 update: point_estimate_real_2020 is USD billions directly (v1.1 models trained
-on real USD market anchors). Pass-through alias columns (usd_point etc.) are preserved
-for tab compatibility until Phase 11 refactors all tabs to use point_estimate_real_2020
-directly.
+on real USD market anchors). All tabs use native column names directly.
 
 Normal/Expert mode content distinction:
 - Normal mode: USD headlines, narrative insights, accessible language
@@ -33,6 +32,7 @@ from config.settings import DATA_PROCESSED, MODELS_DIR
 # Module-level data loading — read once at startup, filter in callbacks
 FORECASTS_DF = pd.read_parquet(DATA_PROCESSED / "forecasts_ensemble.parquet")
 RESIDUALS_DF = pd.read_parquet(DATA_PROCESSED / "residuals_statistical.parquet")
+BACKTESTING_DF = pd.read_parquet(DATA_PROCESSED / "backtesting_results.parquet")
 
 with open(Path(__file__).resolve().parent.parent.parent / "config" / "industries" / "ai.yaml") as f:
     AI_CONFIG = yaml.safe_load(f)
@@ -41,24 +41,15 @@ SOURCE_ATTRIBUTION = AI_CONFIG["source_attribution"]
 SEGMENTS = [seg["id"] for seg in AI_CONFIG["segments"]]
 SEGMENT_DISPLAY = {seg["id"]: seg["display_name"] for seg in AI_CONFIG["segments"]}
 
-# ---------------------------------------------------------------------------
-# Minimal pass-through — point_estimate_real_2020 IS USD billions in v1.1
-# These alias columns prevent downstream tab crashes until Phase 11 refactors them
-# ---------------------------------------------------------------------------
-FORECASTS_DF["usd_point"] = FORECASTS_DF["point_estimate_real_2020"]
-FORECASTS_DF["usd_ci80_lower"] = FORECASTS_DF["ci80_lower"]
-FORECASTS_DF["usd_ci80_upper"] = FORECASTS_DF["ci80_upper"]
-FORECASTS_DF["usd_ci95_lower"] = FORECASTS_DF["ci95_lower"]
-FORECASTS_DF["usd_ci95_upper"] = FORECASTS_DF["ci95_upper"]
-
-# Compute diagnostics at startup from residuals
+# Compute diagnostics at startup from backtesting results
 DIAGNOSTICS = {}
-for segment, grp in RESIDUALS_DF.groupby("segment"):
-    residual = grp["residual"].to_numpy()
+for segment, grp in BACKTESTING_DF.groupby("segment"):
+    hard_rows = grp[grp["actual_type"] == "hard"]
     DIAGNOSTICS[segment] = {
-        "rmse": float(np.sqrt(np.mean(residual ** 2))),
-        "mape": "N/A",  # Cannot compute — no actual values in residuals parquet
-        "r2": "N/A",    # Cannot compute — no actual values in residuals parquet
+        "mape": float(hard_rows["mape"].mean()) if not hard_rows.empty else None,
+        "r2": float(hard_rows["r2"].mean()) if not hard_rows.empty else None,
+        "mape_label": hard_rows["mape_label"].iloc[0] if not hard_rows.empty else "no_hard_actuals",
+        "has_hard_actuals": not hard_rows.empty,
     }
 
 # Resolve the project root so assets/ is always served correctly regardless

@@ -63,16 +63,24 @@ def test_backtest_chart_traces():
 
 
 def test_diagnostics_scorecard():
-    """PRES-03: Diagnostics dict has all 4 segments with RMSE."""
+    """PRES-03: Diagnostics dict has all 4 segments with backtesting metrics (DASH-04)."""
     from src.dashboard.app import DIAGNOSTICS
 
     expected_segments = {"ai_hardware", "ai_infrastructure", "ai_software", "ai_adoption"}
     assert set(DIAGNOSTICS.keys()) == expected_segments, f"Expected {expected_segments}, got {set(DIAGNOSTICS.keys())}"
 
     for seg, metrics in DIAGNOSTICS.items():
-        assert "rmse" in metrics, f"Segment {seg} missing 'rmse'"
-        assert isinstance(metrics["rmse"], float), f"Segment {seg} RMSE should be float, got {type(metrics['rmse'])}"
-        assert metrics["rmse"] > 0, f"Segment {seg} RMSE should be positive"
+        # New DIAGNOSTICS schema: mape, r2, mape_label, has_hard_actuals (from backtesting_results.parquet)
+        assert "mape_label" in metrics, f"Segment {seg} missing 'mape_label'"
+        assert "has_hard_actuals" in metrics, f"Segment {seg} missing 'has_hard_actuals'"
+        assert isinstance(metrics["has_hard_actuals"], bool), (
+            f"Segment {seg} has_hard_actuals should be bool, got {type(metrics['has_hard_actuals'])}"
+        )
+        # mape and r2 may be None for segments without hard actuals
+        if metrics["has_hard_actuals"]:
+            assert isinstance(metrics["mape"], float), (
+                f"Segment {seg} MAPE should be float, got {type(metrics['mape'])}"
+            )
 
 
 def test_shap_image_exists():
