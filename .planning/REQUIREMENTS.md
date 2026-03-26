@@ -29,7 +29,7 @@ Requirements for Model Credibility & Usability milestone. Each maps to roadmap p
 - [x] **DASH-02**: Analyst consensus panel — model output vs published estimate range displayed side-by-side in Basic and Normal tiers
 - [x] **DASH-03**: Revenue multiples reference table — EV/Revenue multiples for AI pure-plays (~33x), semiconductors, and conglomerates (~7x) with source attribution
 - [x] **DASH-04**: Normal/Expert modes updated — real USD figures replace composite indices, recalibrated narrative text, all existing tabs functional with new model outputs
-- [ ] **DASH-05**: Data vintage and methodology transparency — per-source, per-segment "last updated" timestamp and scope label displayed in UI
+- [x] **DASH-05**: Data vintage and methodology transparency — per-source, per-segment "last updated" timestamp and scope label displayed in UI
 
 ## v2 Requirements
 
@@ -83,7 +83,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DASH-02 | Phase 11 | Complete |
 | DASH-03 | Phase 11 | Complete |
 | DASH-04 | Phase 11 | Complete |
-| DASH-05 | Phase 11 | Pending |
+| DASH-05 | Phase 11 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 15 total
