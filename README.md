@@ -35,7 +35,6 @@ uv sync
 
 # Run the full pipeline (requires LSEG Workspace for company financials)
 uv run python -c "from src.ingestion.pipeline import run_full_pipeline; run_full_pipeline('ai')"
-uv run python scripts/run_statistical_pipeline.py
 uv run python scripts/run_ensemble_pipeline.py
 
 # Launch interactive dashboard
@@ -56,15 +55,16 @@ uv run python scripts/run_reports.py
 The system is a five-stage pipeline with an interactive dashboard and report export layer on top:
 
 ```
-World Bank API ─┐
-OECD SDMX API  ─┼─► Ingestion ─► Processing ─► Statistical Models ─► ML Ensemble ─► Dashboard
-LSEG Workspace ─┘                  (PCA)         (ARIMA / Prophet)    (LightGBM)     Reports
+EDGAR 10-K/10-Q ──┐
+LSEG Workspace ────┼──► Ingestion ──► Processing ──► Market Anchors ──► ARIMA/Prophet ──► LightGBM Ensemble ──► Forecasts
+World Bank API ────┤                  (Deflation)    (Scope-Norm.)       (per Segment)     (Residual-Korrektur)    (USD Billions)
+OECD SDMX API ─────┘                  (Validation)   (Interpolation)     (Temporal CV)     (Quantile CIs)
 ```
 
-1. **Ingestion** — pulls raw indicator data from three sources, validates schemas with pandera
-2. **Processing** — deflates to 2020 constant USD, normalizes across economies, builds PCA composite index per segment
-3. **Statistical models** — ARIMA and Prophet with AICc-based selection, temporal cross-validation, structural break detection at 2022 GenAI surge
-4. **ML ensemble** — LightGBM trained on statistical residuals; inverse-RMSE weighted blend; bootstrap confidence intervals
+1. **Ingestion** — pulls raw indicator and company data from four sources, validates schemas with pandera
+2. **Processing** — deflates to 2020 constant USD, normalizes across economies, compiles scope-normalized analyst market anchors
+3. **Statistical models** — ARIMA and Prophet fitted directly on USD market anchor series per segment, with AICc-based selection and temporal cross-validation
+4. **ML ensemble** — LightGBM trained on statistical residuals with macro indicators as exogenous features; inverse-RMSE weighted additive blend; quantile confidence intervals
 5. **Dashboard / Reports** — Dash interactive dashboard with normal/expert modes; WeasyPrint PDF reports with embedded Plotly charts
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full Mermaid data flow diagram and module responsibilities.
@@ -85,9 +85,9 @@ All monetary series are deflated to 2020 constant USD using World Bank GDP defla
 
 ## Methodology
 
-The AI industry has no direct measurement — no statistical agency tracks "AI revenue" as a category. This project builds a **composite PCA index** from proxy indicators that correlate with AI economic activity (R&D expenditure, technology exports, patent filings, company financials), then calibrates it to USD billions using a linear anchor against the 2023 industry consensus of $200 billion.
+The AI industry has no single official measurement. This project compiles scope-normalized analyst consensus estimates from 8 firms (IDC, Gartner, Grand View Research, Statista, Goldman Sachs, Bloomberg Intelligence, McKinsey, CB Insights) into a reconciled market anchor time series in USD billions, anchored to the 2023 industry consensus of ~$200 billion.
 
-The forecasting approach is a **hybrid statistical + ML ensemble**: ARIMA and Prophet build the interpretable statistical baseline with temporal cross-validation; LightGBM corrects the residuals using an additive blend weighted by inverse RMSE. Confidence intervals are derived from bootstrap resampling of the residual distribution.
+The forecasting approach is a **hybrid statistical + ML ensemble**: ARIMA and Prophet are fitted directly on the USD market anchor series per segment with temporal cross-validation; LightGBM corrects the statistical residuals using macro indicators as exogenous features in an additive blend weighted by inverse RMSE. Confidence intervals are derived from quantile regression.
 
 Full methodology details:
 - [docs/methodology_paper.md](docs/methodology_paper.md) — LinkedIn-style writeup with origin story and key findings
@@ -101,7 +101,7 @@ Full methodology details:
 ```
 src/
   ingestion/     # API connectors: World Bank (wbgapi), OECD (pandasdmx), LSEG (lseg-data)
-  processing/    # Deflation, interpolation, normalization, PCA composite index
+  processing/    # Deflation, interpolation, normalization, macro indicator matrix
   models/        # Statistical (ARIMA, Prophet, OLS, Markov) and ML (LightGBM) models
   inference/     # Forecast engine, ensemble weighting, SHAP attribution
   dashboard/     # Dash app with normal/expert modes, fan charts, backtest, SHAP tabs

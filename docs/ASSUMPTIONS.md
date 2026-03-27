@@ -5,72 +5,33 @@
 
 ---
 
-## Value Chain Multiplier Calibration
+## Market Anchor Calibration (v1.1)
 
-*Converts the dimensionless composite index (PCA scores) to USD billions for display.*
+*Anchors model forecasts to analyst consensus market sizes in USD billions.*
 
-### Problem Statement
+### How v1.1 Works
 
-The statistical model produces a PCA first principal component as its output — a dimensionless composite index centered at zero. Raw index values (e.g., 7.8 for ai_software in 2023) are not interpretable as market sizes without calibration. A value chain multiplier anchors the index to a known USD reference point.
+The v1.1 pipeline does **not** use a PCA composite index or value chain multiplier. Instead, market sizes are estimated directly in USD billions:
 
-### Anchor Selection
+1. **Analyst Registry:** Published market size estimates from 8 analyst firms (IDC, Gartner, Grand View Research, Statista, Goldman Sachs, Bloomberg Intelligence, McKinsey, CB Insights) are collected in `data/raw/market_anchors/ai_analyst_registry.yaml`.
+2. **Scope Normalization:** Each estimate is multiplied by the firm's `scope_coefficient` from `config/industries/ai.yaml` to normalize to our market boundary definition.
+3. **Reconciliation:** Per (estimate_year, segment), the scope-normalized estimates are aggregated: median becomes the point estimate, 25th/75th percentiles become the uncertainty range.
+4. **Deflation:** All values are deflated to 2020 constant USD using the World Bank GDP deflator.
+5. **Model Input:** The reconciled market anchor series (`data/processed/market_anchors_ai.parquet`) is used directly as the Y-variable for ARIMA/Prophet fitting — no index-to-USD conversion needed.
 
-**Anchor:** Global AI market \u2248 $200B in 2023
+### Anchor Uncertainty
 
-**Sources:** Three independent consensus estimates:
-- McKinsey Global Institute, *The Economic Potential of Generative AI* (2023): $185\u2013$200B
-- Statista, *Artificial Intelligence \u2014 Statistics & Facts* (2023): $207B
-- Grand View Research, *Artificial Intelligence Market Size Report* (2024): $196B
-
-The $200B anchor is the median of these three estimates, all within a $185\u2013$207B range (\u00b15%). This level of consensus across independent methodologies provides sufficient confidence for calibration purposes.
-
-**If this anchor is wrong:** A 10% error in the anchor ($180B or $220B) propagates linearly to all USD estimates. The confidence intervals (80% and 95%) absorb this anchor uncertainty partially, but systematic anchor error would shift the entire forecast range up or down proportionally.
-
-### Calibration Methodology
-
-**Method:** `per_segment_anchor` \u2014 each segment receives an anchor USD value proportional to its estimated 2023 market share, then a per-segment multiplier is computed as:
-
-```
-multiplier_i = anchor_usd_i / index_i_at_2023
-```
-
-where `anchor_usd_i = $200B \u00d7 segment_share_i`.
-
-**Segment shares (2023 industry consensus):**
-
-| Segment | Share | Anchor USD | Rationale |
-|---------|-------|-----------|-----------|
-| AI Hardware | 35% | $70B | NVIDIA, AMD, TSMC AI chip revenue. McKinsey 2023: GPU/chip revenue dominant in near-term AI market |
-| AI Infrastructure | 25% | $50B | AWS/Azure/GCP AI-specific capital expenditure. IDC 2023: cloud AI infrastructure \u224820-25% of AI total |
-| AI Software & Platforms | 25% | $50B | Foundation model APIs, AI SaaS, developer tooling. Gartner 2023: software and services split evenly |
-| AI Adoption | 15% | $30B | Enterprise productivity gains, AI-enabled services. Broadest/most uncertain segment |
-
-**If segment shares are wrong:** An error in segment attribution does not affect the aggregate total ($200B anchor) \u2014 it only redistributes the total across segments. A 5% shift from hardware to software would increase the hardware multiplier and decrease the software multiplier proportionally.
-
-### Fallback for Negative Index Values
-
-The PCA composite index can be negative (it is zero-centered by construction). If a segment has a negative index value at the anchor year (2023), the per-segment multiplier would produce a negative USD value, which is not meaningful as a market size estimate.
-
-**Fallback rule:** If `index_i_at_2023 <= 0`, use the global fallback:
-```
-multiplier_i_fallback = global_multiplier \u00d7 segment_share_i
-global_multiplier = $200B / sum_of_all_segment_indices_at_2023
-```
-
-**Note on synthetic data:** The current pipeline uses synthetic placeholder data generated without access to real World Bank, OECD, or LSEG APIs. This produces negative index values at the 2023 anchor year for some segments (an artefact of random PCA scores, not economic signal). The fallback multiplier is applied for these segments. When real API data is available, all segment indices at 2023 are expected to be positive, and the per-segment multiplier will apply without fallback.
-
-### USD Floor
-
-All USD estimates are floored at $0B for display. Negative USD values (arising from negative index values in non-anchor years) are meaningful as model outputs \u2014 they indicate below-baseline activity \u2014 but displaying negative market sizes would confuse non-technical readers. Expert mode shows the raw index (which can be negative) for full transparency.
+The analyst consensus range for 2023 global AI market size spans $185–$215B after scope normalization. The median ($200B) is the central estimate. A 10% error propagates linearly to all forecasts. Confidence intervals (80%, 95%) partially absorb this uncertainty, but systematic anchor error shifts the entire forecast range proportionally.
 
 ### Configuration
 
-The multiplier parameters are configurable in `config/industries/ai.yaml` under the `value_chain` key. To update the calibration as better data becomes available:
+Market anchor parameters are in `config/industries/ai.yaml`:
+- `scope_mapping_table`: per-firm scope coefficients and ranges
+- `model_calibration`: CAGR floors, calibration blend weights, CI width floors
 
-1. Update `anchor_value_usd_billions` with the new consensus estimate
-2. Update `segment_anchor_shares` if segment share evidence changes
-3. Rerun the dashboard \u2014 multipliers are recomputed at startup from config
-4. Update this section of ASSUMPTIONS.md with the new sources
+### Historical Note (v1.0)
+
+The v1.0 pipeline used a PCA composite index of proxy indicators, calibrated to USD via a per-segment multiplier anchored at $200B. This approach was replaced in v1.1 because direct analyst-anchored USD series provide better-grounded forecasts with fewer transformation steps. The v1.0 multiplier logic has been removed from the codebase.
 
 ---
 
@@ -82,7 +43,7 @@ The multiplier parameters are configurable in `config/industries/ai.yaml` under 
 
 - **Assumption:** The four AI segments (hardware, infrastructure, software, adoption) can be modeled independently with post-hoc aggregation. **If wrong:** Cross-segment correlations exist (GPU demand drives cloud infrastructure simultaneously); independent modeling underestimates forecast uncertainty and misses spillover-driven accelerations.
 
-- **Assumption:** The PCA first principal component of proxy indicators (R&D/GDP, ICT exports, patents, researchers per million, high-tech exports) is a valid AI market activity index. **If wrong:** If the first PC captures something other than AI intensity (e.g., general economic development), market size estimates inherit systematic bias in both level and trend.
+- **Assumption (v1.0, replaced in v1.1):** The v1.0 PCA composite index has been replaced by direct analyst-anchored USD market sizes. Proxy indicators now serve as exogenous LightGBM features, not as the primary market size signal.
 
 - **Assumption:** TRBC-classified listed companies are representative of the broader AI market. **If wrong:** Private AI companies (e.g., OpenAI pre-IPO, Anthropic, Mistral) are excluded; the TRBC-based revenue series likely understates true market size, especially post-2022 when private AI fundraising exploded.
 
@@ -90,7 +51,7 @@ The multiplier parameters are configurable in `config/industries/ai.yaml` under 
 
 - **Assumption:** OLS is the appropriate GDP share regression baseline, upgraded to WLS or GLSAR only when diagnostics require it (Breusch-Pagan p < 0.05 for heteroscedasticity; Ljung-Box p < 0.05 for autocorrelation). **If wrong:** Using OLS with violated assumptions produces inefficient parameter estimates; the diagnostic-driven upgrade chain ensures the estimator matches the error structure.
 
-- **Assumption:** All preprocessing (StandardScaler for PCA) must be fit on training data only inside each CV fold. **If wrong:** Fitting the scaler on the full dataset leaks future distributional information into training; reported CV metrics would be optimistically biased and would not generalise to out-of-sample periods.
+- **Assumption:** All preprocessing must be fit on training data only inside each CV fold. **If wrong:** Fitting on the full dataset leaks future distributional information into training; reported CV metrics would be optimistically biased and would not generalise to out-of-sample periods.
 
 ---
 
@@ -107,9 +68,9 @@ Direct measurement of "AI revenue" is not available from any statistical agency.
 5. **Researchers per million** (`researchers_per_million`, World Bank SP.POP.SCIE.RD.P6) — human capital input proxy
 6. **High-technology exports** (`hightech_exports`, World Bank TX.VAL.TECH.CD) — technology intensity of traded goods
 
-The PCA first principal component of these six standardized indicators is interpreted as the "AI market activity index." This is the primary bottom-up market size proxy used throughout Phase 2 modeling. Explained variance of the first PC is computed per CV fold and logged at runtime.
+In v1.1, these proxy indicators serve as **exogenous features for LightGBM**, not as PCA input. The primary Y-variable (market size in USD billions) comes from the analyst-anchored market anchors series. The proxy indicators provide additional signal for the ML residual correction layer.
 
-**If this is wrong:** If the first principal component captures general economic development rather than AI-specific activity, all market size estimates carry a systematic level bias. The manual composite (sensitivity alternative using equal weights) cross-validates the PCA composite — agreement between the two strengthens confidence that the index tracks AI activity specifically.
+**If this is wrong:** If the proxy indicators do not correlate with AI activity in all segments equally, the LightGBM residual correction may introduce bias. However, unlike the v1.0 PCA approach, the v1.1 pipeline does not depend on these proxies for the primary market size estimate — they only influence the ML correction term.
 
 ### TRBC Universe Representativeness
 
@@ -249,10 +210,10 @@ Temporal cross-validation uses sklearn `TimeSeriesSplit` with an expanding windo
 
 - **Fold strategy:** Expanding window — each fold adds one year to the training set, preserving chronological order
 - **Number of splits:** Default n_splits=3 for ARIMA and Prophet CV. With ~15 annual observations, 3–4 folds yields training windows of approximately 9–12 observations and test windows of 1–2 observations
-- **No leakage guarantee:** `fit_fn` receives only the training indices. For PCA composites, `StandardScaler` is fitted exclusively on `indicator_matrix[:train_end_idx]`
+- **No leakage guarantee:** `fit_fn` receives only the training indices
 - **Prophet CV:** Uses manual `TimeSeriesSplit` refits (not Prophet's built-in `cross_validation`). This keeps CV methodology symmetric with ARIMA — Prophet's built-in CV has minimum horizon constraints incompatible with 15-year annual panels
 
-**If this is wrong:** Fitting the scaler (or any preprocessing) on the full dataset before splitting would leak future distributional information into the training fold. Reported RMSE and MAPE would be optimistically biased by approximately 10–30% depending on how much the distribution shifts post-2022. The `build_pca_composite()` function is explicitly designed to prevent this by accepting a `train_end_idx` parameter.
+**If this is wrong:** Fitting any preprocessing on the full dataset before splitting would leak future distributional information into the training fold. Reported RMSE and MAPE would be optimistically biased by approximately 10-30% depending on how much the distribution shifts post-2022.
 
 ### Metric Interpretation
 
@@ -300,22 +261,9 @@ The winning model per segment is recorded in the residuals Parquet file (`model_
 
 ### Proxy Does Not Equal Direct Measurement
 
-Two complementary measurement approaches are used:
+In v1.1, the primary market size signal comes from analyst-anchored estimates (direct USD figures), not proxy composites. Proxy indicators (R&D/GDP, ICT exports, patents) serve as exogenous features for the LightGBM residual correction layer, providing supplementary signal rather than the primary measurement.
 
-1. **Bottom-up proxy composite:** PCA of proxy indicators → AI market activity index → scaled to market size estimate
-2. **Top-down GDP share regression:** Macroeconomic regressors → predicted GDP share of AI market
-
-These two approaches cross-validate each other. Agreement between them strengthens confidence in the estimate; disagreement signals measurement uncertainty. Neither is ground truth.
-
-The proxy composite carries:
-- Indicator selection risk (the chosen proxies may not track AI activity in all segments equally)
-- PCA rotation risk (the first principal component may not be the "right" combination)
-
-The GDP share regression carries:
-- Regressor selection risk (R&D/GDP may not be the strongest predictor in all periods)
-- Stationarity risk (GDP share of AI may not be stationary across the full 2010–2025 period)
-
-**If this is wrong:** All estimates carry proxy uncertainty on top of model uncertainty. The total uncertainty band is wider than the model CI alone suggests. Reporting market size as a range (rather than a point estimate) is the only honest presentation.
+**If this is wrong:** All estimates carry analyst consensus uncertainty on top of model uncertainty. The total uncertainty band is wider than the model CI alone suggests. Reporting market size as a range (rather than a point estimate) is the only honest presentation.
 
 ### Regime Assumptions in Interpretation
 
@@ -368,7 +316,7 @@ The correction term $\frac{2k(k+1)}{n-k-1}$ grows materially when $n < 50$:
 
 With n=15 and ARIMA(2,1,2) (k=6), the AICc penalty is 21 points larger than AIC — effectively ruling out higher-order models unless the fit improvement is substantial.
 
-### PCA Composite Construction
+### PCA Composite Construction (Historical — v1.0)
 
 Let $X$ be the $n \times p$ matrix of $p$ standardized proxy indicators over $n$ years.
 
@@ -394,7 +342,7 @@ where $v_1$ is the first eigenvector (loadings).
 
 $$\text{EVR}_1 = \frac{\lambda_1}{\sum_{j=1}^p \lambda_j}$$
 
-This is logged per CV fold. If EVR₁ < 0.5 in a fold, the PCA composite is poorly determined and the manual composite sensitivity check becomes more important.
+This was logged per CV fold in v1.0. If EVR₁ < 0.5, the PCA composite was poorly determined and the manual composite sensitivity check became more important. This section is retained as historical reference only.
 
 ### Chow Test Statistic
 
