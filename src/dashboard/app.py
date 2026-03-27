@@ -30,10 +30,32 @@ import dash_bootstrap_components as dbc
 from config.settings import DATA_PROCESSED, MODELS_DIR
 
 # Module-level data loading — read once at startup, filter in callbacks
-FORECASTS_DF = pd.read_parquet(DATA_PROCESSED / "forecasts_ensemble.parquet")
-RESIDUALS_DF = pd.read_parquet(DATA_PROCESSED / "residuals_statistical.parquet")
-BACKTESTING_DF = pd.read_parquet(DATA_PROCESSED / "backtesting_results.parquet")
-ANCHORS_DF = pd.read_parquet(DATA_PROCESSED / "market_anchors_ai.parquet")
+import logging as _logging
+_logger = _logging.getLogger(__name__)
+
+try:
+    FORECASTS_DF = pd.read_parquet(DATA_PROCESSED / "forecasts_ensemble.parquet")
+except FileNotFoundError:
+    _logger.warning("forecasts_ensemble.parquet not found — using empty DataFrame")
+    FORECASTS_DF = pd.DataFrame()
+
+try:
+    RESIDUALS_DF = pd.read_parquet(DATA_PROCESSED / "residuals_statistical.parquet")
+except FileNotFoundError:
+    _logger.warning("residuals_statistical.parquet not found — using empty DataFrame")
+    RESIDUALS_DF = pd.DataFrame()
+
+try:
+    BACKTESTING_DF = pd.read_parquet(DATA_PROCESSED / "backtesting_results.parquet")
+except FileNotFoundError:
+    _logger.warning("backtesting_results.parquet not found — using empty DataFrame")
+    BACKTESTING_DF = pd.DataFrame()
+
+try:
+    ANCHORS_DF = pd.read_parquet(DATA_PROCESSED / "market_anchors_ai.parquet")
+except FileNotFoundError:
+    _logger.warning("market_anchors_ai.parquet not found — using empty DataFrame")
+    ANCHORS_DF = pd.DataFrame()
 
 # Data freshness check moved to UI banner in layout.py
 

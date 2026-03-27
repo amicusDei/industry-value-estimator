@@ -5,7 +5,7 @@ for backtesting.
 Hard actuals: EDGAR 10-K filed revenue from direct-disclosure companies only.
   - NVIDIA (CIK: 0001045810)
   - Palantir (CIK: 0001321655)
-  - C3.ai (CIK: 0001577552)
+  - C3.ai (CIK: 0001577526)
   These are the ONLY companies whose filed revenue counts as hard actuals.
   Bundled-segment companies (Microsoft, Amazon, Alphabet, Meta, IBM, Accenture, Salesforce)
   are NEVER used as hard actuals — their attributed AI revenue would create circular validation.

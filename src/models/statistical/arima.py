@@ -57,7 +57,8 @@ def assert_model_version() -> None:
     import yaml
     from pathlib import Path
     cfg_path = Path(__file__).resolve().parent.parent.parent.parent / "config" / "industries" / "ai.yaml"
-    _cfg = yaml.safe_load(open(cfg_path))
+    with open(cfg_path) as f:
+        _cfg = yaml.safe_load(f)
     assert _cfg.get("model_version") == "v1.1_real_data", (
         f"model_version must be 'v1.1_real_data', got: {_cfg.get('model_version')}. "
         "Update config/industries/ai.yaml before running v1.1 ARIMA training."

@@ -21,8 +21,12 @@ Usage:
     processed = run_full_pipeline("ai")
     # processed = {"world_bank": Path, "oecd_msti": Path, "oecd_patents": Path}
 """
+import logging
 from pathlib import Path
+
 from tqdm import tqdm
+
+logger = logging.getLogger(__name__)
 
 from config.settings import load_industry_config
 from src.ingestion.world_bank import fetch_world_bank_indicators, save_raw_world_bank
@@ -136,7 +140,7 @@ def run_full_pipeline(
         )
         processed_paths["world_bank"] = wb_path
     except Exception as e:
-        print(f"World Bank ingestion failed: {e}")
+        logger.error(f"World Bank ingestion failed: {e}")
 
     # Step 3: Ingest OECD MSTI
     try:
@@ -151,7 +155,7 @@ def run_full_pipeline(
         )
         processed_paths["oecd_msti"] = msti_path
     except Exception as e:
-        print(f"OECD MSTI ingestion failed: {e}")
+        logger.error(f"OECD MSTI ingestion failed: {e}")
 
     # Step 4: Ingest OECD Patents
     try:
@@ -166,7 +170,7 @@ def run_full_pipeline(
         )
         processed_paths["oecd_patents"] = patents_path
     except Exception as e:
-        print(f"OECD Patents ingestion failed: {e}")
+        logger.error(f"OECD Patents ingestion failed: {e}")
 
     # Step 5: Ingest LSEG (optional)
     if include_lseg:
@@ -193,12 +197,12 @@ def run_full_pipeline(
             processed_paths["lseg"] = lseg_path
             close_lseg_session()
         except Exception as e:
-            print(f"LSEG ingestion failed: {e}")
+            logger.error(f"LSEG ingestion failed: {e}")
             # Attempt graceful session close even on failure
             try:
                 close_lseg_session()
-            except Exception:
-                pass
+            except Exception as e2:
+                logger.warning(f"LSEG session close failed: {e2}")
 
     # Step 6: Compile market anchors (YAML registry -> reconciled Parquet)
     try:
@@ -206,7 +210,7 @@ def run_full_pipeline(
         anchors_path = compile_and_write_market_anchors(industry_id)
         processed_paths["market_anchors"] = anchors_path
     except Exception as e:
-        print(f"Market anchors compilation failed: {e}")
+        logger.error(f"Market anchors compilation failed: {e}")
 
     # Step 7: Ingest EDGAR company filings (requires SEC identity)
     if include_edgar:
@@ -220,7 +224,7 @@ def run_full_pipeline(
             from src.processing.validate import EDGAR_RAW_SCHEMA
             edgar_email = os.environ.get("EDGAR_USER_EMAIL")
             if not edgar_email:
-                print("EDGAR_USER_EMAIL not set — skipping EDGAR ingestion")
+                logger.info("EDGAR_USER_EMAIL not set — skipping EDGAR ingestion")
             else:
                 set_edgar_identity(edgar_email)
                 edgar_df = fetch_all_edgar_companies(config)
@@ -228,7 +232,7 @@ def run_full_pipeline(
                 edgar_path = save_raw_edgar(edgar_df, industry_id)
                 processed_paths["edgar"] = edgar_path
         except Exception as e:
-            print(f"EDGAR ingestion failed: {e}")
+            logger.error(f"EDGAR ingestion failed: {e}")
 
     # Step 8: AI revenue attribution for bundled-segment public companies (Plan 10-02)
     try:
@@ -236,7 +240,7 @@ def run_full_pipeline(
         attribution_path = compile_and_write_attribution(industry_id)
         processed_paths["revenue_attribution"] = attribution_path
     except Exception as e:
-        print(f"Revenue attribution failed: {e}")
+        logger.error(f"Revenue attribution failed: {e}")
 
     # Step 9: Private company valuations (compile YAML registry to Parquet)
     try:
@@ -244,7 +248,7 @@ def run_full_pipeline(
         private_path = compile_and_write_private_valuations(industry_id)
         processed_paths["private_valuations"] = private_path
     except Exception as e:
-        print(f"Private valuations failed: {e}")
+        logger.error(f"Private valuations failed: {e}")
 
     # Step 10: Walk-forward backtesting (requires model outputs + actuals)
     try:
@@ -252,6 +256,6 @@ def run_full_pipeline(
         backtest_path = run_backtesting(industry_id)
         processed_paths["backtesting_results"] = backtest_path
     except Exception as e:
-        print(f"Backtesting failed: {e}")
+        logger.error(f"Backtesting failed: {e}")
 
     return processed_paths

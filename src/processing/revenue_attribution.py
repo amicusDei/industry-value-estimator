@@ -42,7 +42,7 @@ from src.processing.validate import ATTRIBUTION_SCHEMA
 PURE_PLAY_CIKS = {
     "0001045810",  # NVIDIA
     "0001321655",  # Palantir
-    "0001577552",  # C3.ai
+    "0001577526",  # C3.ai
 }
 
 

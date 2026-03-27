@@ -111,8 +111,8 @@ def reflate_to_nominal(
                     _val_base = float(_defl.loc[_defl["year"] == base_year, "value"].iloc[0])
                     if _val_base > 0:
                         _deflator_factor = _val_year / _val_base
-    except Exception:
-        pass  # Fall through to constant CAGR
+    except Exception as e:
+        logging.warning(f"Deflator loading failed: {e}")
 
     if _deflator_factor is not None:
         return value_real_2020 * _deflator_factor
@@ -122,7 +122,8 @@ def reflate_to_nominal(
         from config.settings import load_industry_config
         _cfg = load_industry_config("ai")
         _inflation_cagr = _cfg["model_calibration"]["inflation"]["annual_cagr"]
-    except Exception:
+    except Exception as e:
+        logging.warning(f"Deflator loading failed: {e}")
         _inflation_cagr = 0.025  # fallback: 2.5% constant CAGR
 
     factor = (1.0 + _inflation_cagr) ** (year - base_year)

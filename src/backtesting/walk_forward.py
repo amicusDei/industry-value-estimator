@@ -27,7 +27,10 @@ MAPE thresholds (labels only, not gates):
   >30%  -> directional_only
 """
 
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 import numpy as np
 import pandas as pd
@@ -215,8 +218,8 @@ def run_walk_forward(industry_id: str = "ai") -> pd.DataFrame:
                     "ci80_covered": False,
                     "ci95_covered": False,
                 })
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Benchmark failed: {e}")
 
             # --- Benchmark: Random walk ---
             try:
@@ -239,8 +242,8 @@ def run_walk_forward(industry_id: str = "ai") -> pd.DataFrame:
                     "ci80_covered": False,
                     "ci95_covered": False,
                 })
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Benchmark failed: {e}")
 
             # --- Benchmark: Analyst consensus ---
             try:
@@ -265,8 +268,8 @@ def run_walk_forward(industry_id: str = "ai") -> pd.DataFrame:
                     "ci80_covered": False,
                     "ci95_covered": False,
                 })
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Benchmark failed: {e}")
 
     # --- Part 2: EDGAR hard actuals (independent validation) ---
     try:

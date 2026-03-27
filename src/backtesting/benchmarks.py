@@ -26,7 +26,7 @@ def analyst_consensus_forecast(anchors_df, segment, n_steps=6):
     """Use analyst consensus growth rate from market_anchors.
     Compute historical CAGR from anchors and project forward."""
     seg = anchors_df[anchors_df['segment'] == segment].sort_values('estimate_year')
-    if len(seg) < 2:
+    if seg.empty or len(seg) < 2:
         return [float(seg.iloc[-1]['median_usd_billions_real_2020'])] * n_steps
     first_val = float(seg.iloc[0]['median_usd_billions_real_2020'])
     last_val = float(seg.iloc[-1]['median_usd_billions_real_2020'])
