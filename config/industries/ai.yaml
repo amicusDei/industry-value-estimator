@@ -241,8 +241,8 @@ model_calibration:
 
   # CI width floors (fraction of point estimate)
   ci_width_floors:
-    ci80_fraction: 0.15   # 80% CI half-width minimum as fraction of point
-    ci95_fraction: 0.25   # 95% CI half-width minimum as fraction of point
+    ci80_fraction: 0.25   # 80% CI half-width minimum as fraction of point
+    ci95_fraction: 0.40   # 95% CI half-width minimum as fraction of point
 
   # Forecast floor (prevents negative/near-zero forecasts)
   forecast_floor:

@@ -67,6 +67,9 @@ def label_mape(mape_value: float) -> str:
 def _fit_prophet_loo(train_df: pd.DataFrame, forecast_year: int) -> dict:
     """Fit Prophet on train_df and return point prediction + CI bounds for forecast_year.
 
+    Uses bootstrap resampling of in-sample residuals for CI computation,
+    replacing parametric z-score expansion.
+
     Returns dict with keys: point, ci80_half, ci95_half.
     """
     try:
@@ -81,7 +84,7 @@ def _fit_prophet_loo(train_df: pd.DataFrame, forecast_year: int) -> dict:
             point = float(last_two["y"].iloc[-1] + slope * years_ahead)
         else:
             point = float(train_df["y"].iloc[-1])
-        return {"point": point, "ci80_half": abs(point) * 0.15, "ci95_half": abs(point) * 0.25}
+        return {"point": point, "ci80_half": abs(point) * 0.25, "ci95_half": abs(point) * 0.40}
 
     model = Prophet(
         yearly_seasonality=False,
@@ -95,15 +98,30 @@ def _fit_prophet_loo(train_df: pd.DataFrame, forecast_year: int) -> dict:
         warnings.simplefilter("ignore")
         model.fit(train_df)
 
+    # In-sample prediction to compute residuals for bootstrap
+    in_sample_pred = model.predict(train_df[["ds"]])
+    residuals = train_df["y"].values - in_sample_pred["yhat"].values
+
     future = pd.DataFrame({"ds": [pd.Timestamp(f"{forecast_year}-01-01")]})
     forecast = model.predict(future)
     point = float(forecast["yhat"].iloc[0])
-    yhat_lower = float(forecast["yhat_lower"].iloc[0])
-    yhat_upper = float(forecast["yhat_upper"].iloc[0])
-    # Prophet default interval is 80%
-    ci80_half = (yhat_upper - yhat_lower) / 2
-    # Expand to 95%: z_95/z_80 = 1.96/1.28
-    ci95_half = ci80_half * (1.96 / 1.28)
+
+    # Bootstrap CI from in-sample residuals
+    if len(residuals) >= 3:
+        from src.inference.bootstrap_ci import bootstrap_confidence_intervals
+        point_arr = np.array([point])
+        ci = bootstrap_confidence_intervals(residuals, point_arr, n_bootstrap=1000, seed=42)
+        ci80_half = float((ci["ci80_upper"][0] - ci["ci80_lower"][0]) / 2)
+        ci95_half = float((ci["ci95_upper"][0] - ci["ci95_lower"][0]) / 2)
+    else:
+        # Fallback: wider parametric CIs for very sparse data
+        ci80_half = abs(point) * 0.25
+        ci95_half = abs(point) * 0.40
+
+    # Enforce minimum CI width (25%/40% of point estimate)
+    ci80_half = max(ci80_half, abs(point) * 0.25)
+    ci95_half = max(ci95_half, abs(point) * 0.40)
+
     return {"point": point, "ci80_half": ci80_half, "ci95_half": ci95_half}
 
 

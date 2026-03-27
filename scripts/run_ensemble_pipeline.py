@@ -78,6 +78,7 @@ from src.inference.forecast import (
     get_data_vintage,
     verify_cagr_range,
 )
+from src.inference.bootstrap_ci import bootstrap_confidence_intervals
 from config.settings import DATA_PROCESSED, MODELS_DIR, load_industry_config
 
 logging.basicConfig(
@@ -136,13 +137,13 @@ def _build_forecast_features_v11(
 def _get_historical_usd_values(
     y_series: pd.Series,
     residuals: pd.Series,
-    sigma_historical: float,
+    ci_floors: dict,
 ) -> dict:
     """
     Build historical segment dict from USD Y series.
 
-    Uses the full market_anchors series for historical years (2017-2025),
-    with CI bands from source disagreement or statistical sigma.
+    Uses bootstrap CIs from Prophet residuals for historical uncertainty bands.
+    Falls back to parametric CIs with elevated floors when residuals are too few.
 
     Parameters
     ----------
@@ -150,27 +151,52 @@ def _get_historical_usd_values(
         Real USD billions series indexed by year (from market anchors).
     residuals : pd.Series
         Prophet residuals in USD billions, indexed by year.
-    sigma_historical : float
-        Std dev of residuals — used to build symmetric CI bands.
+    ci_floors : dict
+        CI floor fractions from model_calibration config.
 
     Returns
     -------
     dict suitable for build_forecast_dataframe segment_forecasts input.
     """
-    # Use years covered by the y_series (real observations)
     years = sorted(y_series.index.tolist())
     point_estimates = np.array([float(y_series[y]) for y in years])
 
-    ci80_half = 1.28 * sigma_historical
-    ci95_half = 1.96 * sigma_historical
+    resid_arr = residuals.values
+    if len(resid_arr) >= 5:
+        ci = bootstrap_confidence_intervals(resid_arr, point_estimates)
+        ci80_lower = ci["ci80_lower"]
+        ci80_upper = ci["ci80_upper"]
+        ci95_lower = ci["ci95_lower"]
+        ci95_upper = ci["ci95_upper"]
+    else:
+        # Fallback: parametric CIs with elevated floors for sparse data
+        sigma = float(np.abs(resid_arr).std()) if len(resid_arr) > 1 else 1.0
+        ci80_half = max(1.28 * sigma, point_estimates.mean() * 0.30)
+        ci95_half = max(1.96 * sigma, point_estimates.mean() * 0.50)
+        ci80_lower = point_estimates - ci80_half
+        ci80_upper = point_estimates + ci80_half
+        ci95_lower = point_estimates - ci95_half
+        ci95_upper = point_estimates + ci95_half
+
+    # Enforce minimum CI width floors
+    ci80_floor = point_estimates * ci_floors["ci80_fraction"]
+    ci95_floor = point_estimates * ci_floors["ci95_fraction"]
+    ci80_half_actual = (ci80_upper - ci80_lower) / 2
+    ci95_half_actual = (ci95_upper - ci95_lower) / 2
+    ci80_half_final = np.maximum(ci80_half_actual, ci80_floor)
+    ci95_half_final = np.maximum(ci95_half_actual, ci95_floor)
+    ci80_lower = point_estimates - ci80_half_final
+    ci80_upper = point_estimates + ci80_half_final
+    ci95_lower = point_estimates - ci95_half_final
+    ci95_upper = point_estimates + ci95_half_final
 
     return {
         "years": years,
         "point_estimates": point_estimates,
-        "ci80_lower": point_estimates - ci80_half,
-        "ci80_upper": point_estimates + ci80_half,
-        "ci95_lower": point_estimates - ci95_half,
-        "ci95_upper": point_estimates + ci95_half,
+        "ci80_lower": ci80_lower,
+        "ci80_upper": ci80_upper,
+        "ci95_lower": ci95_lower,
+        "ci95_upper": ci95_upper,
         "is_forecast": [False] * len(years),
     }
 
@@ -564,19 +590,39 @@ def run_pipeline() -> None:
                     f"adaptive weights model_w={_model_w:.3f} consensus_w={_consensus_w:.3f}"
                 )
 
-        # Also adjust CI bounds to track the calibrated point estimates
-        blended_ci80_lower = np.array(blended_ci80_lower).ravel()
-        blended_ci80_upper = np.array(blended_ci80_upper).ravel()
-        blended_ci95_lower = np.array(blended_ci95_lower).ravel()
-        blended_ci95_upper = np.array(blended_ci95_upper).ravel()
+        # Bootstrap CIs from Prophet residuals (replaces parametric z-score approach)
+        prophet_resids = segment_residuals[seg][0]
+        resid_arr = prophet_resids.values
+        blended_point_arr = np.array(blended_point).ravel()
 
-        # Ensure CIs are centered around calibrated point with reasonable width
-        _ci80_half_width = np.maximum(np.abs(blended_ci80_upper - blended_ci80_lower) / 2, blended_point_arr * _ci_floors["ci80_fraction"])
-        _ci95_half_width = np.maximum(np.abs(blended_ci95_upper - blended_ci95_lower) / 2, blended_point_arr * _ci_floors["ci95_fraction"])
-        blended_ci80_lower = blended_point_arr - _ci80_half_width
-        blended_ci80_upper = blended_point_arr + _ci80_half_width
-        blended_ci95_lower = blended_point_arr - _ci95_half_width
-        blended_ci95_upper = blended_point_arr + _ci95_half_width
+        if len(resid_arr) >= 5:
+            ci = bootstrap_confidence_intervals(resid_arr, blended_point_arr)
+            blended_ci80_lower = ci["ci80_lower"]
+            blended_ci80_upper = ci["ci80_upper"]
+            blended_ci95_lower = ci["ci95_lower"]
+            blended_ci95_upper = ci["ci95_upper"]
+        else:
+            # Fallback: parametric CIs with elevated floors for sparse data
+            logger.warning(f"  {seg}: <5 residuals, using parametric CI fallback with elevated floors")
+            sigma = float(np.abs(resid_arr).std()) if len(resid_arr) > 1 else float(blended_point_arr.mean() * 0.20)
+            ci80_half = max(1.28 * sigma, blended_point_arr * 0.30)
+            ci95_half = max(1.96 * sigma, blended_point_arr * 0.50)
+            blended_ci80_lower = blended_point_arr - ci80_half
+            blended_ci80_upper = blended_point_arr + ci80_half
+            blended_ci95_lower = blended_point_arr - ci95_half
+            blended_ci95_upper = blended_point_arr + ci95_half
+
+        # Enforce minimum CI width floors
+        _ci80_floor = blended_point_arr * _ci_floors["ci80_fraction"]
+        _ci95_floor = blended_point_arr * _ci_floors["ci95_fraction"]
+        _ci80_half_actual = (blended_ci80_upper - blended_ci80_lower) / 2
+        _ci95_half_actual = (blended_ci95_upper - blended_ci95_lower) / 2
+        _ci80_half_final = np.maximum(_ci80_half_actual, _ci80_floor)
+        _ci95_half_final = np.maximum(_ci95_half_actual, _ci95_floor)
+        blended_ci80_lower = blended_point_arr - _ci80_half_final
+        blended_ci80_upper = blended_point_arr + _ci80_half_final
+        blended_ci95_lower = blended_point_arr - _ci95_half_final
+        blended_ci95_upper = blended_point_arr + _ci95_half_final
 
         # Floor all values to prevent negative forecasts
         _min_forecast_floor = max(
@@ -589,8 +635,7 @@ def run_pipeline() -> None:
 
         # Build historical values from USD Y series
         prophet_resids = segment_residuals[seg][0]
-        sigma_hist = float(prophet_resids.abs().std()) if len(prophet_resids) > 1 else 1.0
-        hist_data = _get_historical_usd_values(y_series, prophet_resids, sigma_hist)
+        hist_data = _get_historical_usd_values(y_series, prophet_resids, _ci_floors)
 
         # Combine historical + forecast
         all_years = hist_data["years"] + FORECAST_YEARS
