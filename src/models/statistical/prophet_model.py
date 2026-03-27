@@ -193,8 +193,6 @@ def fit_prophet_segment(
         AI segment name (e.g. "ai_software", "ai_hardware").
     changepoint_year : int, optional
         Year to use as explicit Prophet changepoint. Default 2022 (GenAI surge).
-        Override with a detected structural break year from _run_break_detection()
-        in scripts/run_statistical_pipeline.py.
 
     Returns
     -------
@@ -298,9 +296,8 @@ def run_prophet_cv(
         Number of expanding-window CV folds. Default 3.
     changepoint_year : int, optional
         Year to use as explicit Prophet changepoint in each CV fold. Default 2022.
-        Override with a detected structural break year from _run_break_detection()
-        in scripts/run_statistical_pipeline.py. Must match the changepoint_year
-        passed to fit_prophet_segment to ensure consistent CV and final-fit changepoints.
+        Must match the changepoint_year passed to fit_prophet_segment to ensure
+        consistent CV and final-fit changepoints.
 
     Returns
     -------

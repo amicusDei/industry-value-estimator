@@ -221,29 +221,6 @@ attribution_subsegment_ratios:
     rationale: "Ad-driven AI ~85% adoption (AI recommendation/targeting in FoA revenue), ~15% AI platform tools (Llama, FAIR research products)"
     vintage_date: "2025-07"
 
-# LEGACY — archived v1.0 multiplier approach. No longer read by pipeline after Phase 9.
-# LEGACY: value_chain:
-# LEGACY:   # Anchor: AI market estimated at ~$200B in 2023
-# LEGACY:   # Consensus from McKinsey Global Institute (2023), Statista (2023), Grand View Research (2024)
-# LEGACY:   # All agree on a $185–$215B range; $200B used as central estimate
-# LEGACY:   anchor_year: 2023
-# LEGACY:   anchor_value_usd_billions: 200
-# LEGACY:   multiplier_method: "per_segment_anchor"
-# LEGACY:   # Per-segment shares of the $200B anchor (2023 industry consensus)
-# LEGACY:   # Hardware (NVIDIA, AMD, TSMC AI chips): ~35% = $70B
-# LEGACY:   # Infrastructure (AWS/Azure/GCP AI compute build-out): ~25% = $50B
-# LEGACY:   # Software & Platforms (AI SaaS, foundation model APIs): ~25% = $50B
-# LEGACY:   # Adoption (enterprise AI deployment spend): ~15% = $30B
-# LEGACY:   segment_anchor_shares:
-# LEGACY:     ai_hardware: 0.35
-# LEGACY:     ai_infrastructure: 0.25
-# LEGACY:     ai_software: 0.25
-# LEGACY:     ai_adoption: 0.15
-# LEGACY:   # Note: index values can be negative (PCA scores, zero-centered)
-# LEGACY:   # USD values are floored at zero for display; negative values indicate
-# LEGACY:   # the model has no signal above baseline for that segment/year
-# LEGACY:   usd_floor_billions: 0.0
-
 # ============================================================
 # MODEL CALIBRATION PARAMETERS
 # All hardcoded constants used in the ensemble pipeline, dashboard,

@@ -108,6 +108,11 @@ def assess_stationarity(series: np.ndarray | pd.Series) -> dict:
     """
     Assess stationarity of a time series using ADF and KPSS tests.
 
+    Available for diagnostic use; not part of the main v1.1 ensemble pipeline.
+    The ensemble pipeline (run_ensemble_pipeline.py) uses pmdarima's internal
+    stationarity handling. This function remains useful for ad-hoc analysis
+    and notebook diagnostics.
+
     Uses both tests together (belt-and-suspenders approach):
     - ADF null hypothesis: unit root present (non-stationary)
     - KPSS null hypothesis: trend-stationary
