@@ -534,14 +534,35 @@ def run_pipeline() -> None:
             _n_forecast_years = len(blended_point_arr)
             _model_cagr = (_model_end / _last_real) ** (1.0 / _n_forecast_years) - 1.0 if _last_real > 0 else 0
             if _model_cagr < _min_cagr:
-                logger.info(f"  Calibrating {seg}: model CAGR {_model_cagr:.1%} < floor {_min_cagr:.0%}, applying consensus growth rate")
                 # Generate a growth path at the minimum CAGR from the last real value
                 _calibrated = np.array([_last_real * (1 + _min_cagr) ** (i + 1) for i in range(_n_forecast_years)])
-                # Blend: weighted average of model and calibrated to preserve model signal
-                _model_w = _blend_cfg["model_weight"]
-                _consensus_w = _blend_cfg["consensus_weight"]
+                _consensus_cagr = _min_cagr  # calibrated path grows at exactly the floor rate
+
+                # Adaptive weighting: ensure blended CAGR >= floor
+                if _model_cagr < 0:
+                    # Model is shrinking — use 100% calibrated path
+                    _model_w = 0.0
+                elif _model_cagr < _min_cagr:
+                    # Compute weight that achieves exactly floor CAGR:
+                    # blend_cagr = model_w * model_cagr + (1 - model_w) * consensus_cagr = floor
+                    # model_w = (floor - consensus_cagr) / (model_cagr - consensus_cagr)
+                    _denom = _model_cagr - _consensus_cagr
+                    if abs(_denom) > 1e-10:
+                        _model_w = (_min_cagr - _consensus_cagr) / _denom
+                        _model_w = max(0.0, float(np.clip(_model_w, 0.0, 0.5)))
+                    else:
+                        _model_w = 0.0
+                else:
+                    _model_w = _blend_cfg["model_weight"]
+
+                _consensus_w = 1.0 - _model_w
                 blended_point_arr = _model_w * blended_point_arr + _consensus_w * _calibrated
                 blended_point = blended_point_arr
+
+                logger.info(
+                    f"  Calibrating {seg}: model CAGR {_model_cagr:.1%} < floor {_min_cagr:.0%}, "
+                    f"adaptive weights model_w={_model_w:.3f} consensus_w={_consensus_w:.3f}"
+                )
 
         # Also adjust CI bounds to track the calibrated point estimates
         blended_ci80_lower = np.array(blended_ci80_lower).ravel()
