@@ -8,6 +8,7 @@ dependencies = [
     "dash>=4.0.0",
     "dash-bootstrap-components>=2.0.4",
     "edgartools>=5.25.1",
+    "fastapi>=0.135.2",
     "kaleido>=1.2.0",
     "lightgbm>=4.6.0",
     "lseg-data>=2.1.0",
@@ -26,6 +27,7 @@ dependencies = [
     "shap>=0.46.0",
     "statsmodels>=0.14.6",
     "tqdm>=4.67.3",
+    "uvicorn>=0.42.0",
     "wbgapi>=1.0.14",
     "weasyprint>=68.1",
 ]
