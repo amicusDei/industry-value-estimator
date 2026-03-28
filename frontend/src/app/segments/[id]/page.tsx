@@ -43,8 +43,13 @@ export default async function SegmentPage({ params }: { params: Promise<{ id: st
 
   const latestVal = historical.length > 0 ? historical[historical.length - 1].value : null;
 
-  // Q4-only rows for the data table
-  const q4Rows = forecasts.filter((r) => r.quarter === 4);
+  // Q4-only rows for the data table, deduplicated by year (prefer forecast)
+  const q4Map = new Map<number, typeof forecasts[0]>();
+  for (const r of forecasts.filter((r) => r.quarter === 4)) {
+    const existing = q4Map.get(r.year);
+    if (!existing || r.is_forecast) q4Map.set(r.year, r);
+  }
+  const q4Rows = Array.from(q4Map.values()).sort((a, b) => a.year - b.year);
 
   return (
     <div>
@@ -85,8 +90,8 @@ export default async function SegmentPage({ params }: { params: Promise<{ id: st
             </tr>
           </thead>
           <tbody>
-            {q4Rows.map((r) => (
-              <tr key={r.year} className="border-b border-border/50">
+            {q4Rows.map((r, i) => (
+              <tr key={`${r.year}-${r.is_forecast}`} className="border-b border-border/50">
                 <td className="py-2 px-3 font-mono">{r.year}</td>
                 <td className="py-2 px-3 font-mono text-right">{formatUsdB(r.point_estimate)}</td>
                 <td className="py-2 px-3 font-mono text-right text-muted">{formatUsdB(r.ci80_lower)}</td>
