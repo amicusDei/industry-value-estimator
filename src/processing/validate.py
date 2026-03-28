@@ -286,6 +286,7 @@ MARKET_ANCHOR_NOMINAL_SCHEMA = DataFrameSchema(
 MARKET_ANCHOR_SCHEMA = DataFrameSchema(
     {
         "estimate_year": Column(int, Check.in_range(2017, 2035)),
+        "quarter": Column(int, Check.in_range(1, 4)),
         "segment": Column(
             str,
             Check.isin(["total", "ai_hardware", "ai_infrastructure", "ai_software", "ai_adoption"]),

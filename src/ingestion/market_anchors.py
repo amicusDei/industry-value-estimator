@@ -433,14 +433,90 @@ def compile_and_write_market_anchors(industry_id: str = "ai") -> Path:
             "in years 2017-2025."
         )
 
-    result_df = pd.concat(output_records, ignore_index=True)
+    annual_df = pd.concat(output_records, ignore_index=True)
 
-    # Ensure column dtypes are correct before validation
+    # Ensure column dtypes are correct before quarterly expansion
+    annual_df["estimate_year"] = annual_df["estimate_year"].astype(int)
+    annual_df["n_sources"] = annual_df["n_sources"].astype(int)
+    annual_df["estimated_flag"] = annual_df["estimated_flag"].astype(bool)
+
+    # Step 5b: Expand annual data to quarterly granularity
+    # Annual data points map to Q4 (year-end snapshot).
+    # Q1-Q3 are linearly interpolated between consecutive years' Q4 values.
+    value_cols = [
+        "p25_usd_billions_nominal", "median_usd_billions_nominal", "p75_usd_billions_nominal",
+        "p25_usd_billions_real_2020", "median_usd_billions_real_2020", "p75_usd_billions_real_2020",
+    ]
+    quarterly_records = []
+    for segment in sorted(annual_df["segment"].unique()):
+        seg_annual = annual_df[annual_df["segment"] == segment].sort_values("estimate_year")
+        years = seg_annual["estimate_year"].values
+        # Build a dict of annual values keyed by year
+        annual_vals = {}
+        for _, row in seg_annual.iterrows():
+            annual_vals[int(row["estimate_year"])] = row
+
+        for i, year in enumerate(years):
+            row = annual_vals[year]
+            # Q4 = original annual value
+            q4_record = {
+                "estimate_year": int(year),
+                "quarter": 4,
+                "segment": segment,
+                "n_sources": int(row["n_sources"]),
+                "source_list": str(row["source_list"]),
+                "estimated_flag": bool(row["estimated_flag"]),
+            }
+            for col in value_cols:
+                if col in row.index:
+                    q4_record[col] = float(row[col])
+            quarterly_records.append(q4_record)
+
+            # Q1-Q3: interpolate from previous year's Q4 to current year's Q4
+            if i == 0:
+                # First year: Q1=Q2=Q3=Q4 (flat backward extrapolation)
+                for q in (1, 2, 3):
+                    q_record = {
+                        "estimate_year": int(year),
+                        "quarter": q,
+                        "segment": segment,
+                        "n_sources": 0,
+                        "source_list": "",
+                        "estimated_flag": True,
+                    }
+                    for col in value_cols:
+                        if col in row.index:
+                            q_record[col] = float(row[col])
+                    quarterly_records.append(q_record)
+            else:
+                prev_row = annual_vals[int(years[i - 1])]
+                for q in (1, 2, 3):
+                    frac = q / 4.0  # Q1=0.25, Q2=0.50, Q3=0.75
+                    q_record = {
+                        "estimate_year": int(year),
+                        "quarter": q,
+                        "segment": segment,
+                        "n_sources": 0,
+                        "source_list": "",
+                        "estimated_flag": True,
+                    }
+                    for col in value_cols:
+                        if col in prev_row.index and col in row.index:
+                            prev_val = float(prev_row[col])
+                            curr_val = float(row[col])
+                            q_record[col] = prev_val + frac * (curr_val - prev_val)
+                    quarterly_records.append(q_record)
+
+    result_df = pd.DataFrame(quarterly_records)
     result_df["estimate_year"] = result_df["estimate_year"].astype(int)
+    result_df["quarter"] = result_df["quarter"].astype(int)
     result_df["n_sources"] = result_df["n_sources"].astype(int)
     result_df["estimated_flag"] = result_df["estimated_flag"].astype(bool)
 
-    # Step 5: Validate against MARKET_ANCHOR_SCHEMA (includes real_2020 columns)
+    # Sort by (segment, estimate_year, quarter)
+    result_df = result_df.sort_values(["segment", "estimate_year", "quarter"]).reset_index(drop=True)
+
+    # Step 5c: Validate against MARKET_ANCHOR_SCHEMA (includes real_2020 + quarter columns)
     validated_df = MARKET_ANCHOR_SCHEMA.validate(result_df)
 
     # Step 6: Write to data/processed/market_anchors_{industry_id}.parquet

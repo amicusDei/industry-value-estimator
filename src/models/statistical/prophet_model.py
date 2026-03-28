@@ -52,10 +52,8 @@ _MEDIAN_COL = "median_usd_billions_real_2020"
 def prepare_prophet_from_anchors(segment: str) -> pd.DataFrame:
     """Prepare market anchors data in Prophet ds/y format for a segment.
 
-    Uses ALL data (real + interpolated) for sufficient training points. With only
-    2-3 real observations per segment, models require the full 9-year series
-    including interpolated values to produce stable fits. Interpolated values are
-    derived from analyst consensus estimates and provide reasonable signal.
+    Returns quarterly data points. With 9 years × 4 quarters, each segment
+    provides ~36 observations for Prophet fitting.
 
     Parameters
     ----------
@@ -65,26 +63,28 @@ def prepare_prophet_from_anchors(segment: str) -> pd.DataFrame:
     Returns
     -------
     pd.DataFrame
-        DataFrame with columns: ds (datetime YYYY-01-01), y (USD billions).
+        DataFrame with columns: ds (datetime at quarterly frequency), y (USD billions).
         Sorted by ds, indexed by RangeIndex. Includes both real and interpolated rows.
 
     Warns
     -----
     UserWarning
-        If fewer than 5 observations are available.
+        If fewer than 10 observations are available.
     """
     from config.settings import DATA_PROCESSED
     anchors = pd.read_parquet(DATA_PROCESSED / "market_anchors_ai.parquet")
-    # Use ALL data (real + interpolated) for sufficient training points.
     seg = (
         anchors[anchors["segment"] == segment]
-        .sort_values("estimate_year")
-        [["estimate_year", _MEDIAN_COL]]
-        .rename(columns={"estimate_year": "ds", _MEDIAN_COL: "y"})
+        .sort_values(["estimate_year", "quarter"])
         .reset_index(drop=True)
     )
-    seg["ds"] = pd.to_datetime(seg["ds"].astype(str) + "-01-01")
-    if len(seg) < 5:
+    # Build quarterly dates: Q1=Jan, Q2=Apr, Q3=Jul, Q4=Oct
+    quarter_month = {1: "01", 2: "04", 3: "07", 4: "10"}
+    seg["ds"] = pd.to_datetime(
+        seg["estimate_year"].astype(str) + "-" + seg["quarter"].map(quarter_month) + "-01"
+    )
+    seg = seg[["ds", _MEDIAN_COL]].rename(columns={_MEDIAN_COL: "y"}).reset_index(drop=True)
+    if len(seg) < 10:
         warnings.warn(
             f"prepare_prophet_from_anchors: segment '{segment}' has only {len(seg)} "
             f"observations. Forecasts may be unreliable.",
@@ -127,12 +127,17 @@ def fit_prophet_from_anchors(segment: str, changepoint_year: int = 2022) -> Prop
     # 3x weight during model fitting.
     from config.settings import DATA_PROCESSED as _DP
     _anchors_raw = pd.read_parquet(_DP / "market_anchors_ai.parquet")
-    _seg_anchors = _anchors_raw[_anchors_raw["segment"] == segment].sort_values("estimate_year")
-    _n_sources_map = dict(zip(_seg_anchors["estimate_year"], _seg_anchors.get("n_sources", [0]*len(_seg_anchors))))
+    _seg_anchors = _anchors_raw[_anchors_raw["segment"] == segment].sort_values(["estimate_year", "quarter"])
+    # Build (year, quarter) -> n_sources lookup
+    _n_sources_map = {}
+    for _, _r in _seg_anchors.iterrows():
+        _n_sources_map[(_r["estimate_year"], _r["quarter"])] = _r.get("n_sources", 0)
     dupe_rows = []
     for _, row in seg_df_clean.iterrows():
         year_val = row["ds"].year
-        ns = _n_sources_map.get(year_val, 0)
+        month_val = row["ds"].month
+        quarter_val = {1: 1, 4: 2, 7: 3, 10: 4}.get(month_val, 4)
+        ns = _n_sources_map.get((year_val, quarter_val), 0)
         n_copies = 3 if ns > 0 else 1
         for _ in range(n_copies):
             dupe_rows.append({"ds": row["ds"], "y": row["y"]})
@@ -236,7 +241,7 @@ def forecast_prophet(model: Prophet, periods: int) -> pd.DataFrame:
         Prophet forecast DataFrame with columns including "ds", "yhat",
         "yhat_lower", "yhat_upper". Rows = history + future periods.
     """
-    future = model.make_future_dataframe(periods=periods, freq="YS")
+    future = model.make_future_dataframe(periods=periods, freq="QS")
     return model.predict(future)
 
 
@@ -265,8 +270,8 @@ def get_prophet_residuals(model: Prophet, df_segment: pd.DataFrame) -> pd.Series
     # model.history which may contain duplicated rows from observation weighting.
     in_sample = model.predict(df_segment)
     residuals = df_segment["y"].values - in_sample["yhat"].values
-    year_index = df_segment["ds"].dt.year.values
-    return pd.Series(residuals, index=year_index, name="residual")
+    # Use the datetime index directly for quarterly alignment
+    return pd.Series(residuals, index=df_segment["ds"].values, name="residual")
 
 
 def run_prophet_cv(
@@ -396,8 +401,17 @@ def save_all_residuals(
     frames = []
     for seg_name, (resid_series, model_type) in segment_residuals.items():
         frame = resid_series.rename("residual").to_frame()
-        frame.index.name = "year"
-        frame = frame.reset_index()
+        # Handle both datetime-indexed (quarterly) and int-indexed (annual) residuals
+        if hasattr(frame.index, 'year'):
+            # Datetime index — extract year and quarter
+            frame["year"] = frame.index.year
+            month_to_quarter = {1: 1, 4: 2, 7: 3, 10: 4}
+            frame["quarter"] = [month_to_quarter.get(m, 4) for m in frame.index.month]
+        else:
+            frame.index.name = "year"
+            frame = frame.reset_index()
+            frame["quarter"] = 4  # legacy annual data → Q4
+        frame = frame.reset_index(drop=True)
         frame["segment"] = seg_name
         frame["model_type"] = model_type
         frames.append(frame)
@@ -406,12 +420,13 @@ def save_all_residuals(
 
     # Enforce schema types
     combined["year"] = combined["year"].astype(int)
+    combined["quarter"] = combined["quarter"].astype(int)
     combined["residual"] = combined["residual"].astype(float)
     combined["segment"] = combined["segment"].astype(str)
     combined["model_type"] = combined["model_type"].astype(str)
 
     # Column order
-    combined = combined[["year", "segment", "residual", "model_type"]]
+    combined = combined[["year", "quarter", "segment", "residual", "model_type"]]
 
     # Validate: no NaN in year column
     if combined["year"].isna().any():

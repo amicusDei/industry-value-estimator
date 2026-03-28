@@ -64,19 +64,31 @@ def label_mape(mape_value: float) -> str:
     return "directional_only"
 
 
-def _fit_prophet_loo(train_df: pd.DataFrame, forecast_year: int) -> dict:
+def _fit_prophet_loo(train_df: pd.DataFrame, forecast_year: int, forecast_date: str | None = None) -> dict:
     """Fit Prophet on train_df and return point prediction + CI bounds for forecast_year.
 
     Uses bootstrap resampling of in-sample residuals for CI computation,
     replacing parametric z-score expansion.
 
+    Parameters
+    ----------
+    train_df : pd.DataFrame
+        Training data with columns ds (datetime) and y (float).
+    forecast_year : int
+        Year to forecast (used for fallback).
+    forecast_date : str, optional
+        Specific date to forecast (e.g. "2024-10-01" for Q4).
+        If None, defaults to "{forecast_year}-01-01".
+
     Returns dict with keys: point, ci80_half, ci95_half.
     """
+    if forecast_date is None:
+        forecast_date = f"{forecast_year}-01-01"
+
     try:
         from prophet import Prophet
     except ImportError:
         warnings.warn("Prophet not available -- using linear extrapolation for LOO")
-        # Fallback: simple linear extrapolation from last two points
         if len(train_df) >= 2:
             last_two = train_df.tail(2)
             slope = float(last_two["y"].iloc[-1] - last_two["y"].iloc[-2])
@@ -93,7 +105,6 @@ def _fit_prophet_loo(train_df: pd.DataFrame, forecast_year: int) -> dict:
         growth="linear",
     )
 
-    # Suppress Prophet's verbose output
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         model.fit(train_df)
@@ -102,7 +113,7 @@ def _fit_prophet_loo(train_df: pd.DataFrame, forecast_year: int) -> dict:
     in_sample_pred = model.predict(train_df[["ds"]])
     residuals = train_df["y"].values - in_sample_pred["yhat"].values
 
-    future = pd.DataFrame({"ds": [pd.Timestamp(f"{forecast_year}-01-01")]})
+    future = pd.DataFrame({"ds": [pd.Timestamp(forecast_date)]})
     forecast = model.predict(future)
     point = float(forecast["yhat"].iloc[0])
 
@@ -154,12 +165,21 @@ def run_walk_forward(industry_id: str = "ai") -> pd.DataFrame:
     # --- Part 1: Leave-one-out cross-validation (non-circular) ---
     segments = [s for s in anchors_df["segment"].unique() if s != "total"]
 
+    # Detect quarterly vs annual data
+    has_quarter = "quarter" in anchors_df.columns
+
     for segment in sorted(segments):
-        seg_data = anchors_df[anchors_df["segment"] == segment].sort_values("estimate_year")
+        if has_quarter:
+            seg_data = anchors_df[anchors_df["segment"] == segment].sort_values(["estimate_year", "quarter"])
+        else:
+            seg_data = anchors_df[anchors_df["segment"] == segment].sort_values("estimate_year")
 
         for eval_year in EVALUATION_YEARS:
-            # Check if this year exists in data
-            year_row = seg_data[seg_data["estimate_year"] == eval_year]
+            # Get Q4 actual for evaluation (or annual value if no quarters)
+            if has_quarter:
+                year_row = seg_data[(seg_data["estimate_year"] == eval_year) & (seg_data["quarter"] == 4)]
+            else:
+                year_row = seg_data[seg_data["estimate_year"] == eval_year]
             if year_row.empty:
                 continue
 
@@ -167,19 +187,37 @@ def run_walk_forward(industry_id: str = "ai") -> pd.DataFrame:
             if actual_val <= 0:
                 continue
 
-            # Build training set: ALL years EXCEPT eval_year
-            train_data = seg_data[seg_data["estimate_year"] != eval_year].copy()
-            if len(train_data) < 3:
+            # Build training set: ALL quarters EXCEPT Q4 of eval_year
+            if has_quarter:
+                train_data = seg_data[
+                    ~((seg_data["estimate_year"] == eval_year) & (seg_data["quarter"] == 4))
+                ].copy()
+            else:
+                train_data = seg_data[seg_data["estimate_year"] != eval_year].copy()
+            if len(train_data) < 5:
                 continue
 
             # --- Prophet LOO (primary model) ---
-            train_prophet = pd.DataFrame({
-                "ds": pd.to_datetime(train_data["estimate_year"].astype(str) + "-01-01"),
-                "y": train_data[median_col].values,
-            })
+            if has_quarter:
+                quarter_month = {1: "01", 2: "04", 3: "07", 4: "10"}
+                train_prophet = pd.DataFrame({
+                    "ds": pd.to_datetime(
+                        train_data["estimate_year"].astype(str) + "-" +
+                        train_data["quarter"].map(quarter_month) + "-01"
+                    ),
+                    "y": train_data[median_col].values,
+                })
+                # Forecast target is Q4 of eval_year
+                forecast_date = f"{eval_year}-10-01"
+            else:
+                train_prophet = pd.DataFrame({
+                    "ds": pd.to_datetime(train_data["estimate_year"].astype(str) + "-01-01"),
+                    "y": train_data[median_col].values,
+                })
+                forecast_date = f"{eval_year}-01-01"
 
             try:
-                prophet_result = _fit_prophet_loo(train_prophet, eval_year)
+                prophet_result = _fit_prophet_loo(train_prophet, eval_year, forecast_date=forecast_date)
                 predicted_val = prophet_result["point"]
                 ci80_half = prophet_result["ci80_half"]
                 ci95_half = prophet_result["ci95_half"]
@@ -215,7 +253,12 @@ def run_walk_forward(industry_id: str = "ai") -> pd.DataFrame:
             })
 
             # --- Benchmark: Naive forecast ---
-            train_y = train_data.set_index("estimate_year")[median_col]
+            # Use Q4 annual values for benchmark models
+            if has_quarter:
+                _bench_data = train_data[train_data["quarter"] == 4].copy()
+            else:
+                _bench_data = train_data.copy()
+            train_y = _bench_data.set_index("estimate_year")[median_col]
             try:
                 naive_pred = naive_forecast(train_y, n_steps=1)[0]
                 naive_pred = max(naive_pred, 0.1)

@@ -44,14 +44,15 @@ def sample_forecast_df():
     A minimal forecast DataFrame with all 10 required columns,
     built via build_forecast_dataframe so the schema matches production.
     """
-    years = list(range(2010, 2031))
-    is_forecast = [False] * 15 + [True] * 6
+    # Build quarterly year_quarters from 2010Q1 through 2030Q4
+    year_quarters = [(y, q) for y in range(2010, 2031) for q in range(1, 5)]
+    is_forecast = [False] * (15 * 4) + [True] * (6 * 4)
     rng = np.random.default_rng(1)
-    n = len(years)
+    n = len(year_quarters)
 
     segment_forecasts = {
         "ai_software": {
-            "years": years,
+            "year_quarters": year_quarters,
             "point_estimates": rng.uniform(50, 200, n),
             "ci80_lower": rng.uniform(40, 180, n),
             "ci80_upper": rng.uniform(60, 220, n),
@@ -69,6 +70,7 @@ def sample_forecast_df():
 
 REQUIRED_COLUMNS = [
     "year",
+    "quarter",
     "segment",
     "point_estimate_real_2020",
     "point_estimate_nominal",
@@ -76,6 +78,10 @@ REQUIRED_COLUMNS = [
     "ci80_upper",
     "ci95_lower",
     "ci95_upper",
+    "ci80_lower_nominal",
+    "ci80_upper_nominal",
+    "ci95_lower_nominal",
+    "ci95_upper_nominal",
     "is_forecast",
     "data_vintage",
 ]

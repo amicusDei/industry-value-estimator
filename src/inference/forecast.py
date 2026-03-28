@@ -186,7 +186,11 @@ def build_forecast_dataframe(
     """
     rows = []
     for segment, fcasts in segment_forecasts.items():
-        years = fcasts["years"]
+        # Support both quarterly (year_quarters) and legacy annual (years) format
+        if "year_quarters" in fcasts:
+            year_quarters = fcasts["year_quarters"]
+        else:
+            year_quarters = [(y, 4) for y in fcasts["years"]]
         point_estimates = fcasts["point_estimates"]
         ci80_lower = fcasts["ci80_lower"]
         ci80_upper = fcasts["ci80_upper"]
@@ -194,9 +198,10 @@ def build_forecast_dataframe(
         ci95_upper = fcasts["ci95_upper"]
         is_forecast = fcasts["is_forecast"]
 
-        for i, year in enumerate(years):
+        for i, (year, quarter) in enumerate(year_quarters):
             row = {
                 "year": int(year),
+                "quarter": int(quarter),
                 "segment": segment,
                 "point_estimate_real_2020": float(point_estimates[i]),
                 "ci80_lower": float(ci80_lower[i]),
@@ -223,6 +228,7 @@ def build_forecast_dataframe(
 
     df = pd.DataFrame(rows, columns=[
         "year",
+        "quarter",
         "segment",
         "point_estimate_real_2020",
         "point_estimate_nominal",
@@ -238,8 +244,8 @@ def build_forecast_dataframe(
         "data_vintage",
     ])
 
-    # Sort by (segment, year) for deterministic output
-    df = df.sort_values(["segment", "year"]).reset_index(drop=True)
+    # Sort by (segment, year, quarter) for deterministic output
+    df = df.sort_values(["segment", "year", "quarter"]).reset_index(drop=True)
 
     return df
 
@@ -303,9 +309,18 @@ def verify_cagr_range(
 
     results: dict[str, float] = {}
     for seg in segments:
-        seg_df = df[df["segment"] == seg].sort_values("year")
-        val_start = seg_df.loc[seg_df["year"] == start_year, "point_estimate_real_2020"]
-        val_end = seg_df.loc[seg_df["year"] == end_year, "point_estimate_real_2020"]
+        seg_df = df[df["segment"] == seg].sort_values(["year", "quarter"] if "quarter" in df.columns else ["year"])
+        # Use Q4 values for annual CAGR comparison
+        if "quarter" in df.columns:
+            val_start = seg_df.loc[
+                (seg_df["year"] == start_year) & (seg_df["quarter"] == 4), "point_estimate_real_2020"
+            ]
+            val_end = seg_df.loc[
+                (seg_df["year"] == end_year) & (seg_df["quarter"] == 4), "point_estimate_real_2020"
+            ]
+        else:
+            val_start = seg_df.loc[seg_df["year"] == start_year, "point_estimate_real_2020"]
+            val_end = seg_df.loc[seg_df["year"] == end_year, "point_estimate_real_2020"]
 
         if len(val_start) > 0 and len(val_end) > 0:
             v_start = val_start.iloc[0]

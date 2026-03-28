@@ -113,15 +113,24 @@ def compute_source_disagreement_columns(
         - anchor_p25_real_2020: p25 source disagreement lower bound (NaN for forecast years)
         - anchor_p75_real_2020: p75 source disagreement upper bound (NaN for forecast years)
     """
-    anchor_lookup = anchors_df.set_index(["estimate_year", "segment"])[
-        ["p25_usd_billions_real_2020", "p75_usd_billions_real_2020"]
-    ]
+    # Build lookup key depending on whether data is quarterly
+    if "quarter" in anchors_df.columns:
+        anchor_lookup = anchors_df.set_index(["estimate_year", "quarter", "segment"])[
+            ["p25_usd_billions_real_2020", "p75_usd_billions_real_2020"]
+        ]
+    else:
+        anchor_lookup = anchors_df.set_index(["estimate_year", "segment"])[
+            ["p25_usd_billions_real_2020", "p75_usd_billions_real_2020"]
+        ]
     df = forecast_df.copy()
 
     p25_values = []
     p75_values = []
     for _, row in df.iterrows():
-        key = (row["year"], row["segment"])
+        if "quarter" in anchors_df.columns and "quarter" in df.columns:
+            key = (row["year"], int(row["quarter"]), row["segment"])
+        else:
+            key = (row["year"], row["segment"])
         if key in anchor_lookup.index:
             p25_values.append(anchor_lookup.loc[key, "p25_usd_billions_real_2020"])
             p75_values.append(anchor_lookup.loc[key, "p75_usd_billions_real_2020"])

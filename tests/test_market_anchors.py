@@ -244,7 +244,7 @@ class TestYearCoverage:
     """DATA-11: Full 2017-2025 coverage after interpolation."""
 
     def test_all_years_present(self, anchors_df):
-        """Every segment has entries for all years 2017-2025."""
+        """Every segment has entries for all years 2017-2025 (quarterly)."""
         expected_years = set(range(2017, 2026))
         for segment in anchors_df["segment"].unique():
             seg_years = set(anchors_df[anchors_df["segment"] == segment]["estimate_year"].tolist())
@@ -261,9 +261,9 @@ class TestYearCoverage:
         )
 
     def test_min_row_count(self, anchors_df):
-        """At least 45 rows present (9 years x 5 segments)."""
-        assert len(anchors_df) >= 45, (
-            f"Expected >= 45 rows, got {len(anchors_df)}"
+        """At least 180 rows present (9 years x 4 quarters x 5 segments)."""
+        assert len(anchors_df) >= 180, (
+            f"Expected >= 180 rows (quarterly), got {len(anchors_df)}"
         )
 
 
@@ -295,16 +295,22 @@ class TestEstimatedFlag:
         )
 
     def test_year_2017_is_estimated_for_sub_segments(self, anchors_df):
-        """Year 2017 for sub-segments (ai_hardware etc.) must be estimated (no real data)."""
+        """Year 2017 Q1-Q3 for sub-segments must be estimated (interpolated). Q4 may have real data."""
         sub_segments = ["ai_hardware", "ai_infrastructure", "ai_software", "ai_adoption"]
         for seg in sub_segments:
-            row_2017 = anchors_df[
+            rows_2017 = anchors_df[
                 (anchors_df["segment"] == seg) & (anchors_df["estimate_year"] == 2017)
             ]
-            assert len(row_2017) == 1, f"Expected exactly one row for {seg} year 2017"
-            assert row_2017.iloc[0]["estimated_flag"] is True or row_2017.iloc[0]["estimated_flag"] == True, (
-                f"{seg} year 2017 should be estimated_flag=True (no source data)"
-            )
+            if "quarter" in anchors_df.columns:
+                assert len(rows_2017) == 4, f"Expected 4 quarterly rows for {seg} year 2017, got {len(rows_2017)}"
+                # Q1-Q3 must be estimated (interpolated from Q4)
+                q1_q3 = rows_2017[rows_2017["quarter"].isin([1, 2, 3])]
+                assert q1_q3["estimated_flag"].all(), (
+                    f"{seg} year 2017 Q1-Q3 should have estimated_flag=True (interpolated)"
+                )
+            else:
+                assert len(rows_2017) == 1, f"Expected 1 row for {seg} year 2017"
+                assert rows_2017.iloc[0]["estimated_flag"] is True or rows_2017.iloc[0]["estimated_flag"] == True
 
 
 class TestPercentileOrder:

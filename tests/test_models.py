@@ -132,16 +132,18 @@ class TestARIMA:
         reason="market_anchors_ai.parquet not generated — run Phase 8 pipeline first",
     )
     def test_load_segment_y_series_returns_usd_range(self):
-        """load_segment_y_series returns USD billions values (>1.0) indexed by integer years."""
+        """load_segment_y_series returns USD billions values (>1.0) indexed by quarterly dates."""
         from src.models.statistical.arima import load_segment_y_series
 
         s = load_segment_y_series("ai_hardware")
 
         assert isinstance(s, pd.Series), f"Expected pd.Series, got {type(s)}"
-        assert len(s) > 0, "ai_hardware Y series is empty after n_sources > 0 filter"
-        assert s.index.dtype in (np.int64, np.int32, int, "int64", "int32"), (
-            f"Expected integer year index, got dtype={s.index.dtype}"
+        assert len(s) > 0, "ai_hardware Y series is empty"
+        # Quarterly data uses DatetimeIndex
+        assert isinstance(s.index, pd.DatetimeIndex) or s.index.dtype in (np.int64, np.int32), (
+            f"Expected DatetimeIndex or integer index, got dtype={s.index.dtype}"
         )
+        assert len(s) >= 30, f"Expected >= 30 quarterly observations, got {len(s)}"
         assert (s > 1.0).all(), (
             f"Expected all values > 1.0 USD billions, got min={s.min():.4f}"
         )
@@ -244,14 +246,18 @@ class TestProphet:
         residuals = get_prophet_residuals(model, seg)
 
         assert isinstance(residuals, pd.Series)
-        # Index should be integer years, not datetime
-        assert residuals.index.dtype in (np.int64, np.int32, int, "int64", "int32"), (
-            f"Expected integer year index, got dtype={residuals.index.dtype}"
+        # Index is now datetime (quarterly) — verify it has proper dates
+        assert isinstance(residuals.index, pd.DatetimeIndex) or residuals.index.dtype in (np.int64, np.int32), (
+            f"Expected DatetimeIndex or integer index, got dtype={residuals.index.dtype}"
         )
-        # First year should be 2010, not 0 or some offset
-        assert residuals.index[0] == 2010, (
-            f"Expected first year=2010, got {residuals.index[0]}"
-        )
+        if isinstance(residuals.index, pd.DatetimeIndex):
+            assert residuals.index[0].year == 2010, (
+                f"Expected first year=2010, got {residuals.index[0].year}"
+            )
+        else:
+            assert residuals.index[0] == 2010, (
+                f"Expected first year=2010, got {residuals.index[0]}"
+            )
 
     def test_prophet_cv(self):
         """run_prophet_cv returns list of 3 dicts each with 'rmse' key."""

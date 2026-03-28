@@ -93,10 +93,14 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 SEGMENTS = ["ai_hardware", "ai_infrastructure", "ai_software", "ai_adoption"]
 
-# Forecast horizon
-FORECAST_YEARS = list(range(2025, 2031))
+# Forecast horizon — quarterly: 2025Q1 through 2030Q4 = 24 quarters
+FORECAST_QUARTERS = [(y, q) for y in range(2025, 2031) for q in range(1, 5)]
+FORECAST_STEPS = len(FORECAST_QUARTERS)  # 24
 HISTORICAL_END = 2024
 HISTORY_START = 2017  # First year with real market anchor data
+
+# For backward compatibility in some places
+FORECAST_YEARS = list(range(2025, 2031))
 
 
 # ---------------------------------------------------------------------------
@@ -106,11 +110,11 @@ HISTORY_START = 2017  # First year with real market anchor data
 def _build_forecast_features_v11(
     last_lag1: float,
     last_lag2: float,
-    forecast_years: list[int],
+    forecast_quarters: list[tuple[int, int]],
     macro_df: pd.DataFrame | None = None,
 ) -> np.ndarray:
     """
-    Build feature rows for forecast years (v1.1 version).
+    Build feature rows for forecast quarters (v1.1 version).
 
     Uses last known residual lags as constant forward projection.
     Optionally merges macro features aligned to forecast years.
@@ -120,15 +124,15 @@ def _build_forecast_features_v11(
         [c for c in macro_df.columns if c in ALL_FEATURE_COLS]
         if macro_df is not None else []
     )
-    for year in forecast_years:
-        year_norm = (year - 2010) / 14.0
+    for year, quarter in forecast_quarters:
+        # Encode year+quarter as continuous time: 2025Q1=2025.0, 2025Q2=2025.25, etc.
+        year_frac = year + (quarter - 1) / 4.0
+        year_norm = (year_frac - 2010) / 14.0
         row = [last_lag1, last_lag2, year_norm]
         for col in available_macro_cols:
-            # Use last known macro value for forecast years (constant forward)
             if year in macro_df.index:
                 row.append(float(macro_df.loc[year, col]))
             else:
-                # Use last available value
                 row.append(float(macro_df[col].iloc[-1]))
         rows.append(row)
     return np.array(rows, dtype=np.float64)
@@ -140,7 +144,7 @@ def _get_historical_usd_values(
     ci_floors: dict,
 ) -> dict:
     """
-    Build historical segment dict from USD Y series.
+    Build historical segment dict from USD Y series (quarterly).
 
     Uses bootstrap CIs from Prophet residuals for historical uncertainty bands.
     Falls back to parametric CIs with elevated floors when residuals are too few.
@@ -148,18 +152,23 @@ def _get_historical_usd_values(
     Parameters
     ----------
     y_series : pd.Series
-        Real USD billions series indexed by year (from market anchors).
+        Real USD billions series indexed by DatetimeIndex (quarterly).
     residuals : pd.Series
-        Prophet residuals in USD billions, indexed by year.
+        Prophet residuals in USD billions.
     ci_floors : dict
         CI floor fractions from model_calibration config.
 
     Returns
     -------
     dict suitable for build_forecast_dataframe segment_forecasts input.
+    Contains 'year_quarters' as list of (year, quarter) tuples.
     """
-    years = sorted(y_series.index.tolist())
-    point_estimates = np.array([float(y_series[y]) for y in years])
+    point_estimates = y_series.values.astype(float)
+    month_to_quarter = {1: 1, 4: 2, 7: 3, 10: 4}
+    year_quarters = [
+        (int(dt.year), month_to_quarter.get(int(dt.month), 4))
+        for dt in pd.DatetimeIndex(y_series.index)
+    ]
 
     resid_arr = residuals.values
     if len(resid_arr) >= 5:
@@ -169,7 +178,6 @@ def _get_historical_usd_values(
         ci95_lower = ci["ci95_lower"]
         ci95_upper = ci["ci95_upper"]
     else:
-        # Fallback: parametric CIs with elevated floors for sparse data
         sigma = float(np.abs(resid_arr).std()) if len(resid_arr) > 1 else 1.0
         ci80_half = max(1.28 * sigma, point_estimates.mean() * 0.30)
         ci95_half = max(1.96 * sigma, point_estimates.mean() * 0.50)
@@ -191,13 +199,13 @@ def _get_historical_usd_values(
     ci95_upper = point_estimates + ci95_half_final
 
     return {
-        "years": years,
+        "year_quarters": year_quarters,
         "point_estimates": point_estimates,
         "ci80_lower": ci80_lower,
         "ci80_upper": ci80_upper,
         "ci95_lower": ci95_lower,
         "ci95_upper": ci95_upper,
-        "is_forecast": [False] * len(years),
+        "is_forecast": [False] * len(year_quarters),
     }
 
 
@@ -390,23 +398,23 @@ def run_pipeline() -> None:
             try:
                 arima_order = select_arima_order(y_series)
                 arima_results = fit_arima_segment(y_series, arima_order)
-                arima_forecast_df = forecast_arima(arima_results, steps=6)
+                arima_forecast_df = forecast_arima(arima_results, steps=FORECAST_STEPS)
                 # 80% CI from ARIMA (alpha=0.20)
-                arima_forecast_80 = forecast_arima(arima_results, steps=6, alpha=0.20)
+                arima_forecast_80 = forecast_arima(arima_results, steps=FORECAST_STEPS, alpha=0.20)
                 arima_available = True
                 logger.info(f"  ARIMA({arima_order}) fitted successfully")
             except Exception as exc:
                 logger.warning(f"  ARIMA fit failed: {exc} — using Prophet only")
                 arima_available = False
 
-        # Prophet forecast (6 steps: 2025-2030)
+        # Prophet forecast (24 quarterly steps: 2025Q1-2030Q4)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            prophet_forecast = forecast_prophet(prophet_model, periods=6)
+            prophet_forecast = forecast_prophet(prophet_model, periods=FORECAST_STEPS)
 
-        # Extract 2025-2030 Prophet forecasts
-        # forecast_prophet returns history + future; last 6 rows are 2025-2030
-        future_prophet_rows = prophet_forecast.tail(6)
+        # Extract 2025Q1-2030Q4 Prophet forecasts
+        # forecast_prophet returns history + future; last FORECAST_STEPS rows are forecast
+        future_prophet_rows = prophet_forecast.tail(FORECAST_STEPS)
         prophet_point = future_prophet_rows["yhat"].values
         prophet_ci80_lower = future_prophet_rows["yhat_lower"].values
         prophet_ci80_upper = future_prophet_rows["yhat_upper"].values
@@ -474,7 +482,7 @@ def run_pipeline() -> None:
             last_lag1 = float(last_residuals[-1])
             last_lag2 = float(last_residuals[-2]) if len(last_residuals) >= 2 else 0.0
             X_future = _build_forecast_features_v11(
-                last_lag1, last_lag2, FORECAST_YEARS, macro_df=macro_df
+                last_lag1, last_lag2, FORECAST_QUARTERS, macro_df=macro_df
             )
             # Restrict to available columns
             if len(avail_feat_cols) != len(effective_feature_cols):
@@ -548,20 +556,21 @@ def run_pipeline() -> None:
         # Analyst consensus calibration: The AI market is in a structural growth phase.
         # When ARIMA/Prophet produce flat or declining forecasts due to noisy short training
         # data, we calibrate using a minimum growth rate derived from analyst consensus.
-        # Gartner/IDC/GVR consensus: total AI market CAGR ~20-35% through 2030.
-        # Per-segment minimum CAGRs are conservative lower bounds.
         _min_cagr = _cagr_floors.get(seg, 0.15)
-        _last_real = float(y_series.iloc[-1])
+        _last_real = float(y_series.iloc[-1])  # Last quarterly value (2024 Q4)
         blended_point_arr = np.array(blended_point).ravel()
 
         # Check if model CAGR is below the consensus floor
+        # Compare Q4 2024 (last real) to Q4 2030 (last forecast) for annual CAGR
         if len(blended_point_arr) > 0:
-            _model_end = float(blended_point_arr[-1])
-            _n_forecast_years = len(blended_point_arr)
+            _model_end = float(blended_point_arr[-1])  # Q4 2030
+            _n_forecast_years = 6  # 2025-2030 = 6 years (not quarters)
             _model_cagr = (_model_end / _last_real) ** (1.0 / _n_forecast_years) - 1.0 if _last_real > 0 else 0
             if _model_cagr < _min_cagr:
                 # Generate a growth path at the minimum CAGR from the last real value
-                _calibrated = np.array([_last_real * (1 + _min_cagr) ** (i + 1) for i in range(_n_forecast_years)])
+                # For quarterly: each quarter grows at (1 + annual_cagr)^(1/4)
+                _quarterly_growth = (1 + _min_cagr) ** 0.25
+                _calibrated = np.array([_last_real * _quarterly_growth ** (i + 1) for i in range(FORECAST_STEPS)])
                 _consensus_cagr = _min_cagr  # calibrated path grows at exactly the floor rate
 
                 # Adaptive weighting: ensure blended CAGR >= floor
@@ -633,12 +642,12 @@ def run_pipeline() -> None:
         blended_ci80_lower = np.maximum(blended_ci80_lower, _min_forecast_floor * 0.5)
         blended_ci95_lower = np.maximum(blended_ci95_lower, _min_forecast_floor * 0.25)
 
-        # Build historical values from USD Y series
+        # Build historical values from USD Y series (quarterly)
         prophet_resids = segment_residuals[seg][0]
         hist_data = _get_historical_usd_values(y_series, prophet_resids, _ci_floors)
 
         # Combine historical + forecast
-        all_years = hist_data["years"] + FORECAST_YEARS
+        all_year_quarters = hist_data["year_quarters"] + FORECAST_QUARTERS
         all_point = np.concatenate([
             hist_data["point_estimates"],
             blended_point,
@@ -659,10 +668,10 @@ def run_pipeline() -> None:
             hist_data["ci95_upper"],
             np.array(blended_ci95_upper).ravel(),
         ])
-        all_is_forecast = hist_data["is_forecast"] + [True] * len(FORECAST_YEARS)
+        all_is_forecast = hist_data["is_forecast"] + [True] * len(FORECAST_QUARTERS)
 
         all_segment_forecasts[seg] = {
-            "years": all_years,
+            "year_quarters": all_year_quarters,
             "point_estimates": all_point,
             "ci80_lower": all_ci80_lower,
             "ci80_upper": all_ci80_upper,
@@ -678,7 +687,7 @@ def run_pipeline() -> None:
             "lgbm_weight": weights_dict[seg]["lgbm_weight"],
             "y_obs": len(y_series),
         })
-        logger.info(f"  {seg}: {len(all_years)} total years, 2025-2030 forecast added")
+        logger.info(f"  {seg}: {len(all_year_quarters)} total quarters, 2025Q1-2030Q4 forecast added")
 
     # ---------------------------------------------------------------------------
     # Step 7: Build and save forecasts_ensemble.parquet
@@ -740,7 +749,8 @@ def run_pipeline() -> None:
     assert (forecast_df["point_estimate_real_2020"] > 1.0).any(), (
         "FAIL: No point_estimate_real_2020 > 1.0 — values appear to be in index units, not USD billions"
     )
-    total_2025 = forecast_df[forecast_df["year"] == 2025]["point_estimate_real_2020"].sum()
+    # Use Q4 values for total market size (annual snapshot)
+    total_2025 = forecast_df[(forecast_df["year"] == 2025) & (forecast_df["quarter"] == 4)]["point_estimate_real_2020"].sum()
     logger.info(f"  Total market 2025: ${total_2025:.0f}B")
     logger.info("  Contract assertions: PASSED")
 
