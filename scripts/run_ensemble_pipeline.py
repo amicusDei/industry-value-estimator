@@ -79,6 +79,7 @@ from src.inference.forecast import (
     verify_cagr_range,
 )
 from src.inference.bootstrap_ci import bootstrap_confidence_intervals
+from src.processing.private_market_integration import compute_private_contribution
 from config.settings import DATA_PROCESSED, MODELS_DIR, load_industry_config
 
 logging.basicConfig(
@@ -714,6 +715,22 @@ def run_pipeline() -> None:
         )
     except Exception as exc:
         logger.warning(f"  Failed to attach source disagreement columns: {exc}")
+
+    # ---------------------------------------------------------------------------
+    # Step 9b: Add private market contribution
+    # ---------------------------------------------------------------------------
+    logger.info("\n=== Step 9b: Adding private market contribution ===\n")
+
+    private_contrib = compute_private_contribution()
+    if private_contrib:
+        forecast_df["private_contribution_usd"] = forecast_df["segment"].map(
+            lambda seg: private_contrib.get(seg, {}).get("arr_weighted", 0.0)
+        )
+        for seg, contrib in private_contrib.items():
+            logger.info(f"  {seg}: +${contrib['arr_weighted']:.1f}B private ARR ({contrib['n_companies']} companies)")
+    else:
+        forecast_df["private_contribution_usd"] = 0.0
+        logger.info("  No private market contribution available")
 
     forecast_df.to_parquet(forecast_path, index=False)
     logger.info(f"  Saved: {forecast_path}")
