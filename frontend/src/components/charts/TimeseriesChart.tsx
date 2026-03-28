@@ -72,7 +72,9 @@ export default function TimeseriesChart({
         priceLineVisible: false,
         lastValueVisible: false,
       });
-      ci95Upper.setData(ci95.map((d) => ({ time: toTime(d.time), value: d.upper })));
+      ci95Upper.setData(
+        ci95.map((d) => ({ time: toTime(d.time), value: d.upper })).sort((a, b) => (a.time as number) - (b.time as number))
+      );
 
       const ci95Lower = chart.addSeries(AreaSeries, {
         lineColor: "transparent",
@@ -82,7 +84,9 @@ export default function TimeseriesChart({
         priceLineVisible: false,
         lastValueVisible: false,
       });
-      ci95Lower.setData(ci95.map((d) => ({ time: toTime(d.time), value: d.lower })));
+      ci95Lower.setData(
+        ci95.map((d) => ({ time: toTime(d.time), value: d.lower })).sort((a, b) => (a.time as number) - (b.time as number))
+      );
     }
 
     // CI80 band
@@ -95,7 +99,9 @@ export default function TimeseriesChart({
         priceLineVisible: false,
         lastValueVisible: false,
       });
-      ci80Upper.setData(ci80.map((d) => ({ time: toTime(d.time), value: d.upper })));
+      ci80Upper.setData(
+        ci80.map((d) => ({ time: toTime(d.time), value: d.upper })).sort((a, b) => (a.time as number) - (b.time as number))
+      );
 
       const ci80Lower = chart.addSeries(AreaSeries, {
         lineColor: "transparent",
@@ -105,7 +111,9 @@ export default function TimeseriesChart({
         priceLineVisible: false,
         lastValueVisible: false,
       });
-      ci80Lower.setData(ci80.map((d) => ({ time: toTime(d.time), value: d.lower })));
+      ci80Lower.setData(
+        ci80.map((d) => ({ time: toTime(d.time), value: d.lower })).sort((a, b) => (a.time as number) - (b.time as number))
+      );
     }
 
     // Historical line (grey)
@@ -116,7 +124,10 @@ export default function TimeseriesChart({
         priceLineVisible: false,
         lastValueVisible: false,
       });
-      histSeries.setData(historical.map((d) => ({ time: toTime(d.time), value: d.value })));
+      const histData = historical
+        .map((d) => ({ time: toTime(d.time), value: d.value }))
+        .sort((a, b) => (a.time as number) - (b.time as number));
+      histSeries.setData(histData);
     }
 
     // Forecast line (orange)
@@ -126,12 +137,16 @@ export default function TimeseriesChart({
         lineWidth: 2,
         priceLineVisible: false,
       });
-      // Connect to last historical point
-      const bridge =
-        historical.length > 0
-          ? [{ time: toTime(historical[historical.length - 1].time), value: historical[historical.length - 1].value }]
-          : [];
-      fcSeries.setData([...bridge, ...forecast.map((d) => ({ time: toTime(d.time), value: d.value }))]);
+      // Build forecast points, prepend last historical for visual continuity
+      const lastHist = historical.length > 0
+        ? [{ time: toTime(historical[historical.length - 1].time), value: historical[historical.length - 1].value }]
+        : [];
+      const fcPoints = forecast
+        .map((d) => ({ time: toTime(d.time), value: d.value }))
+        // Filter out any forecast point at or before the last historical time
+        .filter((p) => lastHist.length === 0 || p.time > lastHist[0].time);
+      const merged = [...lastHist, ...fcPoints].sort((a, b) => (a.time as number) - (b.time as number));
+      fcSeries.setData(merged);
     }
 
     chart.timeScale().fitContent();
