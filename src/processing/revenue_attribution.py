@@ -27,6 +27,7 @@ Usage:
     # Full pipeline: load YAML, validate, write Parquet, return Path:
     path = compile_and_write_attribution("ai")
 """
+import logging
 import yaml
 import pandas as pd
 import pyarrow as pa
@@ -36,6 +37,8 @@ from pathlib import Path
 
 from config.settings import DATA_RAW, DATA_PROCESSED
 from src.processing.validate import ATTRIBUTION_SCHEMA
+
+logger = logging.getLogger(__name__)
 
 
 # CIKs of pure-play AI companies — 100% of revenue is AI, use ratio=1.0.
@@ -94,6 +97,17 @@ def load_attribution_registry(registry_path: Path) -> pd.DataFrame:
     return df
 
 
+def _load_earnings_attribution() -> pd.DataFrame | None:
+    """Load earnings attribution parquet if it exists."""
+    path = DATA_PROCESSED / "earnings_ai_attribution.parquet"
+    if path.exists():
+        try:
+            return pd.read_parquet(path)
+        except Exception as e:
+            logger.warning("Failed to load earnings attribution: %s", e)
+    return None
+
+
 def estimate_ai_revenue(
     company_revenue: float,
     cik: str,
@@ -103,10 +117,11 @@ def estimate_ai_revenue(
     """
     Estimate AI-attributable revenue for a single company by CIK.
 
-    For pure-play companies (NVIDIA, Palantir, C3.ai), uses ratio=1.0 with
-    attribution_method="direct_disclosure". For all other companies, the
-    function is a lightweight lookup helper that can be extended with
-    config-driven ratios.
+    Lookup priority:
+    1. Earnings-based attribution (earnings_ai_attribution.parquet) — if available
+    2. Pure-play companies (ratio=1.0)
+    3. Config-driven overrides from attribution_config
+    4. Default fallback (ratio=0.0)
 
     Parameters
     ----------
@@ -126,7 +141,7 @@ def estimate_ai_revenue(
     dict
         {
             "ai_revenue_usd": float,       # USD billions
-            "attribution_method": str,      # direct_disclosure | management_commentary | analogue_ratio
+            "attribution_method": str,      # direct_disclosure | earnings_regex | earnings_regex+llm | ...
             "ratio": float,                 # AI revenue / total revenue (0.0-1.0 or >1 not expected)
             "ratio_source": str,            # Provenance citation
             "uncertainty_low": float,       # Lower bound USD billions
@@ -134,11 +149,46 @@ def estimate_ai_revenue(
             "vintage_date": str,            # ISO date string
         }
     """
-    # Pure-play companies: pass-through with ratio=1.0
+    # Priority 1: Earnings-based attribution from EDGAR regex/LLM extraction
+    earnings_df = _load_earnings_attribution()
+    if earnings_df is not None and not earnings_df.empty:
+        cik_matches = earnings_df[earnings_df["cik"] == cik]
+        if not cik_matches.empty:
+            # Filter by year if possible
+            year_matches = cik_matches[cik_matches["fiscal_year"] == year]
+            if year_matches.empty:
+                # Fall back to most recent year
+                year_matches = cik_matches.sort_values("fiscal_year", ascending=False).head(1)
+
+            best = year_matches.sort_values("confidence_score", ascending=False).iloc[0]
+            ai_revenue = float(best["ai_revenue_usd"])
+            method = str(best["attribution_method"])
+            confidence = float(best.get("confidence_score", 0.5))
+            # Uncertainty scales inversely with confidence
+            uncertainty_factor = max(0.05, 0.30 * (1.0 - confidence))
+            ratio = ai_revenue / company_revenue if company_revenue > 0 else 0.0
+
+            logger.info(
+                "estimate_ai_revenue: CIK %s using earnings-based attribution "
+                "(method=%s, $%.1fB, confidence=%.2f)",
+                cik, method, ai_revenue, confidence,
+            )
+            return {
+                "ai_revenue_usd": ai_revenue,
+                "attribution_method": method,
+                "ratio": ratio,
+                "ratio_source": f"Earnings-based extraction (confidence={confidence:.2f})",
+                "uncertainty_low": ai_revenue * (1.0 - uncertainty_factor),
+                "uncertainty_high": ai_revenue * (1.0 + uncertainty_factor),
+                "vintage_date": str(best.get("vintage_date", f"{year}-12-31")),
+            }
+
+    # Priority 2: Pure-play companies — pass-through with ratio=1.0
     if cik in PURE_PLAY_CIKS:
         ai_revenue = company_revenue
         uncertainty_low = company_revenue * 0.95
         uncertainty_high = company_revenue * 1.05
+        logger.info("estimate_ai_revenue: CIK %s using pure-play pass-through", cik)
         return {
             "ai_revenue_usd": ai_revenue,
             "attribution_method": "direct_disclosure",
@@ -149,12 +199,13 @@ def estimate_ai_revenue(
             "vintage_date": f"{year}-12-31",
         }
 
-    # Config-driven overrides for other companies
+    # Priority 3: Config-driven overrides for other companies
     if cik in attribution_config:
         cfg = attribution_config[cik]
         ratio = cfg.get("ratio", 0.0)
         ai_revenue = company_revenue * ratio
         uncertainty_factor = cfg.get("uncertainty_factor", 0.2)
+        logger.info("estimate_ai_revenue: CIK %s using config override (ratio=%.2f)", cik, ratio)
         return {
             "ai_revenue_usd": ai_revenue,
             "attribution_method": cfg.get("method", "analogue_ratio"),
@@ -165,7 +216,8 @@ def estimate_ai_revenue(
             "vintage_date": cfg.get("vintage_date", f"{year}-12-31"),
         }
 
-    # Default fallback: analogue_ratio with unknown ratio
+    # Priority 4: Default fallback — analogue_ratio with unknown ratio
+    logger.info("estimate_ai_revenue: CIK %s — no attribution source found, fallback", cik)
     return {
         "ai_revenue_usd": 0.0,
         "attribution_method": "analogue_ratio",

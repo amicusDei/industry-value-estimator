@@ -79,7 +79,21 @@ The LSEG TRBC codes used (Computer Processing Hardware 57201010, Electronic Equi
 - **Private company exclusion:** Pre-IPO AI companies (e.g., OpenAI, Anthropic, Mistral, xAI) are excluded from the TRBC revenue series. The private AI market has grown faster than the public market post-2022.
 - **Survivorship bias:** Companies that were delisted, acquired, or went bankrupt are not in the current TRBC universe. Acquired AI companies (e.g., DeepMind pre-Alphabet, GitHub) contributed revenue that is now attributed to acquirers' broader segments.
 
-**If this is wrong:** Market size is likely understated by 20–40% in 2023–2025 based on public vs. private AI fundraising ratios reported by PitchBook and CB Insights. The understatement is larger in the software/adoption segments (more private activity) and smaller in hardware (dominated by public companies like NVIDIA, AMD).
+**If this is wrong:** Market size is likely understated by 20-40% in 2023-2025 based on public vs. private AI fundraising ratios reported by PitchBook and CB Insights. The understatement is larger in the software/adoption segments (more private activity) and smaller in hardware (dominated by public companies like NVIDIA, AMD).
+
+### Earnings-Based AI Revenue Attribution
+
+Per-company AI revenue attribution uses a three-tier methodology with documented confidence levels:
+
+1. **Earnings regex extraction** (highest priority): Company-specific regex patterns scan EDGAR 10-K/10-Q filing text for AI-related revenue disclosures (e.g., NVIDIA "Data Center segment revenue was $X billion"). Extractions include confidence scores (high/medium/low) based on pattern specificity.
+
+2. **LLM validation** (optional enhancement): When ANTHROPIC_API_KEY is configured, Claude claude-sonnet-4-5 validates regex extractions — confirming whether the figure is genuinely AI-specific, the dollar amount is correctly parsed, and the fiscal period is properly identified. Produces a 0-1 confidence score.
+
+3. **YAML static fallback**: When EDGAR data is unavailable or extraction fails, hand-curated estimates from `data/raw/attribution/ai_attribution_registry.yaml` provide baseline attribution with documented provenance (analyst reports, earnings commentary, analogue ratios).
+
+The `estimate_ai_revenue()` function in `revenue_attribution.py` consults `earnings_ai_attribution.parquet` first. If no earnings-based entry exists for a (CIK, year) pair, it falls back to pure-play pass-through (ratio=1.0) or config-driven ratios.
+
+**If this is wrong:** Regex extraction may produce false positives (e.g., matching total segment revenue that includes non-AI items). The LLM validation layer mitigates this. The static YAML fallback carries vintage-date risk: estimates become stale as companies shift AI revenue mix quarter-to-quarter. The uncertainty bounds on each attribution entry quantify this risk.
 
 ### Geographic Coverage
 

@@ -144,15 +144,17 @@ class TestLoadAttributionRegistry:
 
 class TestEstimateAiRevenue:
     def test_estimate_ai_revenue_pure_play_nvidia(self):
-        """estimate_ai_revenue for NVIDIA returns ratio=1.0 and direct_disclosure."""
+        """estimate_ai_revenue for NVIDIA uses pure-play when no earnings data."""
+        from unittest.mock import patch
         from src.processing.revenue_attribution import estimate_ai_revenue
 
-        result = estimate_ai_revenue(
-            company_revenue=47.5,
-            cik="0001045810",
-            attribution_config={},
-            year=2024,
-        )
+        with patch("src.processing.revenue_attribution._load_earnings_attribution", return_value=None):
+            result = estimate_ai_revenue(
+                company_revenue=47.5,
+                cik="0001045810",
+                attribution_config={},
+                year=2024,
+            )
         assert isinstance(result, dict)
         assert result["attribution_method"] == "direct_disclosure"
         assert result["ratio"] == 1.0

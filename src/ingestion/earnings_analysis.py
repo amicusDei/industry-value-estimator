@@ -20,6 +20,7 @@ Usage:
 
 import logging
 import re
+from pathlib import Path
 
 import pandas as pd
 
@@ -366,3 +367,233 @@ def _empty_result_df() -> pd.DataFrame:
         "cik", "period_end", "form_type", "pattern_name",
         "extracted_value_usd", "unit", "confidence", "raw_snippet",
     ])
+
+
+def _empty_attribution_df() -> pd.DataFrame:
+    """Return empty earnings attribution DataFrame with correct schema."""
+    return pd.DataFrame(columns=[
+        "cik", "company_name", "fiscal_year", "fiscal_quarter",
+        "total_revenue_usd", "ai_revenue_usd", "ai_ratio",
+        "attribution_method", "confidence_score", "llm_validated",
+        "vintage_date",
+    ])
+
+
+def run_earnings_attribution(industry_id: str = "ai") -> pd.DataFrame:
+    """
+    Run earnings-based AI revenue attribution for all companies in ai.yaml.
+
+    For each company in edgar_companies:
+    1. Attempts fetch_and_extract() for EDGAR filings
+    2. Optionally runs LLM validation (if ANTHROPIC_API_KEY is set)
+    3. Computes AI revenue ratio from regex extractions
+    4. Falls back to static YAML ratios when no EDGAR data is available
+
+    Output is written to data/processed/earnings_ai_attribution.parquet.
+
+    Parameters
+    ----------
+    industry_id : str
+        Industry config ID. Default "ai".
+
+    Returns
+    -------
+    pd.DataFrame
+        Earnings attribution results with schema: cik, company_name,
+        fiscal_year, fiscal_quarter, total_revenue_usd, ai_revenue_usd,
+        ai_ratio, attribution_method, confidence_score, llm_validated,
+        vintage_date.
+    """
+    import yaml
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+    from datetime import datetime, timezone
+    from config.settings import DATA_PROCESSED
+
+    config_path = Path(__file__).resolve().parent.parent.parent / "config" / "industries" / f"{industry_id}.yaml"
+    with open(config_path) as f:
+        config = yaml.safe_load(f)
+
+    edgar_companies = config.get("edgar_companies", [])
+    if not edgar_companies:
+        logger.warning("No edgar_companies in %s.yaml", industry_id)
+        return _empty_attribution_df()
+
+    # Load existing YAML attribution as fallback
+    from config.settings import DATA_RAW
+    yaml_registry_path = DATA_RAW / "attribution" / f"{industry_id}_attribution_registry.yaml"
+    yaml_fallback = {}
+    if yaml_registry_path.exists():
+        with open(yaml_registry_path) as f:
+            yaml_data = yaml.safe_load(f)
+        for entry in yaml_data.get("entries", []):
+            yaml_fallback[entry["cik"]] = entry
+
+    # Build company context for LLM validation
+    company_contexts = {}
+    for comp in edgar_companies:
+        company_contexts[comp["cik"]] = {
+            "company_name": comp["name"],
+            "filing_type": "10-K",
+        }
+
+    rows = []
+    for comp in edgar_companies:
+        cik = comp["cik"]
+        name = comp["name"]
+        form_types = comp.get("form_types", ["10-K", "10-Q"])
+
+        logger.info("Processing %s (CIK: %s)", name, cik)
+
+        # Attempt EDGAR extraction
+        extraction_df = pd.DataFrame()
+        try:
+            extraction_df = fetch_and_extract(cik, form_types=form_types, start_year=2022, end_year=2025)
+        except Exception as e:
+            logger.warning("EDGAR fetch failed for %s: %s", name, e)
+
+        if not extraction_df.empty:
+            # Pick highest-confidence extraction per (cik, period_end)
+            best = _select_best_extractions(extraction_df)
+
+            # Attempt LLM validation if available
+            llm_validated_flag = None
+            try:
+                from src.ingestion.llm_validator import validate_batch
+                validated = validate_batch(best.to_dict("records"), company_contexts)
+                for v in validated:
+                    fiscal_year, fiscal_quarter = _parse_fiscal_period(
+                        v.get("llm_fiscal_period", v.get("period_end", ""))
+                    )
+                    rows.append({
+                        "cik": cik,
+                        "company_name": name,
+                        "fiscal_year": fiscal_year,
+                        "fiscal_quarter": fiscal_quarter,
+                        "total_revenue_usd": None,
+                        "ai_revenue_usd": v.get("llm_corrected_value_usd") or v["extracted_value_usd"],
+                        "ai_ratio": None,
+                        "attribution_method": "earnings_regex+llm",
+                        "confidence_score": v.get("llm_confidence", 0.5),
+                        "llm_validated": v.get("llm_validated"),
+                        "vintage_date": datetime.now(tz=timezone.utc).strftime("%Y-%m-%d"),
+                    })
+                continue
+            except Exception as e:
+                logger.info("LLM validation skipped for %s: %s", name, e)
+
+            # Use regex-only extractions
+            for _, row in best.iterrows():
+                fiscal_year, fiscal_quarter = _parse_fiscal_period(str(row.get("period_end", "")))
+                rows.append({
+                    "cik": cik,
+                    "company_name": name,
+                    "fiscal_year": fiscal_year,
+                    "fiscal_quarter": fiscal_quarter,
+                    "total_revenue_usd": None,
+                    "ai_revenue_usd": row["extracted_value_usd"],
+                    "ai_ratio": None,
+                    "attribution_method": "earnings_regex",
+                    "confidence_score": _confidence_to_score(row["confidence"]),
+                    "llm_validated": None,
+                    "vintage_date": datetime.now(tz=timezone.utc).strftime("%Y-%m-%d"),
+                })
+        else:
+            # Fallback: use YAML static attribution
+            if cik in yaml_fallback:
+                entry = yaml_fallback[cik]
+                rows.append({
+                    "cik": cik,
+                    "company_name": name,
+                    "fiscal_year": entry.get("year", 2024),
+                    "fiscal_quarter": None,
+                    "total_revenue_usd": None,
+                    "ai_revenue_usd": entry["ai_revenue_usd_billions"],
+                    "ai_ratio": None,
+                    "attribution_method": f"yaml_fallback/{entry['attribution_method']}",
+                    "confidence_score": 0.3 if entry.get("estimated_flag") else 0.7,
+                    "llm_validated": None,
+                    "vintage_date": entry.get("vintage_date", ""),
+                })
+                logger.info("  %s: using YAML fallback ($%.1fB)", name, entry["ai_revenue_usd_billions"])
+            else:
+                logger.warning("  %s: no EDGAR data and no YAML fallback", name)
+
+    if not rows:
+        logger.warning("No earnings attribution results produced")
+        result_df = _empty_attribution_df()
+    else:
+        result_df = pd.DataFrame(rows)
+
+    # Write parquet
+    output_path = DATA_PROCESSED / f"earnings_{industry_id}_attribution.parquet"
+    DATA_PROCESSED.mkdir(parents=True, exist_ok=True)
+    table = pa.Table.from_pandas(result_df, preserve_index=False)
+    existing_meta = table.schema.metadata or {}
+    custom_meta = {
+        b"source": b"earnings_analysis",
+        b"industry": industry_id.encode(),
+        b"compiled_at": datetime.now(tz=timezone.utc).isoformat().encode(),
+        b"n_companies": str(len(result_df["cik"].unique())).encode(),
+    }
+    table = table.replace_schema_metadata({**existing_meta, **custom_meta})
+    pq.write_table(table, output_path, compression="snappy")
+
+    logger.info("Wrote %d rows to %s", len(result_df), output_path)
+    return result_df
+
+
+def _select_best_extractions(df: pd.DataFrame) -> pd.DataFrame:
+    """Select highest-confidence extraction per (cik, period_end)."""
+    confidence_order = {"high": 3, "medium": 2, "low": 1}
+    df = df.copy()
+    df["_conf_rank"] = df["confidence"].map(confidence_order).fillna(0)
+    # Group by (cik, period_end) and take the highest confidence
+    idx = df.groupby(["cik", "period_end"])["_conf_rank"].idxmax()
+    return df.loc[idx].drop(columns=["_conf_rank"]).reset_index(drop=True)
+
+
+def _confidence_to_score(confidence_str: str) -> float:
+    """Convert confidence string to numeric score."""
+    return {"high": 0.9, "medium": 0.6, "low": 0.3}.get(confidence_str, 0.3)
+
+
+def _parse_fiscal_period(period_str: str) -> tuple[int, int | None]:
+    """Parse a fiscal period string into (year, quarter).
+
+    Handles formats: "FY2024", "Q3 2024", "2024-09-30", "2024".
+
+    Returns
+    -------
+    tuple[int, int | None]
+        (fiscal_year, fiscal_quarter). Quarter is None for annual periods.
+    """
+    import re as _re
+
+    if not period_str:
+        return (2024, None)
+
+    # "Q3 2024" or "Q3FY2024" or "Q1 FY 2025" — check before bare FY
+    m = _re.search(r"Q(\d)\s*(?:FY)?\s*(\d{4})", period_str, _re.IGNORECASE)
+    if m:
+        return (int(m.group(2)), int(m.group(1)))
+
+    # "FY2024" or "FY 2024" (after quarter check)
+    m = _re.search(r"FY\s*(\d{4})", period_str, _re.IGNORECASE)
+    if m:
+        return (int(m.group(1)), None)
+
+    # "2024-09-30" (date format)
+    m = _re.search(r"(\d{4})-(\d{2})-\d{2}", period_str)
+    if m:
+        year = int(m.group(1))
+        month = int(m.group(2))
+        quarter = (month - 1) // 3 + 1
+        return (year, quarter)
+
+    # "2024" bare year
+    m = _re.search(r"(\d{4})", period_str)
+    if m:
+        return (int(m.group(1)), None)
+
+    return (2024, None)
