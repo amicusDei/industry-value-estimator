@@ -187,6 +187,14 @@ def run_walk_forward(industry_id: str = "ai") -> pd.DataFrame:
             if actual_val <= 0:
                 continue
 
+            # Data leakage check: only use non-interpolated actuals as holdout
+            is_interpolated = bool(year_row.iloc[0].get("estimated_flag", False))
+            actual_n_sources = int(year_row.iloc[0].get("n_sources", 0))
+            circular_flag = is_interpolated and actual_n_sources == 0
+
+            # Regime label
+            regime_label = "pre_genai" if eval_year <= 2021 else "post_genai"
+
             # Build training set: ALL quarters EXCEPT Q4 of eval_year
             if has_quarter:
                 train_data = seg_data[
@@ -245,11 +253,12 @@ def run_walk_forward(industry_id: str = "ai") -> pd.DataFrame:
                 "holdout_type": "leave_one_out",
                 "actual_type": "held_out",
                 "mape": mape_val,
-                "r2": float("nan"),  # R2 meaningless for single-point
+                "r2": float("nan"),
                 "mape_label": mape_label_val,
-                "circular_flag": False,
+                "circular_flag": circular_flag,
                 "ci80_covered": ci80_covered,
                 "ci95_covered": ci95_covered,
+                "regime_label": regime_label,
             })
 
             # --- Benchmark: Naive forecast ---
@@ -275,9 +284,10 @@ def run_walk_forward(industry_id: str = "ai") -> pd.DataFrame:
                     "mape": naive_mape,
                     "r2": float("nan"),
                     "mape_label": label_mape(naive_mape),
-                    "circular_flag": False,
+                    "circular_flag": circular_flag,
                     "ci80_covered": False,
                     "ci95_covered": False,
+                    "regime_label": regime_label,
                 })
             except Exception as e:
                 logger.warning(f"Benchmark failed: {e}")
@@ -299,9 +309,10 @@ def run_walk_forward(industry_id: str = "ai") -> pd.DataFrame:
                     "mape": rw_mape,
                     "r2": float("nan"),
                     "mape_label": label_mape(rw_mape),
-                    "circular_flag": False,
+                    "circular_flag": circular_flag,
                     "ci80_covered": False,
                     "ci95_covered": False,
+                    "regime_label": regime_label,
                 })
             except Exception as e:
                 logger.warning(f"Benchmark failed: {e}")
@@ -325,9 +336,10 @@ def run_walk_forward(industry_id: str = "ai") -> pd.DataFrame:
                     "mape": consensus_mape,
                     "r2": float("nan"),
                     "mape_label": label_mape(consensus_mape),
-                    "circular_flag": False,
+                    "circular_flag": circular_flag,
                     "ci80_covered": False,
                     "ci95_covered": False,
+                    "regime_label": regime_label,
                 })
             except Exception as e:
                 logger.warning(f"Benchmark failed: {e}")
@@ -377,6 +389,7 @@ def run_walk_forward(industry_id: str = "ai") -> pd.DataFrame:
                     "circular_flag": False,
                     "ci80_covered": ci80_covered,
                     "ci95_covered": ci95_covered,
+                    "regime_label": "pre_genai" if year <= 2021 else "post_genai",
                 })
     except Exception as exc:
         print(f"[walk_forward] EDGAR hard actuals failed: {exc}")
@@ -386,7 +399,7 @@ def run_walk_forward(industry_id: str = "ai") -> pd.DataFrame:
         return pd.DataFrame(columns=[
             "year", "segment", "actual_usd", "predicted_usd", "residual_usd",
             "model", "holdout_type", "actual_type", "mape", "r2", "mape_label",
-            "circular_flag", "ci80_covered", "ci95_covered",
+            "circular_flag", "ci80_covered", "ci95_covered", "regime_label",
         ])
 
     results_df = pd.DataFrame(results)
@@ -418,6 +431,27 @@ def run_backtesting(industry_id: str = "ai") -> Path:
             for model_name in sorted(loo["model"].unique()):
                 model_mean_mape = loo[loo["model"] == model_name]["mape"].mean()
                 print(f"    {model_name:<20} {model_mean_mape:.1f}%")
+
+            # Regime-aware MAPE summary
+            if "regime_label" in loo.columns:
+                print("\n  --- Regime-Aware MAPE (Prophet LOO) ---")
+                prophet_loo_regime = loo[loo["model"] == "prophet_loo"]
+                for regime in ["pre_genai", "post_genai"]:
+                    regime_rows = prophet_loo_regime[prophet_loo_regime["regime_label"] == regime]
+                    if not regime_rows.empty:
+                        # Exclude circular (interpolated actuals) from MAPE
+                        non_circular = regime_rows[~regime_rows["circular_flag"]]
+                        if not non_circular.empty:
+                            rmape = non_circular["mape"].mean()
+                            print(f"    {regime}: {rmape:.1f}% MAPE ({len(non_circular)} non-circular folds)")
+                        else:
+                            print(f"    {regime}: all folds circular (interpolated actuals)")
+
+                # Data leakage warning
+                circular_count = loo[loo["circular_flag"]].shape[0]
+                if circular_count > 0:
+                    print(f"\n  WARNING: {circular_count} evaluations use interpolated actuals (circular_flag=True)")
+                    print("           These are excluded from regime MAPE above.")
 
             # LightGBM value-add evaluation (Finding 4)
             prophet_loo_df = loo[loo["model"] == "prophet_loo"]
