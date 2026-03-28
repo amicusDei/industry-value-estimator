@@ -14,7 +14,7 @@ Pipeline steps
 5. Fit LightGBM on USD residuals (with optional macro features)
 6. Blend ARIMA + Prophet + LightGBM forecasts
 7. Build forecasts_ensemble.parquet with point_estimate_real_2020 in USD billions
-8. Verify CAGR 2025-2030 per segment and log results
+8. Verify CAGR 2026-2030 per segment and log results
 9. Attach source disagreement columns (anchor_p25/p75)
 10. Run contract test assertions (values > 1.0 USD billions)
 
@@ -94,14 +94,15 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 SEGMENTS = ["ai_hardware", "ai_infrastructure", "ai_software", "ai_adoption"]
 
-# Forecast horizon — quarterly: 2025Q1 through 2030Q4 = 24 quarters
-FORECAST_QUARTERS = [(y, q) for y in range(2025, 2031) for q in range(1, 5)]
-FORECAST_STEPS = len(FORECAST_QUARTERS)  # 24
-HISTORICAL_END = 2024
+# Forecast horizon — quarterly: 2026Q1 through 2030Q4 = 20 quarters
+# 2025 is fully historical (market anchor data available through 2025)
+FORECAST_QUARTERS = [(y, q) for y in range(2026, 2031) for q in range(1, 5)]
+FORECAST_STEPS = len(FORECAST_QUARTERS)  # 20
+HISTORICAL_END = 2025
 HISTORY_START = 2017  # First year with real market anchor data
 
 # For backward compatibility in some places
-FORECAST_YEARS = list(range(2025, 2031))
+FORECAST_YEARS = list(range(2026, 2031))
 
 
 # ---------------------------------------------------------------------------
@@ -562,10 +563,10 @@ def run_pipeline() -> None:
         blended_point_arr = np.array(blended_point).ravel()
 
         # Check if model CAGR is below the consensus floor
-        # Compare Q4 2024 (last real) to Q4 2030 (last forecast) for annual CAGR
+        # Compare Q4 2025 (last real) to Q4 2030 (last forecast) for annual CAGR
         if len(blended_point_arr) > 0:
             _model_end = float(blended_point_arr[-1])  # Q4 2030
-            _n_forecast_years = 6  # 2025-2030 = 6 years (not quarters)
+            _n_forecast_years = 5  # 2026-2030 = 5 years from Q4 2025 baseline
             _model_cagr = (_model_end / _last_real) ** (1.0 / _n_forecast_years) - 1.0 if _last_real > 0 else 0
             if _model_cagr < _min_cagr:
                 # Generate a growth path at the minimum CAGR from the last real value
@@ -736,12 +737,12 @@ def run_pipeline() -> None:
     logger.info(f"  Saved: {forecast_path}")
 
     # ---------------------------------------------------------------------------
-    # Step 8: Verify CAGR 2025-2030
+    # Step 8: Verify CAGR 2026-2030
     # ---------------------------------------------------------------------------
-    logger.info("\n=== Step 8: CAGR 2025-2030 Verification (MODL-05) ===\n")
+    logger.info("\n=== Step 8: CAGR 2026-2030 Verification (MODL-05) ===\n")
 
-    cagr_results = verify_cagr_range(forecast_df, SEGMENTS)
-    print("\nCAGR 2025-2030 per segment:")
+    cagr_results = verify_cagr_range(forecast_df, SEGMENTS, start_year=2026, end_year=2030)
+    print("\nCAGR 2026-2030 per segment:")
     print("-" * 45)
     for seg, cagr in cagr_results.items():
         cagr_pct = cagr * 100
@@ -767,8 +768,8 @@ def run_pipeline() -> None:
         "FAIL: No point_estimate_real_2020 > 1.0 — values appear to be in index units, not USD billions"
     )
     # Use Q4 values for total market size (annual snapshot)
-    total_2025 = forecast_df[(forecast_df["year"] == 2025) & (forecast_df["quarter"] == 4)]["point_estimate_real_2020"].sum()
-    logger.info(f"  Total market 2025: ${total_2025:.0f}B")
+    total_2026 = forecast_df[(forecast_df["year"] == 2026) & (forecast_df["quarter"] == 4)]["point_estimate_real_2020"].sum()
+    logger.info(f"  Total market 2026 (first forecast year): ${total_2026:.0f}B")
     logger.info("  Contract assertions: PASSED")
 
     # ---------------------------------------------------------------------------

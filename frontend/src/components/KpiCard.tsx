@@ -16,7 +16,7 @@ export default function KpiCard({ segmentName, marketSize, cagr }: KpiCardProps)
         {formatUsdB(marketSize)}
       </p>
       <div className="flex items-center gap-2">
-        <span className="text-muted text-xs">CAGR 2025-30</span>
+        <span className="text-muted text-xs">CAGR 2026-30</span>
         <span className={`font-mono text-sm font-medium ${pct.colorClass}`}>
           {pct.text}
         </span>

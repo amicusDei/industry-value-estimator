@@ -45,7 +45,7 @@ export default async function Home() {
                   {formatUsdB(seg.market_size_2024_usd_b)}
                 </p>
                 <div className="flex items-center gap-2">
-                  <span className="text-muted text-xs">CAGR 25-30</span>
+                  <span className="text-muted text-xs">CAGR 26-30</span>
                   <span className={`font-mono text-sm font-medium ${pct.colorClass}`}>{pct.text}</span>
                 </div>
               </Link>
