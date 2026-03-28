@@ -21,9 +21,17 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-screen bg-bg text-text antialiased">
+      <body className="min-h-screen bg-bg text-text antialiased flex flex-col">
         <Navbar />
-        <main className="max-w-7xl mx-auto px-4 py-8">{children}</main>
+        <main className="max-w-7xl mx-auto px-4 py-8 flex-1 w-full">{children}</main>
+        <footer className="border-t border-border mt-auto py-6 px-4">
+          <p className="max-w-5xl mx-auto text-[10px] text-muted leading-relaxed">
+            This platform provides estimated market sizing for informational and research purposes
+            only. It does not constitute investment advice, financial guidance, or any recommendation
+            to buy, sell, or hold securities. All projections are model-generated estimates subject
+            to significant uncertainty. Past performance does not guarantee future results.
+          </p>
+        </footer>
       </body>
     </html>
   );

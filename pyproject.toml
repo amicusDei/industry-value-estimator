@@ -13,6 +13,7 @@ dependencies = [
     "lightgbm>=4.6.0",
     "lseg-data>=2.1.0",
     "numpy>=2.4.3",
+    "openpyxl>=3.1.5",
     "pandas>=3.0.1",
     "pandasdmx>=1.10.0",
     "pandera>=0.30.0",

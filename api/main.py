@@ -11,7 +11,7 @@ Run with:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routers import forecasts, segments, companies, diagnostics
+from api.routers import forecasts, segments, companies, diagnostics, export, sensitivity
 
 app = FastAPI(
     title="AI Industry Value Estimator API",
@@ -31,6 +31,8 @@ app.include_router(forecasts.router)
 app.include_router(segments.router)
 app.include_router(companies.router)
 app.include_router(diagnostics.router)
+app.include_router(export.router)
+app.include_router(sensitivity.router)
 
 
 @app.get("/")
@@ -43,5 +45,8 @@ def root():
             "/api/v1/segments",
             "/api/v1/companies",
             "/api/v1/diagnostics",
+            "/api/v1/export/csv",
+            "/api/v1/export/excel",
+            "/api/v1/sensitivity",
         ],
     }

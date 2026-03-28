@@ -7,8 +7,7 @@ class ForecastRow(BaseModel):
     year: int
     quarter: int
     segment: str
-    point_estimate_real_2020: float
-    point_estimate_nominal: float
+    point_estimate: float
     ci80_lower: float
     ci80_upper: float
     ci95_lower: float
@@ -62,3 +61,17 @@ class DiagnosticsResponse(BaseModel):
     data: list[DiagnosticRow]
     count: int
     summary: dict
+
+
+class SensitivityRow(BaseModel):
+    segment: str
+    year: int
+    quarter: int
+    base: float
+    shifted: float
+    delta_pct: float
+
+
+class SensitivityResponse(BaseModel):
+    anchor_shift: float
+    data: list[SensitivityRow]

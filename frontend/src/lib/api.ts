@@ -22,8 +22,7 @@ export interface ForecastRow {
   year: number;
   quarter: number;
   segment: string;
-  point_estimate_real_2020: number;
-  point_estimate_nominal: number;
+  point_estimate: number;
   ci80_lower: number;
   ci80_upper: number;
   ci95_lower: number;
@@ -67,10 +66,35 @@ export interface DiagnosticsResponse {
   summary: Record<string, { mean_mape: number; n_folds: number }>;
 }
 
-export const getSegments = () => fetchJSON<SegmentsResponse>("/api/v1/segments");
-export const getForecasts = (segment?: string) =>
+export interface SensitivityRow {
+  segment: string;
+  year: number;
+  quarter: number;
+  base: number;
+  shifted: number;
+  delta_pct: number;
+}
+
+export interface SensitivityResponse {
+  anchor_shift: number;
+  data: SensitivityRow[];
+}
+
+export const getSegments = (valuation = "nominal") =>
+  fetchJSON<SegmentsResponse>(`/api/v1/segments?valuation=${valuation}`);
+
+export const getForecasts = (segment?: string, valuation = "nominal") =>
   fetchJSON<ForecastResponse>(
-    `/api/v1/forecasts${segment ? `?segment=${segment}` : ""}`
+    `/api/v1/forecasts?valuation=${valuation}${segment ? `&segment=${segment}` : ""}`
   );
+
 export const getCompanies = () => fetchJSON<CompaniesResponse>("/api/v1/companies");
 export const getDiagnostics = () => fetchJSON<DiagnosticsResponse>("/api/v1/diagnostics");
+
+export const getSensitivity = (shift: number, segment?: string) =>
+  fetchJSON<SensitivityResponse>(
+    `/api/v1/sensitivity?anchor_shift=${shift}${segment ? `&segment=${segment}` : ""}`
+  );
+
+export const getExportUrl = (format: "csv" | "excel", segment?: string) =>
+  `${API_BASE}/api/v1/export/${format}?valuation=nominal${segment ? `&segment=${segment}` : ""}`;
