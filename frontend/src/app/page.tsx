@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getSegments } from "@/lib/api";
 import { formatUsdB, formatPct } from "@/lib/formatters";
 import ExportButton from "@/components/ExportButton";
+import TotalChart from "@/components/TotalChart";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,13 @@ export default async function Home() {
           <code className="font-mono text-accent text-sm mt-2 block">
             uv run uvicorn api.main:app --port 8000
           </code>
+        </div>
+      )}
+
+      {/* Total Market Chart */}
+      {segments.length > 0 && (
+        <div className="mt-8">
+          <TotalChart />
         </div>
       )}
 

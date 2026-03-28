@@ -96,5 +96,24 @@ export const getSensitivity = (shift: number, segment?: string) =>
     `/api/v1/sensitivity?anchor_shift=${shift}${segment ? `&segment=${segment}` : ""}`
   );
 
+export const getTotalForecasts = (valuation = "nominal") =>
+  fetchJSON<ForecastResponse>(`/api/v1/forecasts/total?valuation=${valuation}`);
+
+export interface AnalystFirm {
+  firm: string;
+  scope_alignment: string;
+  scope_coefficient: number;
+  estimates: { year: number; value: number }[];
+  scope_includes: string;
+  scope_excludes: string;
+}
+
+export interface ConsensusResponse {
+  firms: AnalystFirm[];
+  our_median_2024: number | null;
+}
+
+export const getConsensus = () => fetchJSON<ConsensusResponse>("/api/v1/analyst-consensus");
+
 export const getExportUrl = (format: "csv" | "excel", segment?: string) =>
   `${API_BASE}/api/v1/export/${format}?valuation=nominal${segment ? `&segment=${segment}` : ""}`;
