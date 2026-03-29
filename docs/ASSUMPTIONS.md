@@ -95,6 +95,12 @@ The `estimate_ai_revenue()` function in `revenue_attribution.py` consults `earni
 
 **If this is wrong:** Regex extraction may produce false positives (e.g., matching total segment revenue that includes non-AI items). The LLM validation layer mitigates this. The static YAML fallback carries vintage-date risk: estimates become stale as companies shift AI revenue mix quarter-to-quarter. The uncertainty bounds on each attribution entry quantify this risk.
 
+### Data Quality Notes
+
+**ai_software 2024 growth spike (+111% YoY):** The 2024 ai_software estimate ($117B real 2020 USD) is computed as the median of two firms: CB Insights ($70B, narrow GenAI-native scope) and Precedence Research ($209B, broad "AI software including infrastructure" scope). The 3x spread between these estimates produces a median that appears as a sharp jump from the 2023 value ($56B, single IDC estimate). This is a scope-mixing artifact, not real 111% market growth. The Precedence Research scope is broader than our market boundary definition; a scope coefficient adjustment for segment-level estimates (currently only applied to "total" estimates) would reduce this spike. This is flagged as a known data quality issue for v1.2.
+
+**2022→2023 ai_software decline (-28%):** The 2022 estimate derives from a single interpolated source while 2023 has a direct IDC estimate. The apparent decline reflects source methodology differences, not an actual market contraction.
+
 ### Geographic Coverage
 
 The model covers 5 regions comprising 19 economy codes:
