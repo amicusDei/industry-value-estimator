@@ -466,7 +466,9 @@ def run_pipeline() -> None:
             logger.info(f"  Running LightGBM CV ({len(y)} samples, {len(avail_feat_cols)} features)...")
             cv_results = lgbm_cv_for_segment(y, X, n_splits=min(3, len(y) - 1))
             lgbm_cv_rmse = float(np.mean([fold["rmse"] for fold in cv_results]))
-            stat_rmse = float(np.std(y))
+            # Use Prophet in-sample residual RMSE (cross-validated via LOO in backtesting)
+            _prophet_resids = segment_residuals[seg][0].values
+            stat_rmse = float(np.sqrt(np.mean(_prophet_resids ** 2))) if len(_prophet_resids) > 0 else float(np.std(y))
 
             stat_weight, lgbm_weight = compute_ensemble_weights(stat_rmse, lgbm_cv_rmse)
             weights_dict[seg] = {"stat_weight": stat_weight, "lgbm_weight": lgbm_weight}
