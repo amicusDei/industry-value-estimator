@@ -25,7 +25,7 @@ export default async function Home() {
           <h1 className="text-2xl font-semibold mb-1">Global AI Market Overview</h1>
           <p className="text-muted text-sm">
             <span className="font-mono text-text">{formatUsdB(totalMarket)}</span>{" "}
-            total market (2024, nominal USD)
+            total market (2025, nominal USD)
           </p>
         </div>
         <ExportButton label="Export All Data" />

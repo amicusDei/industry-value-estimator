@@ -57,12 +57,12 @@ def analyst_consensus():
             "scope_excludes": scope.get("excludes", ""),
         })
 
-    # Our median for 2024 (from forecast data)
+    # Our median for 2025 (last historical year)
     df = get_forecasts()
     our_median = None
     if not df.empty and "quarter" in df.columns:
-        q4_2024 = df[(df["year"] == 2024) & (df["quarter"] == 4)]
-        if not q4_2024.empty:
-            our_median = round(float(q4_2024["point_estimate_nominal"].sum()), 1)
+        q4_2025 = df[(df["year"] == 2025) & (df["quarter"] == 4)]
+        if not q4_2025.empty:
+            our_median = round(float(q4_2025["point_estimate_nominal"].sum()), 1)
 
     return {"firms": firms, "our_median_2024": our_median}

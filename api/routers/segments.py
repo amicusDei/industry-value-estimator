@@ -22,9 +22,9 @@ def list_segments(
 
         market_size = None
         if not df.empty and "quarter" in df.columns:
-            q4_2024 = df[(df["segment"] == seg_id) & (df["year"] == 2024) & (df["quarter"] == 4)]
-            if not q4_2024.empty:
-                market_size = round(float(q4_2024[point_col].iloc[0]), 1)
+            q4_2025 = df[(df["segment"] == seg_id) & (df["year"] == 2025) & (df["quarter"] == 4)]
+            if not q4_2025.empty:
+                market_size = round(float(q4_2025[point_col].iloc[0]), 1)
 
         cagr = None
         if not df.empty and "quarter" in df.columns:
