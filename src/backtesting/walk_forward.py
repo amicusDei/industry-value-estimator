@@ -394,6 +394,79 @@ def run_walk_forward(industry_id: str = "ai") -> pd.DataFrame:
     except Exception as exc:
         print(f"[walk_forward] EDGAR hard actuals failed: {exc}")
 
+    # --- Part 3: Ensemble vs soft actuals (all segments) ---
+    # Compare forecasts_ensemble.parquet against Q4 market anchor values
+    # for segments without EDGAR hard actuals
+    try:
+        forecasts_path = DATA_PROCESSED / "forecasts_ensemble.parquet"
+        if forecasts_path.exists():
+            fc_df = pd.read_parquet(forecasts_path)
+            anch_df = pd.read_parquet(DATA_PROCESSED / "market_anchors_ai.parquet")
+            existing_ensemble_segs = {r["segment"] for r in results if r.get("model") == "ensemble"}
+            has_quarter_fc = "quarter" in fc_df.columns
+            has_quarter_anch = "quarter" in anch_df.columns
+
+            for segment in sorted(segments):
+                if segment in existing_ensemble_segs:
+                    continue  # already has EDGAR ensemble results
+
+                # Get Q4 anchor actuals (non-interpolated only)
+                if has_quarter_anch:
+                    seg_anch = anch_df[
+                        (anch_df["segment"] == segment) &
+                        (anch_df["quarter"] == 4) &
+                        (anch_df["estimated_flag"] == False)
+                    ]
+                else:
+                    seg_anch = anch_df[
+                        (anch_df["segment"] == segment) &
+                        (anch_df["estimated_flag"] == False)
+                    ]
+
+                for _, arow in seg_anch.iterrows():
+                    year = int(arow["estimate_year"])
+                    actual_val = float(arow[median_col])
+                    if actual_val <= 0:
+                        continue
+
+                    # Match to forecast
+                    if has_quarter_fc:
+                        frow = fc_df[
+                            (fc_df["year"] == year) & (fc_df["quarter"] == 4) & (fc_df["segment"] == segment)
+                        ]
+                    else:
+                        frow = fc_df[(fc_df["year"] == year) & (fc_df["segment"] == segment)]
+                    if frow.empty:
+                        continue
+
+                    predicted_val = float(frow["point_estimate_real_2020"].iloc[0])
+                    mape_val = abs(actual_val - predicted_val) / actual_val * 100
+
+                    ci80_lower = float(frow["ci80_lower"].iloc[0])
+                    ci80_upper = float(frow["ci80_upper"].iloc[0])
+                    ci95_lower = float(frow["ci95_lower"].iloc[0])
+                    ci95_upper = float(frow["ci95_upper"].iloc[0])
+
+                    results.append({
+                        "year": year,
+                        "segment": segment,
+                        "actual_usd": actual_val,
+                        "predicted_usd": predicted_val,
+                        "residual_usd": predicted_val - actual_val,
+                        "model": "ensemble",
+                        "holdout_type": "anchor_soft",
+                        "actual_type": "soft",
+                        "mape": mape_val,
+                        "r2": float("nan"),
+                        "mape_label": label_mape(mape_val),
+                        "circular_flag": False,
+                        "ci80_covered": ci80_lower <= actual_val <= ci80_upper,
+                        "ci95_covered": ci95_lower <= actual_val <= ci95_upper,
+                        "regime_label": "pre_genai" if year <= 2021 else "post_genai",
+                    })
+    except Exception as exc:
+        print(f"[walk_forward] Ensemble soft actuals failed: {exc}")
+
     if not results:
         print("[walk_forward] No results produced")
         return pd.DataFrame(columns=[
