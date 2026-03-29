@@ -115,5 +115,26 @@ export interface ConsensusResponse {
 
 export const getConsensus = () => fetchJSON<ConsensusResponse>("/api/v1/analyst-consensus");
 
+export interface DataQualitySegment {
+  real_data_points: number;
+  interpolated_data_points: number;
+  real_data_ratio: number;
+  earliest_real_year: number | null;
+  latest_real_year: number | null;
+  n_analyst_firms: number;
+  backtesting_mape: number | null;
+  backtesting_model: string;
+  ci80_coverage: number | null;
+  ci95_coverage: number | null;
+  cagr_source: string;
+}
+
+export interface DataQualityResponse {
+  per_segment: Record<string, DataQualitySegment>;
+  methodology_caveats: string[];
+}
+
+export const getDataQuality = () => fetchJSON<DataQualityResponse>("/api/v1/data-quality");
+
 export const getExportUrl = (format: "csv" | "excel", segment?: string) =>
   `${API_BASE}/api/v1/export/${format}?valuation=nominal${segment ? `&segment=${segment}` : ""}`;

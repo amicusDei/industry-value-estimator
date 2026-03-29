@@ -1,4 +1,4 @@
-import { getForecasts, getSegments } from "@/lib/api";
+import { getForecasts, getSegments, getDataQuality } from "@/lib/api";
 import { formatUsdB } from "@/lib/formatters";
 import TimeseriesChart from "@/components/charts/TimeseriesChart";
 import ExportButton from "@/components/ExportButton";
@@ -15,15 +15,19 @@ export default async function SegmentPage({ params }: { params: Promise<{ id: st
 
   let segmentName = id;
   let forecasts: Awaited<ReturnType<typeof getForecasts>>["data"] = [];
+  let dq: Awaited<ReturnType<typeof getDataQuality>> | null = null;
 
   try {
-    const [segRes, fcRes] = await Promise.all([getSegments(), getForecasts(id)]);
+    const [segRes, fcRes, dqRes] = await Promise.all([getSegments(), getForecasts(id), getDataQuality()]);
     const seg = segRes.segments.find((s) => s.id === id);
     if (seg) segmentName = seg.display_name;
     forecasts = fcRes.data;
+    dq = dqRes;
   } catch {
     return <div className="text-muted">API offline or segment not found.</div>;
   }
+
+  const segDq = dq?.per_segment?.[id];
 
   const historical = forecasts
     .filter((r) => !r.is_forecast)
@@ -64,6 +68,30 @@ export default async function SegmentPage({ params }: { params: Promise<{ id: st
         </div>
         <ExportButton segment={id} label="Export Segment" />
       </div>
+
+      {/* Data quality badges */}
+      {segDq && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          <span className="text-xs px-2 py-1 rounded bg-[#ffffff10] text-muted">
+            {segDq.real_data_points} real / {segDq.real_data_points + segDq.interpolated_data_points} total data points
+          </span>
+          {segDq.n_analyst_firms > 0 && (
+            <span className="text-xs px-2 py-1 rounded bg-[#ffffff10] text-muted">
+              {segDq.n_analyst_firms} analyst firms
+            </span>
+          )}
+          {segDq.cagr_source === "calibration_floor" && (
+            <span className="text-xs px-2 py-1 rounded bg-[#eab30820] text-[#eab308]">
+              CAGR floor-constrained
+            </span>
+          )}
+          {segDq.backtesting_mape != null && (
+            <span className="text-xs px-2 py-1 rounded bg-[#ffffff10] text-muted">
+              MAPE: {segDq.backtesting_mape}%
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="bg-surface border border-border rounded-lg p-4 mb-8">
         <TimeseriesChart historical={historical} forecast={forecast} ci80={ci80} ci95={ci95} />
