@@ -149,8 +149,8 @@ def clip_ci_bounds(row: dict) -> dict:
         Copy of row with clipped CI values.
     """
     row = row.copy()
-    row["ci95_lower"] = min(row["ci95_lower"], row["ci80_lower"], row["point_estimate_real_2020"])
-    row["ci80_lower"] = min(row["ci80_lower"], row["point_estimate_real_2020"])
+    row["ci95_lower"] = max(0.0, min(row["ci95_lower"], row["ci80_lower"]))
+    row["ci80_lower"] = max(0.0, min(row["ci80_lower"], row["point_estimate_real_2020"]))
     row["ci80_upper"] = max(row["ci80_upper"], row["point_estimate_real_2020"])
     row["ci95_upper"] = max(row["ci95_upper"], row["ci80_upper"])
     return row

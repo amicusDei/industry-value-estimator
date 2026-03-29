@@ -559,8 +559,9 @@ def run_pipeline() -> None:
         # When ARIMA/Prophet produce flat or declining forecasts due to noisy short training
         # data, we calibrate using a minimum growth rate derived from analyst consensus.
         _min_cagr = _cagr_floors.get(seg, 0.15)
-        _last_real = float(y_series.iloc[-1])  # Last quarterly value (2024 Q4)
+        _last_real = float(y_series.iloc[-1])
         blended_point_arr = np.array(blended_point).ravel()
+        blended_point_arr_uncalibrated = blended_point_arr.copy()
 
         # Check if model CAGR is below the consensus floor
         # Compare Q4 2025 (last real) to Q4 2030 (last forecast) for annual CAGR
@@ -622,6 +623,19 @@ def run_pipeline() -> None:
             blended_ci80_upper = blended_point_arr + ci80_half
             blended_ci95_lower = blended_point_arr - ci95_half
             blended_ci95_upper = blended_point_arr + ci95_half
+
+        # Scale CI bands proportionally with CAGR calibration
+        if len(blended_point_arr_uncalibrated) > 0:
+            calibration_ratio = np.where(
+                blended_point_arr_uncalibrated > 0,
+                blended_point_arr / blended_point_arr_uncalibrated,
+                1.0,
+            )
+            calibration_ratio = np.where(np.isfinite(calibration_ratio), calibration_ratio, 1.0)
+            blended_ci80_lower = blended_ci80_lower * calibration_ratio
+            blended_ci80_upper = blended_ci80_upper * calibration_ratio
+            blended_ci95_lower = blended_ci95_lower * calibration_ratio
+            blended_ci95_upper = blended_ci95_upper * calibration_ratio
 
         # Enforce minimum CI width floors
         _ci80_floor = blended_point_arr * _ci_floors["ci80_fraction"]
@@ -770,7 +784,19 @@ def run_pipeline() -> None:
     # Use Q4 values for total market size (annual snapshot)
     total_2026 = forecast_df[(forecast_df["year"] == 2026) & (forecast_df["quarter"] == 4)]["point_estimate_real_2020"].sum()
     logger.info(f"  Total market 2026 (first forecast year): ${total_2026:.0f}B")
-    logger.info("  Contract assertions: PASSED")
+    logger.info("  Basic contract assertions: PASSED")
+
+    # CI contract assertions
+    for _, _row in forecast_df.iterrows():
+        _seg, _yr, _q = _row["segment"], _row["year"], _row["quarter"]
+        _pt = _row["point_estimate_real_2020"]
+        assert _row["ci95_lower"] >= 0, f"Negative CI95 lower: {_seg} {_yr}Q{_q}"
+        assert _row["ci80_lower"] >= 0, f"Negative CI80 lower: {_seg} {_yr}Q{_q}"
+        assert _row["ci80_lower"] <= _pt + 0.01, f"CI80 lower > point: {_seg} {_yr}Q{_q}"
+        assert _pt <= _row["ci80_upper"] + 0.01, f"Point > CI80 upper: {_seg} {_yr}Q{_q}"
+        assert _row["ci95_lower"] <= _row["ci80_lower"] + 0.01, f"CI95 lower > CI80 lower: {_seg} {_yr}Q{_q}"
+        assert _row["ci80_upper"] <= _row["ci95_upper"] + 0.01, f"CI80 upper > CI95 upper: {_seg} {_yr}Q{_q}"
+    logger.info("  ALL CI CONTRACT ASSERTIONS PASSED")
 
     # ---------------------------------------------------------------------------
     # SHAP summary plot
