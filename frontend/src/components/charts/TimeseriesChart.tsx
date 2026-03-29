@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { createChart, LineSeries, AreaSeries } from "lightweight-charts";
+import { createChart, LineSeries } from "lightweight-charts";
 import type { IChartApi, UTCTimestamp } from "lightweight-charts";
 
 interface DataPoint {
@@ -48,14 +48,14 @@ export default function TimeseriesChart({
       width: containerRef.current.clientWidth,
       height,
       layout: {
-        background: { color: "#0a0a0f" },
+        background: { color: "#0f1117" },
         textColor: "#64748b",
         fontFamily: "'JetBrains Mono', monospace",
         fontSize: 11,
       },
       grid: {
-        vertLines: { color: "#ffffff08" },
-        horzLines: { color: "#ffffff08" },
+        vertLines: { color: "#ffffff0a" },
+        horzLines: { color: "#ffffff0a" },
       },
       rightPriceScale: {
         borderColor: "#ffffff12",
@@ -72,60 +72,52 @@ export default function TimeseriesChart({
     });
     chartRef.current = chart;
 
-    // --- CI bands as stacked areas with background mask ---
-    // Layer order (bottom to top):
-    //   1. CI95 upper fill (faint orange from top)
-    //   2. CI95 lower mask (background color from bottom, erases below lower bound)
-    //   3. CI80 upper fill (stronger orange from top)
-    //   4. CI80 lower mask (background color from bottom, erases below lower bound)
-    // Result: visible corridor between lower and upper bounds.
+    // --- CI bands as line pairs (upper + lower per level) ---
 
-    const BG = "#0a0a0f";
-
+    // CI95 lines (faint, wider band)
     if (ci95 && ci95.length > 0) {
-      // Fill from top down to upper line
-      const s95u = chart.addSeries(AreaSeries, {
-        lineColor: "transparent",
-        topColor: "rgba(249,115,22,0.06)",
-        bottomColor: "rgba(249,115,22,0.06)",
+      const ci95Upper = chart.addSeries(LineSeries, {
+        color: "rgba(249,115,22,0.25)",
         lineWidth: 1,
+        lineStyle: 2, // dashed
         priceLineVisible: false,
         lastValueVisible: false,
+        crosshairMarkerVisible: false,
       });
-      s95u.setData(sorted(ci95.map((d) => ({ time: toTime(d.time), value: d.upper }))));
+      ci95Upper.setData(sorted(ci95.map((d) => ({ time: toTime(d.time), value: d.upper }))));
 
-      // Mask: fill background color from bottom up to lower line
-      const s95l = chart.addSeries(AreaSeries, {
-        lineColor: "transparent",
-        topColor: BG,
-        bottomColor: BG,
+      const ci95Lower = chart.addSeries(LineSeries, {
+        color: "rgba(249,115,22,0.25)",
         lineWidth: 1,
+        lineStyle: 2,
         priceLineVisible: false,
         lastValueVisible: false,
+        crosshairMarkerVisible: false,
       });
-      s95l.setData(sorted(ci95.map((d) => ({ time: toTime(d.time), value: d.lower }))));
+      ci95Lower.setData(sorted(ci95.map((d) => ({ time: toTime(d.time), value: d.lower }))));
     }
 
+    // CI80 lines (stronger, inner band)
     if (ci80 && ci80.length > 0) {
-      const s80u = chart.addSeries(AreaSeries, {
-        lineColor: "transparent",
-        topColor: "rgba(249,115,22,0.14)",
-        bottomColor: "rgba(249,115,22,0.14)",
+      const ci80Upper = chart.addSeries(LineSeries, {
+        color: "rgba(249,115,22,0.50)",
         lineWidth: 1,
+        lineStyle: 1, // dotted
         priceLineVisible: false,
         lastValueVisible: false,
+        crosshairMarkerVisible: false,
       });
-      s80u.setData(sorted(ci80.map((d) => ({ time: toTime(d.time), value: d.upper }))));
+      ci80Upper.setData(sorted(ci80.map((d) => ({ time: toTime(d.time), value: d.upper }))));
 
-      const s80l = chart.addSeries(AreaSeries, {
-        lineColor: "transparent",
-        topColor: BG,
-        bottomColor: BG,
+      const ci80Lower = chart.addSeries(LineSeries, {
+        color: "rgba(249,115,22,0.50)",
         lineWidth: 1,
+        lineStyle: 1,
         priceLineVisible: false,
         lastValueVisible: false,
+        crosshairMarkerVisible: false,
       });
-      s80l.setData(sorted(ci80.map((d) => ({ time: toTime(d.time), value: d.lower }))));
+      ci80Lower.setData(sorted(ci80.map((d) => ({ time: toTime(d.time), value: d.lower }))));
     }
 
     // Historical line (grey)
@@ -139,7 +131,7 @@ export default function TimeseriesChart({
       histSeries.setData(sorted(historical.map((d) => ({ time: toTime(d.time), value: d.value }))));
     }
 
-    // Forecast line (orange)
+    // Forecast line (orange, solid)
     if (forecast.length > 0) {
       const fcSeries = chart.addSeries(LineSeries, {
         color: "#f97316",

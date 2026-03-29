@@ -56,8 +56,8 @@ export default function TotalChart() {
       <div className="flex gap-6 mt-3 text-xs text-muted">
         <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-[#64748b] inline-block" /> Historical</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-accent inline-block" /> Forecast</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-2 bg-[#f9731625] inline-block rounded-sm" /> 80% CI</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-2 bg-[#f973160f] inline-block rounded-sm" /> 95% CI</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-0 border-t border-dashed border-[#f9731680] inline-block" /> 80% CI</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-0 border-t border-dashed border-[#f9731640] inline-block" /> 95% CI</span>
       </div>
     </div>
   );
