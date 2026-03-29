@@ -1093,3 +1093,109 @@ entries:
     methodology_notes: "McKinsey enterprise adoption estimate from State of AI 2024. Survey-based with revenue extrapolation. Not directly comparable to IDC/Gartner/GVR market size figures."
     source_url: "https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai"
     confidence: "low"
+
+  # ============================================================
+  # Mordor Intelligence — AI Market (scope_coefficient TBD)
+  # Broad scope including AI software, hardware, services
+  # ============================================================
+
+  - source_firm: "Mordor Intelligence"
+    report_name: "Artificial Intelligence Market Size, Trends, Share & Growth Drivers 2031"
+    publication_year: 2025
+    estimate_year: 2025
+    segment: "total"
+    as_published_usd_billions: 306.04
+    currency: "nominal_usd"
+    scope_includes: "AI software, AI hardware, AI services, enterprise AI platforms, cloud AI infrastructure"
+    scope_excludes: "General IT infrastructure not dedicated to AI"
+    methodology_notes: "Primary and secondary research. Broad scope similar to IDC+hardware."
+    source_url: "https://www.mordorintelligence.com/industry-reports/global-artificial-intelligence-market"
+    confidence: "medium"
+
+  - source_firm: "Mordor Intelligence"
+    report_name: "Artificial Intelligence Market Size, Trends, Share & Growth Drivers 2031"
+    publication_year: 2025
+    estimate_year: 2026
+    segment: "total"
+    as_published_usd_billions: 434.42
+    currency: "nominal_usd"
+    scope_includes: "AI software, AI hardware, AI services, enterprise AI platforms, cloud AI infrastructure"
+    scope_excludes: "General IT infrastructure not dedicated to AI"
+    methodology_notes: "Forecast at 41.95% CAGR from 2025 base."
+    source_url: "https://www.mordorintelligence.com/industry-reports/global-artificial-intelligence-market"
+    confidence: "medium"
+
+  - source_firm: "Mordor Intelligence"
+    report_name: "Artificial Intelligence Market Size, Trends, Share & Growth Drivers 2031"
+    publication_year: 2025
+    estimate_year: 2030
+    segment: "total"
+    as_published_usd_billions: 1811.75
+    currency: "nominal_usd"
+    scope_includes: "AI software, AI hardware, AI services, enterprise AI platforms, cloud AI infrastructure"
+    scope_excludes: "General IT infrastructure not dedicated to AI"
+    methodology_notes: "Forecast at 41.95% CAGR 2026-2031. 2030 interpolated from 2031 endpoint ($2503B)."
+    source_url: "https://www.mordorintelligence.com/industry-reports/global-artificial-intelligence-market"
+    confidence: "medium"
+
+  # ============================================================
+  # MarketsandMarkets — AI Market
+  # Broad scope: hardware + software + services
+  # ============================================================
+
+  - source_firm: "MarketsandMarkets"
+    report_name: "Artificial Intelligence Market Report 2025-2032"
+    publication_year: 2025
+    estimate_year: 2025
+    segment: "total"
+    as_published_usd_billions: 371.71
+    currency: "nominal_usd"
+    scope_includes: "AI hardware, software, services across enterprise, cloud, and on-premise deployments"
+    scope_excludes: "General IT not AI-specific, consumer AI devices"
+    methodology_notes: "Primary interviews + secondary research. 30.6% CAGR to 2032."
+    source_url: "https://www.marketsandmarkets.com/Market-Reports/artificial-intelligence-market-74851580.html"
+    confidence: "medium"
+
+  - source_firm: "MarketsandMarkets"
+    report_name: "Artificial Intelligence Market Report 2025-2032"
+    publication_year: 2025
+    estimate_year: 2030
+    segment: "total"
+    as_published_usd_billions: 1394.30
+    currency: "nominal_usd"
+    scope_includes: "AI hardware, software, services across enterprise, cloud, and on-premise deployments"
+    scope_excludes: "General IT not AI-specific, consumer AI devices"
+    methodology_notes: "Interpolated from 2032 endpoint ($2407B) at 30.6% CAGR."
+    source_url: "https://www.marketsandmarkets.com/Market-Reports/artificial-intelligence-market-74851580.html"
+    confidence: "medium"
+
+  # ============================================================
+  # Fortune Business Insights — AI Market
+  # Broad scope: hardware + software + services + industry verticals
+  # ============================================================
+
+  - source_firm: "Fortune Business Insights"
+    report_name: "Artificial Intelligence Market Size, Share & Industry Analysis 2025-2032"
+    publication_year: 2025
+    estimate_year: 2025
+    segment: "total"
+    as_published_usd_billions: 294.16
+    currency: "nominal_usd"
+    scope_includes: "AI hardware, software, services, by deployment (on-premise + cloud), all industry verticals"
+    scope_excludes: "Not specified — broad scope"
+    methodology_notes: "29.2% CAGR to 2032. Survey + secondary research."
+    source_url: "https://www.fortunebusinessinsights.com/industry-reports/artificial-intelligence-market-100114"
+    confidence: "medium"
+
+  - source_firm: "Fortune Business Insights"
+    report_name: "Artificial Intelligence Market Size, Share & Industry Analysis 2025-2032"
+    publication_year: 2025
+    estimate_year: 2030
+    segment: "total"
+    as_published_usd_billions: 1042.59
+    currency: "nominal_usd"
+    scope_includes: "AI hardware, software, services, by deployment (on-premise + cloud), all industry verticals"
+    scope_excludes: "Not specified — broad scope"
+    methodology_notes: "Interpolated from 2032 endpoint ($1771.62B) at 29.2% CAGR."
+    source_url: "https://www.fortunebusinessinsights.com/industry-reports/artificial-intelligence-market-100114"
+    confidence: "medium"
