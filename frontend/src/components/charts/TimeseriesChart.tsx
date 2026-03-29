@@ -57,7 +57,13 @@ export default function TimeseriesChart({
         vertLines: { color: "#ffffff08" },
         horzLines: { color: "#ffffff08" },
       },
-      rightPriceScale: { borderColor: "#ffffff12" },
+      rightPriceScale: {
+        borderColor: "#ffffff12",
+      },
+      localization: {
+        priceFormatter: (price: number) =>
+          price >= 1000 ? `$${(price / 1000).toFixed(1)}T` : `$${price.toFixed(0)}B`,
+      },
       timeScale: { borderColor: "#ffffff12" },
       crosshair: {
         vertLine: { color: "#ffffff20" },
