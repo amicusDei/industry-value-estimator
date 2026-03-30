@@ -219,10 +219,9 @@ class TestDeflation:
     def test_real_less_than_nominal_for_post_2020(self, anchors_df):
         """For years > 2020, real values should be <= nominal (inflation adjustment)."""
         post_2020 = anchors_df[anchors_df["estimate_year"] > 2020]
-        # Only check rows where we have actual (non-extrapolated from edge) data
-        # Focus on 'total' segment which has genuine multi-source data post-2020
-        total_post = post_2020[post_2020["segment"] == "total"]
-        for _, row in total_post.iterrows():
+        # Check across all segments (total is no longer in output after v1.2 disaggregation)
+        check_rows = post_2020[post_2020["segment"] == "ai_hardware"]
+        for _, row in check_rows.iterrows():
             assert row["median_usd_billions_real_2020"] <= row["median_usd_billions_nominal"], (
                 f"Year {row['estimate_year']}: real_2020 ({row['median_usd_billions_real_2020']:.2f}) "
                 f"> nominal ({row['median_usd_billions_nominal']:.2f})"
@@ -231,7 +230,7 @@ class TestDeflation:
     def test_real_greater_than_nominal_for_pre_2020(self, anchors_df):
         """For years < 2020, real values should be >= nominal (deflation adjustment)."""
         pre_2020 = anchors_df[
-            (anchors_df["estimate_year"] < 2020) & (anchors_df["segment"] == "total")
+            (anchors_df["estimate_year"] < 2020) & (anchors_df["segment"] == "ai_hardware")
         ]
         for _, row in pre_2020.iterrows():
             assert row["median_usd_billions_real_2020"] >= row["median_usd_billions_nominal"], (
@@ -261,9 +260,13 @@ class TestYearCoverage:
         )
 
     def test_min_row_count(self, anchors_df):
-        """At least 180 rows present (9 years x 4 quarters x 5 segments)."""
-        assert len(anchors_df) >= 180, (
-            f"Expected >= 180 rows (quarterly), got {len(anchors_df)}"
+        """At least 144 rows present (9 years x 4 quarters x 4 segments).
+
+        Since v1.2, total-market entries are disaggregated into segment-level anchors
+        and the 'total' segment is no longer in the output DataFrame.
+        """
+        assert len(anchors_df) >= 144, (
+            f"Expected >= 144 rows (quarterly, 4 segments), got {len(anchors_df)}"
         )
 
 
@@ -282,16 +285,15 @@ class TestEstimatedFlag:
     def test_real_data_rows_not_flagged(self, anchors_df):
         """Rows backed by multiple analyst sources have estimated_flag reflecting actual data.
 
-        For the 'total' segment where we have confirmed multi-source data for specific years,
-        the rows with n_sources >= 3 should generally have estimated_flag consistent with
-        whether the estimate_year > publication_year.
+        Since v1.2, total-market entries are disaggregated into segment-level anchors.
+        We check that segment-level rows with high source counts exist for core years.
         """
-        # Rows with n_sources >= 3 should exist for 2020-2024 total segment
+        # Rows with n_sources >= 3 should exist for any segment in 2020-2024
         high_coverage = anchors_df[
-            (anchors_df["segment"] == "total") & (anchors_df["n_sources"] >= 3)
+            (anchors_df["segment"] != "total") & (anchors_df["n_sources"] >= 3)
         ]
         assert len(high_coverage) > 0, (
-            "Expected total segment rows with n_sources >= 3 for core years 2020-2024"
+            "Expected segment-level rows with n_sources >= 3 for core years 2020-2024"
         )
 
     def test_year_2017_is_estimated_for_sub_segments(self, anchors_df):
