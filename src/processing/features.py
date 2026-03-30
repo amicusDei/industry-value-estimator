@@ -11,8 +11,8 @@ in temporal cross-validation. See RESEARCH.md Pattern 6 and Pitfall 3.
 
 Flat feature builder rationale: Phase 9 retrains ARIMA, Prophet, and LightGBM directly on
 real USD market sizes from market_anchors_ai.parquet. The macro indicators (R&D spend,
-patents, ICT exports, GDP) feed into models as exogenous regressors — no PCA reduction
-is applied. Keeping the full indicator matrix preserves interpretability and allows
+patents, ICT exports, GDP) feed into models as exogenous regressors. The full indicator
+matrix is preserved without dimensionality reduction. Keeping the full indicator matrix preserves interpretability and allows
 per-indicator feature importance analysis via SHAP in Phase 10.
 """
 import warnings
@@ -31,7 +31,7 @@ def build_indicator_matrix(
     Build flat macro indicator matrix from long-format processed data.
 
     Output: wide matrix (n_years x n_indicators) in value_real_2020 units.
-    No PCA reduction applied.
+    No dimensionality reduction applied.
 
     Parameters
     ----------
@@ -77,7 +77,7 @@ def build_manual_composite(
     train_end_idx: int,
 ) -> np.ndarray:
     """
-    Build a manual weighted composite index as a sensitivity alternative to PCA.
+    Build a manual weighted composite index as a sensitivity check.
 
     Standardizes using training-period statistics only (no leakage), then
     computes a weighted sum across indicators.

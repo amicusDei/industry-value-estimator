@@ -154,7 +154,7 @@ def run_walk_forward(industry_id: str = "ai") -> pd.DataFrame:
     """
     anchors_path = DATA_PROCESSED / "market_anchors_ai.parquet"
     if not anchors_path.exists():
-        print(f"[walk_forward] market_anchors_ai.parquet not found -- returning empty")
+        logger.warning(f"[walk_forward] market_anchors_ai.parquet not found -- returning empty")
         return pd.DataFrame()
 
     anchors_df = pd.read_parquet(anchors_path)
@@ -230,7 +230,7 @@ def run_walk_forward(industry_id: str = "ai") -> pd.DataFrame:
                 ci80_half = prophet_result["ci80_half"]
                 ci95_half = prophet_result["ci95_half"]
             except Exception as exc:
-                print(f"[walk_forward] LOO failed for {segment}/{eval_year}: {exc}")
+                logger.warning(f"[walk_forward] LOO failed for {segment}/{eval_year}: {exc}")
                 continue
 
             # Ensure prediction is positive
@@ -392,7 +392,7 @@ def run_walk_forward(industry_id: str = "ai") -> pd.DataFrame:
                     "regime_label": "pre_genai" if year <= 2021 else "post_genai",
                 })
     except Exception as exc:
-        print(f"[walk_forward] EDGAR hard actuals failed: {exc}")
+        logger.warning(f"[walk_forward] EDGAR hard actuals failed: {exc}")
 
     # --- Part 3: Ensemble vs soft actuals (all segments) ---
     # Compare forecasts_ensemble.parquet against Q4 market anchor values
@@ -465,10 +465,10 @@ def run_walk_forward(industry_id: str = "ai") -> pd.DataFrame:
                         "regime_label": "pre_genai" if year <= 2021 else "post_genai",
                     })
     except Exception as exc:
-        print(f"[walk_forward] Ensemble soft actuals failed: {exc}")
+        logger.warning(f"[walk_forward] Ensemble soft actuals failed: {exc}")
 
     if not results:
-        print("[walk_forward] No results produced")
+        logger.warning("[walk_forward] No results produced")
         return pd.DataFrame(columns=[
             "year", "segment", "actual_usd", "predicted_usd", "residual_usd",
             "model", "holdout_type", "actual_type", "mape", "r2", "mape_label",

@@ -25,9 +25,12 @@ Usage:
     msti_df = fetch_oecd_msti(config)
     patents_df = fetch_oecd_ai_patents(config)
 """
+import logging
 import pandasdmx as sdmx
 import pandas as pd
 import pyarrow as pa
+
+logger = logging.getLogger(__name__)
 import pyarrow.parquet as pq
 import requests
 import requests_cache
@@ -166,7 +169,7 @@ def fetch_oecd_msti(config: dict) -> pd.DataFrame:
     countries = _get_oecd_country_codes(config)
     date_range = config["date_range"]
 
-    print(f"  Fetching OECD MSTI from new API for {len(countries)} countries...")
+    logger.info(f"Fetching OECD MSTI from new API for {len(countries)} countries...")
     df = _fetch_msti_via_new_api(countries, date_range["start"], date_range["end"])
 
     # Filter to measures of interest to reduce noise
@@ -227,7 +230,7 @@ def fetch_oecd_ai_patents(config: dict) -> pd.DataFrame:
     countries = _get_oecd_country_codes(config)
     date_range = config["date_range"]
 
-    print(f"  Fetching OECD MSTI ICT-BERD as AI patent proxy for {len(countries)} countries...")
+    logger.info(f"Fetching OECD MSTI ICT-BERD as AI patent proxy for {len(countries)} countries...")
     df_full = _fetch_msti_via_new_api(countries, date_range["start"], date_range["end"])
 
     # Extract only the ICT-sector BERD measure as patent proxy
@@ -236,7 +239,7 @@ def fetch_oecd_ai_patents(config: dict) -> pd.DataFrame:
     if "MEASURE" in df_full.columns:
         df_icts = df_full[df_full["MEASURE"] == "B_ICTS"].copy()
         if len(df_icts) == 0:
-            print("  WARNING: B_ICTS not found; falling back to B (total BERD)")
+            logger.warning("B_ICTS not found; falling back to B (total BERD)")
             df_icts = df_full[df_full["MEASURE"] == "B"].copy()
     else:
         df_icts = df_full.copy()

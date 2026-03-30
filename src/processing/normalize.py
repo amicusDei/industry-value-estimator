@@ -105,7 +105,7 @@ def normalize_oecd(
 
     OECD data is typically in long format with a 'value' column. Unlike World Bank,
     OECD data does not need deflation in the current pipeline because the composite
-    index construction (PCA) standardizes all indicators anyway — deflation of OECD
+    feature construction standardizes all indicators anyway — deflation of OECD
     count variables (patents, researchers) would be incorrect. If GERD monetary values
     are used directly in future, deflation should be added here.
 

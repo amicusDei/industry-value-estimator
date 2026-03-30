@@ -14,10 +14,13 @@ Soft actuals: analyst consensus from market_anchors_ai.parquet.
   Uses median_usd_billions_real_2020 as the actual value per segment per year.
 """
 
+import logging
 import warnings
 from pathlib import Path
 
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 from config.settings import DATA_RAW, DATA_PROCESSED
 
@@ -164,9 +167,9 @@ def assemble_actuals(industry_id: str = "ai") -> pd.DataFrame:
                 agg_df["source"] = "EDGAR 10-K"
                 records.append(agg_df[["year", "segment", "actual_usd_billions", "actual_type", "source", "source_date"]])
     else:
-        print(
-            f"[actuals_assembly] EDGAR parquet not found at {edgar_path} — "
-            "using soft actuals only. Hard actuals require EDGAR ingestion (Plan 08-03)."
+        logger.info(
+            f"EDGAR parquet not found at {edgar_path} — "
+            "using soft actuals only. Hard actuals require EDGAR ingestion."
         )
 
     # --- Soft actuals: market anchor analyst consensus ---
