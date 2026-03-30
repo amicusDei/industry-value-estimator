@@ -466,15 +466,50 @@ def run_pipeline() -> None:
             logger.info(f"  Running LightGBM CV ({len(y)} samples, {len(avail_feat_cols)} features)...")
             cv_results = lgbm_cv_for_segment(y, X, n_splits=min(3, len(y) - 1))
             lgbm_cv_rmse = float(np.mean([fold["rmse"] for fold in cv_results]))
-            # Use Prophet in-sample residual RMSE (cross-validated via LOO in backtesting)
-            _prophet_resids = segment_residuals[seg][0].values
-            stat_rmse = float(np.sqrt(np.mean(_prophet_resids ** 2))) if len(_prophet_resids) > 0 else float(np.std(y))
+
+            # Compute Prophet CV-RMSE via expanding-window on quarterly series
+            # Each fold: train on first N quarters, predict next 4, collect errors
+            _y_vals = y_series.values
+            _cv_errors = []
+            _min_train = max(12, len(_y_vals) // 2)  # at least 12 quarters for training
+            _step = 4  # predict 4 quarters ahead (1 year)
+            for _split in range(_min_train, len(_y_vals) - _step + 1, _step):
+                _train_slice = _y_vals[:_split]
+                _test_slice = _y_vals[_split:_split + _step]
+                try:
+                    _train_ds = pd.DataFrame({
+                        "ds": y_series.index[:_split],
+                        "y": _train_slice,
+                    })
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        from prophet import Prophet as _Prophet
+                        _cv_model = _Prophet(
+                            yearly_seasonality=False, weekly_seasonality=False,
+                            daily_seasonality=False, growth="linear",
+                        )
+                        _cv_model.fit(_train_ds)
+                        _cv_future = _cv_model.make_future_dataframe(periods=_step, freq="QS")
+                        _cv_pred = _cv_model.predict(_cv_future)
+                        _pred_vals = _cv_pred["yhat"].values[-_step:]
+                    _cv_errors.extend((_test_slice - _pred_vals).tolist())
+                except Exception:
+                    pass
+
+            if len(_cv_errors) >= 4:
+                stat_rmse = float(np.sqrt(np.mean(np.array(_cv_errors) ** 2)))
+                _rmse_method = "expanding-window CV"
+            else:
+                # Fallback: in-sample residual RMSE
+                _prophet_resids = segment_residuals[seg][0].values
+                stat_rmse = float(np.sqrt(np.mean(_prophet_resids ** 2))) if len(_prophet_resids) > 0 else 1.0
+                _rmse_method = "in-sample residuals (CV fallback)"
 
             stat_weight, lgbm_weight = compute_ensemble_weights(stat_rmse, lgbm_cv_rmse)
             weights_dict[seg] = {"stat_weight": stat_weight, "lgbm_weight": lgbm_weight}
 
             logger.info(
-                f"  stat_rmse={stat_rmse:.2f}B, lgbm_cv_rmse={lgbm_cv_rmse:.2f}B, "
+                f"  stat_rmse={stat_rmse:.2f}B ({_rmse_method}), lgbm_cv_rmse={lgbm_cv_rmse:.2f}B, "
                 f"stat_w={stat_weight:.3f}, lgbm_w={lgbm_weight:.3f}"
             )
 
