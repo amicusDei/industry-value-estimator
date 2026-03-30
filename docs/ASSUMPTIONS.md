@@ -95,6 +95,18 @@ The `estimate_ai_revenue()` function in `revenue_attribution.py` consults `earni
 
 **If this is wrong:** Regex extraction may produce false positives (e.g., matching total segment revenue that includes non-AI items). The LLM validation layer mitigates this. The static YAML fallback carries vintage-date risk: estimates become stale as companies shift AI revenue mix quarter-to-quarter. The uncertainty bounds on each attribution entry quantify this risk.
 
+### Backtesting Methodology — LOO vs Soft Actuals
+
+All backtesting uses Leave-One-Out cross-validation on non-interpolated analyst estimates. For each evaluation year, that year's Q4 anchor value is removed from training data, the model is refit, and the held-out value is predicted. This produces genuine out-of-sample MAPE.
+
+**Why soft actuals were removed:** An earlier version compared ensemble forecasts against the same market anchor data used for training (actual == predicted, MAPE = 0.0%). This is circular validation — it measures goodness-of-fit, not predictive accuracy. All `actual_type="soft"` rows have been removed. A contract test enforces zero soft actual rows.
+
+**Validation sources by segment:**
+- **ai_hardware:** EDGAR hard actuals (NVIDIA 10-K, direct disclosure) + LOO anchor estimates
+- **ai_infrastructure/software/adoption:** LOO anchor estimates only (no independent hard actuals)
+
+**Limitation:** LOO on analyst consensus is NOT independent ground truth. Analysts may share methodology or data sources. True independent validation requires company-filed revenue that differs from analyst estimates (only available for NVIDIA via EDGAR).
+
 ### Data Quality Notes
 
 **ai_software 2024 growth spike (+111% YoY):** The 2024 ai_software estimate ($117B real 2020 USD) is computed as the median of two firms: CB Insights ($70B, narrow GenAI-native scope) and Precedence Research ($209B, broad "AI software including infrastructure" scope). The 3x spread between these estimates produces a median that appears as a sharp jump from the 2023 value ($56B, single IDC estimate). This is a scope-mixing artifact, not real 111% market growth. The Precedence Research scope is broader than our market boundary definition; a scope coefficient adjustment for segment-level estimates (currently only applied to "total" estimates) would reduce this spike. This is flagged as a known data quality issue for v1.2.
