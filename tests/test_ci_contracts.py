@@ -1,14 +1,25 @@
-"""CI bound contract tests — institutional-grade invariants."""
+"""CI bound contract tests — institutional-grade invariants.
 
+CI coverage targets are NOT 100% — that was an artifact of circular backtesting.
+With honest LOO evaluation, expect 40-90% CI80 coverage given limited data.
+"""
+
+import warnings
 import pandas as pd
 import pytest
 
 PARQUET = "data/processed/forecasts_ensemble.parquet"
+BT_PARQUET = "data/processed/backtesting_results.parquet"
 
 
 @pytest.fixture(scope="module")
 def fc():
     return pd.read_parquet(PARQUET)
+
+
+@pytest.fixture(scope="module")
+def bt():
+    return pd.read_parquet(BT_PARQUET)
 
 
 def test_ci_bounds_non_negative(fc):
@@ -35,7 +46,6 @@ def test_ci_width_floors(fc):
             continue
         ci80_width = r["ci80_upper"] - r["ci80_lower"]
         ci95_width = r["ci95_upper"] - r["ci95_lower"]
-        # Floor is half-width as fraction of point: 0.25 * pt * 2 = 0.5 * pt
         assert ci80_width >= pt * 0.4, f"CI80 too narrow for {r['segment']} {r['year']}Q{r['quarter']}"
         assert ci95_width >= pt * 0.7, f"CI95 too narrow for {r['segment']} {r['year']}Q{r['quarter']}"
 
@@ -45,3 +55,25 @@ def test_ci_nominal_consistent(fc):
     post_2020 = fc[fc["year"] > 2020]
     if "ci80_lower_nominal" in post_2020.columns:
         assert (post_2020["ci80_upper_nominal"] >= post_2020["ci80_upper"] - 0.1).all()
+
+
+def test_ci80_coverage_realistic(bt):
+    """CI80 coverage from LOO should be in 30-100% range (NOT always 100%).
+
+    100% CI80 coverage was an artifact of circular backtesting. With honest
+    LOO, expect 40-90% depending on segment and data quality.
+    """
+    loo = bt[bt["model"] == "prophet_loo"]
+    if loo.empty or "ci80_covered" not in loo.columns:
+        pytest.skip("No prophet_loo CI80 data")
+
+    coverage = loo["ci80_covered"].mean()
+    if coverage > 0.99:
+        warnings.warn(
+            f"CI80 coverage is {coverage:.0%} — suspiciously high, may indicate "
+            "circular validation or overly wide bands",
+            UserWarning,
+        )
+    assert coverage >= 0.30, (
+        f"CI80 coverage {coverage:.0%} is below 30% — CIs may be miscalibrated"
+    )
