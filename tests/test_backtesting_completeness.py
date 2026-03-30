@@ -26,8 +26,14 @@ def test_all_segments_have_prophet_loo(bt):
 
 def test_all_segments_have_ensemble(bt):
     for seg in SEGMENTS:
-        ens = bt[(bt["segment"] == seg) & (bt["model"] == "ensemble")]
+        ens = bt[(bt["segment"] == seg) & (bt["model"].str.contains("ensemble"))]
         assert len(ens) >= 1, f"{seg}: no ensemble results"
+
+
+def test_no_circular_soft_actuals(bt):
+    """No circular soft actuals (MAPE=0 from comparing training data to itself)."""
+    soft = bt[bt["actual_type"] == "soft"]
+    assert len(soft) == 0, f"Found {len(soft)} circular soft actual rows — these are invalid"
 
 
 def test_no_future_leakage(bt):

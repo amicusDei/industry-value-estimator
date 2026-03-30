@@ -394,78 +394,92 @@ def run_walk_forward(industry_id: str = "ai") -> pd.DataFrame:
     except Exception as exc:
         logger.warning(f"[walk_forward] EDGAR hard actuals failed: {exc}")
 
-    # --- Part 3: Ensemble vs soft actuals (all segments) ---
-    # Compare forecasts_ensemble.parquet against Q4 market anchor values
-    # for segments without EDGAR hard actuals
+    # --- Part 3: True LOO ensemble backtesting for all segments ---
+    # For each segment, for each non-interpolated Q4 year: refit Prophet
+    # on data excluding that year, forecast it, compare to held-out actual.
+    # This is NOT circular — the actual is genuinely excluded from training.
     try:
-        forecasts_path = DATA_PROCESSED / "forecasts_ensemble.parquet"
-        if forecasts_path.exists():
-            fc_df = pd.read_parquet(forecasts_path)
-            anch_df = pd.read_parquet(DATA_PROCESSED / "market_anchors_ai.parquet")
-            existing_ensemble_segs = {r["segment"] for r in results if r.get("model") == "ensemble"}
-            has_quarter_fc = "quarter" in fc_df.columns
-            has_quarter_anch = "quarter" in anch_df.columns
+        anch_df = pd.read_parquet(DATA_PROCESSED / "market_anchors_ai.parquet")
+        existing_ensemble_segs = {r["segment"] for r in results if r.get("model") == "ensemble"}
+        has_quarter_anch = "quarter" in anch_df.columns
+        quarter_month = {1: "01", 2: "04", 3: "07", 4: "10"}
 
-            for segment in sorted(segments):
-                if segment in existing_ensemble_segs:
-                    continue  # already has EDGAR ensemble results
+        for segment in sorted(segments):
+            if segment in existing_ensemble_segs:
+                continue  # already has EDGAR hard actual ensemble results
 
-                # Get Q4 anchor actuals (non-interpolated only)
+            seg_all = anch_df[anch_df["segment"] == segment].copy()
+            if has_quarter_anch:
+                seg_real_q4 = seg_all[(seg_all["quarter"] == 4) & (seg_all["estimated_flag"] == False)]
+            else:
+                seg_real_q4 = seg_all[seg_all["estimated_flag"] == False]
+
+            for _, holdout_row in seg_real_q4.iterrows():
+                eval_year = int(holdout_row["estimate_year"])
+                actual_val = float(holdout_row[median_col])
+                if actual_val <= 0:
+                    continue
+
+                # Build training set: ALL quarterly data EXCEPT Q4 of eval_year
                 if has_quarter_anch:
-                    seg_anch = anch_df[
-                        (anch_df["segment"] == segment) &
-                        (anch_df["quarter"] == 4) &
-                        (anch_df["estimated_flag"] == False)
-                    ]
+                    train = seg_all[
+                        ~((seg_all["estimate_year"] == eval_year) & (seg_all["quarter"] == 4))
+                    ].copy()
                 else:
-                    seg_anch = anch_df[
-                        (anch_df["segment"] == segment) &
-                        (anch_df["estimated_flag"] == False)
-                    ]
+                    train = seg_all[seg_all["estimate_year"] != eval_year].copy()
 
-                for _, arow in seg_anch.iterrows():
-                    year = int(arow["estimate_year"])
-                    actual_val = float(arow[median_col])
-                    if actual_val <= 0:
-                        continue
+                if len(train) < 8:
+                    continue  # need minimum data for Prophet
 
-                    # Match to forecast
-                    if has_quarter_fc:
-                        frow = fc_df[
-                            (fc_df["year"] == year) & (fc_df["quarter"] == 4) & (fc_df["segment"] == segment)
-                        ]
-                    else:
-                        frow = fc_df[(fc_df["year"] == year) & (fc_df["segment"] == segment)]
-                    if frow.empty:
-                        continue
-
-                    predicted_val = float(frow["point_estimate_real_2020"].iloc[0])
-                    mape_val = abs(actual_val - predicted_val) / actual_val * 100
-
-                    ci80_lower = float(frow["ci80_lower"].iloc[0])
-                    ci80_upper = float(frow["ci80_upper"].iloc[0])
-                    ci95_lower = float(frow["ci95_lower"].iloc[0])
-                    ci95_upper = float(frow["ci95_upper"].iloc[0])
-
-                    results.append({
-                        "year": year,
-                        "segment": segment,
-                        "actual_usd": actual_val,
-                        "predicted_usd": predicted_val,
-                        "residual_usd": predicted_val - actual_val,
-                        "model": "ensemble",
-                        "holdout_type": "anchor_soft",
-                        "actual_type": "soft",
-                        "mape": mape_val,
-                        "r2": float("nan"),
-                        "mape_label": label_mape(mape_val),
-                        "circular_flag": False,
-                        "ci80_covered": ci80_lower <= actual_val <= ci80_upper,
-                        "ci95_covered": ci95_lower <= actual_val <= ci95_upper,
-                        "regime_label": "pre_genai" if year <= 2021 else "post_genai",
+                # Build Prophet training DataFrame
+                if has_quarter_anch:
+                    train_prophet = pd.DataFrame({
+                        "ds": pd.to_datetime(
+                            train["estimate_year"].astype(str) + "-" +
+                            train["quarter"].map(quarter_month) + "-01"
+                        ),
+                        "y": train[median_col].values,
                     })
+                    forecast_date = f"{eval_year}-10-01"
+                else:
+                    train_prophet = pd.DataFrame({
+                        "ds": pd.to_datetime(train["estimate_year"].astype(str) + "-01-01"),
+                        "y": train[median_col].values,
+                    })
+                    forecast_date = f"{eval_year}-01-01"
+
+                try:
+                    loo_result = _fit_prophet_loo(train_prophet, eval_year, forecast_date=forecast_date)
+                    predicted_val = max(loo_result["point"], 0.1)
+                    ci80_half = loo_result["ci80_half"]
+                    ci95_half = loo_result["ci95_half"]
+                except Exception as e:
+                    logger.warning(f"[walk_forward] Ensemble LOO failed for {segment}/{eval_year}: {e}")
+                    continue
+
+                mape_val = abs(actual_val - predicted_val) / actual_val * 100
+                ci80_covered = (predicted_val - ci80_half) <= actual_val <= (predicted_val + ci80_half)
+                ci95_covered = (predicted_val - ci95_half) <= actual_val <= (predicted_val + ci95_half)
+
+                results.append({
+                    "year": eval_year,
+                    "segment": segment,
+                    "actual_usd": actual_val,
+                    "predicted_usd": predicted_val,
+                    "residual_usd": predicted_val - actual_val,
+                    "model": "ensemble_loo",
+                    "holdout_type": "leave_one_out",
+                    "actual_type": "held_out",
+                    "mape": mape_val,
+                    "r2": float("nan"),
+                    "mape_label": label_mape(mape_val),
+                    "circular_flag": False,
+                    "ci80_covered": ci80_covered,
+                    "ci95_covered": ci95_covered,
+                    "regime_label": "pre_genai" if eval_year <= 2021 else "post_genai",
+                })
     except Exception as exc:
-        logger.warning(f"[walk_forward] Ensemble soft actuals failed: {exc}")
+        logger.warning(f"[walk_forward] Ensemble LOO backtesting failed: {exc}")
 
     if not results:
         logger.warning("[walk_forward] No results produced")
