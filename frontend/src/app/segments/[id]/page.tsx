@@ -119,16 +119,10 @@ export default async function SegmentPage({ params }: { params: Promise<{ id: st
       <ValidationPanel data={validationData} />
 
       {scenarioData.length > 0 ? (
-        <ScenarioChartSection scenarioData={scenarioData} />
+        <ScenarioChartSection scenarioData={scenarioData} segmentName={segmentName} />
       ) : (
         <div className="bg-surface border border-border rounded-lg p-4 mb-8">
-          <TimeseriesChart historical={historical} forecast={forecast} ci80={ci80} ci95={ci95} />
-          <div className="flex gap-6 mt-3 text-xs text-muted">
-            <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-[#64748b] inline-block" /> Historical</span>
-            <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-accent inline-block" /> Forecast</span>
-            <span className="flex items-center gap-1.5"><span className="w-3 h-0 border-t border-dashed border-[#f9731680] inline-block" /> 80% CI</span>
-            <span className="flex items-center gap-1.5"><span className="w-3 h-0 border-t border-dashed border-[#f9731640] inline-block" /> 95% CI</span>
-          </div>
+          <TimeseriesChart historical={historical} forecast={forecast} ci80={ci80} ci95={ci95} segmentName={segmentName} />
         </div>
       )}
 

@@ -678,6 +678,20 @@ woff = [
 ]
 
 [[package]]
+name = "fpdf2"
+version = "2.8.7"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "defusedxml", marker = "sys_platform != 'win32'" },
+    { name = "fonttools", marker = "sys_platform != 'win32'" },
+    { name = "pillow", marker = "sys_platform != 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/27/f2/72feae0b2827ed38013e4307b14f95bf0b3d124adfef4d38a7d57533f7be/fpdf2-2.8.7.tar.gz", hash = "sha256:7060ccee5a9c7ab0a271fb765a36a23639f83ef8996c34e3d46af0a17ede57f9", size = 362351, upload-time = "2026-02-28T05:39:16.456Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/66/0a/cf50ecffa1e3747ed9380a3adfc829259f1f86b3fdbd9e505af789003141/fpdf2-2.8.7-py3-none-any.whl", hash = "sha256:d391fc508a3ce02fc43a577c830cda4fe6f37646f2d143d489839940932fbc19", size = 327056, upload-time = "2026-02-28T05:39:14.619Z" },
+]
+
+[[package]]
 name = "fqdn"
 version = "1.5.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1525,6 +1539,7 @@ dependencies = [
     { name = "dash-bootstrap-components", marker = "sys_platform != 'win32'" },
     { name = "edgartools", marker = "sys_platform != 'win32'" },
     { name = "fastapi", marker = "sys_platform != 'win32'" },
+    { name = "fpdf2", marker = "sys_platform != 'win32'" },
     { name = "kaleido", marker = "sys_platform != 'win32'" },
     { name = "lightgbm", marker = "sys_platform != 'win32'" },
     { name = "lseg-data", marker = "sys_platform != 'win32'" },
@@ -1564,6 +1579,7 @@ requires-dist = [
     { name = "dash-bootstrap-components", specifier = ">=2.0.4" },
     { name = "edgartools", specifier = ">=5.25.1" },
     { name = "fastapi", specifier = ">=0.135.2" },
+    { name = "fpdf2", specifier = ">=2.8.7" },
     { name = "kaleido", specifier = ">=1.2.0" },
     { name = "lightgbm", specifier = ">=4.6.0" },
     { name = "lseg-data", specifier = ">=2.1.0" },

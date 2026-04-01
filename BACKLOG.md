@@ -1,3 +1,5 @@
+# ⚠️ DEPRECATED — Roadmap und Task-Status sind in CLAUDE.md konsolidiert. Diese Datei wird nicht mehr gepflegt.
+
 # Projekt-Backlog — AI Industry Value Estimator
 
 Stand: 2026-04-01
@@ -12,43 +14,44 @@ Von Forecast-Dashboard zu Research-Intelligence-Plattform. Differentiator: Analy
 
 Diese APs sind die strategische Priorität. Fertige Prompts in PROMPT_TEMPLATES.md.
 
-#### Backend / Pipeline (parallel ausführbar)
-- [ ] **v2-AP1**: Analyst Dispersion Index — IQR, Std, Min/Max pro Segment/Jahr aus vorhandenen Daten berechnen → `analyst_dispersion.parquet` (2-3h, keine Abhängigkeiten)
-- [ ] **v2-AP2**: Scenario Engine — Pre-computed Bull/Base/Bear mit unterschiedlichen CAGR-Floors → `forecasts_scenarios.parquet` (3-4h, keine Abhängigkeiten)
+#### Backend / Pipeline ✓
+- [x] **v2-AP1**: Analyst Dispersion Index → `analyst_dispersion.parquet` (45 rows, 4 seg × 9+ yr)
+- [x] **v2-AP2**: Scenario Engine → `forecasts_scenarios.parquet` (672 rows, 3 Szenarien)
 
-#### Frontend (nach Backend-APs)
-- [ ] **v2-AP3**: Dispersion-Visualisierung — Fan-Chart/Box-Plot auf Segment-Pages + API-Endpoint (2-3h, nach v2-AP1)
-- [ ] **v2-AP4**: Scenario-Switcher — Toggle Conservative/Base/Aggressive, clientseitiges Switching (2-3h, nach v2-AP2)
+#### Frontend ✓
+- [x] **v2-AP3**: Dispersion-Visualisierung — Fan-Chart auf Segment-Pages
+- [x] **v2-AP4**: Scenario-Switcher — Toggle Conservative/Base/Aggressive
 
-#### Intelligence Layer (nach Backend-APs)
-- [ ] **v2-AP5**: Automated Insight Narratives — Regelbasierte Texte pro Segment: CAGR-Treiber, Dispersion-Trends, Scenario-Spreads, Top-Analyst-Identifikation (3-4h, nach v2-AP1 + v2-AP2)
+#### Intelligence Layer ✓
+- [x] **v2-AP5**: Automated Insight Narratives — 5 Insight-Typen pro Segment (314 Zeilen, regelbasiert)
 
-#### Stretch Goal
-- [ ] **v2-AP6**: Bottom-Up Validation — EDGAR Capex-Extraction für Top-5 Companies → Sum-of-Parts vs. Top-Down Kreuzvalidierung (4-5h, parallel möglich)
+#### ✓ Bottom-Up Validation
+- [x] **v2-AP6a**: Bottom-Up Backend-Erweiterung — Multi-Year, Coverage-Trends, Narrativ-Integration
+- [x] **v2-AP6b**: Bottom-Up Frontend — Stacked Bar Chart mit Coverage-Ratio, API-Endpoint
 
-### P0 — Frontend Bloomberg-Grade (parallel zu v2-APs)
+### P0 — Phase 3: Frontend Bloomberg-Grade + Portfolio-Showcase
 
-- [ ] **FE-01**: TradingView Charts reparieren/professionalisieren (CI-Bänder, Achsenbeschriftung, Tooltips)
-- [ ] **FE-02**: Total Market Chart (Summe aller Segmente mit Overlap-Bereinigung)
-- [ ] **FE-04**: Excel/CSV Export aller Forecast-Daten mit Metadaten-Header
-- [ ] **FE-05**: Diagnostics-Page fertigstellen (MAPE-Heatmap, CI Coverage, Regime-Analyse)
-- [ ] **FE-06**: Responsive Design + Dark Mode (Bloomberg-Look)
+Ziel: 5-Minuten-Eindruck für Hiring Manager. Fertige Prompts in PROMPT_TEMPLATES.md.
 
-Note: FE-03 (Analyst Consensus Visualization) wird durch v2-AP3 (Dispersion-Visualisierung) ersetzt und erweitert.
+#### Parallel startbar (keine Abhängigkeiten)
+- [ ] **v3-AP1**: README Rewrite + Architecture Diagram — GitHub-Visitenkarte (2h)
+- [ ] **v3-AP3**: Chart Professionalisierung — CI-Bänder, Tooltips, Legende, Forecast-Marker (2-3h)
+- [ ] **v3-AP4**: Diagnostics Page — MAPE-Heatmap, CI Coverage, Regime-Analyse, Data Sources (3h)
+- [ ] **v3-AP7**: Excel/CSV Export — Multi-Sheet .xlsx mit Metadaten-Header (2h)
 
-### P0 — Modell-Credibility
+#### Sequentiell (nach den parallelen APs)
+- [ ] **v3-AP5**: Methodology Paper als PDF — Goldman-Sachs-Research-Note-Stil, 3-4 Seiten (3-4h, nach v3-AP3)
+- [ ] **v3-AP6**: Screenshots + README Finalisierung — 3+ Screenshots in README einfügen (1h, nach v3-AP3 + v3-AP4)
+- [ ] **v3-AP2**: Live Deployment — Vercel (Frontend) + Fly.io (API), klickbarer Link in README (2h)
 
+Note: FE-01 → v3-AP3, FE-05 → v3-AP4, FE-04 → v3-AP7, DOC-01 → v3-AP5. Dark Mode ist bereits implementiert (CSS vars). FE-02 (Total Market Chart) existiert bereits als TotalChart.tsx.
+
+### P1 — Nach Phase 3
+
+#### Modell-Credibility
 - [ ] **MOD-01**: Mehr Analystendaten beschaffen (Mordor Intelligence, MarketsandMarkets — bereits 12 Firmen, Ziel: 15+)
 - [ ] **MOD-02**: Sector-spezifische Features für LightGBM (NVIDIA earnings als Lead-Indikator für ai_hardware)
 - [ ] **MOD-03**: Prophet-Hyperparameter-Tuning per Segment (changepoint_prior_scale, seasonality_prior_scale)
-
-### P1 — Nächste Woche (hoher Impact, moderater Aufwand)
-
-#### Institutionelle Dokumentation
-- [ ] **DOC-01**: Methodology Paper (2-3 Seiten, LaTeX oder PDF) — Research-Note-Format à la Goldman Sachs
-- [ ] **DOC-02**: Data Provenance Dashboard — welche Quelle floss wann mit welchem Gewicht ein
-
-Note: DOC-03 (Sensitivity Analysis) wird durch v2-AP2 (Scenario Engine) + v2-AP4 (Scenario-Switcher) ersetzt.
 
 #### Pipeline-Robustheit
 - [ ] **PIPE-01**: CI/CD: GitHub Actions für automatischen Pipeline-Run + Test bei jedem Push
@@ -85,3 +88,10 @@ Neue Ideen hier parken, später priorisieren:
 - [x] Bootstrap CIs + non-negative enforcement
 - [x] Nominal/Real USD Switch (Frontend + API)
 - [x] Private Market Integration (18 companies)
+- [x] v2-AP1: Analyst Dispersion Index (45 rows, 4 seg × 9+ yr)
+- [x] v2-AP2: Scenario Engine (672 rows, 3 Szenarien)
+- [x] v2-AP3: Dispersion-Visualisierung (Frontend)
+- [x] v2-AP4: Scenario-Switcher (Frontend)
+- [x] v2-AP5: Automated Insight Narratives (5 Insight-Typen, regelbasiert)
+- [x] v2-AP6a: Bottom-Up Validation Backend (Multi-Year, Coverage-Trends, Narrativ-Integration)
+- [x] v2-AP6b: Bottom-Up Validation Frontend (Stacked Bar Chart, API-Endpoint)

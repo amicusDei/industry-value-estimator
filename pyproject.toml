@@ -9,6 +9,7 @@ dependencies = [
     "dash-bootstrap-components>=2.0.4",
     "edgartools>=5.25.1",
     "fastapi>=0.135.2",
+    "fpdf2>=2.8.7",
     "kaleido>=1.2.0",
     "lightgbm>=4.6.0",
     "lseg-data>=2.1.0",

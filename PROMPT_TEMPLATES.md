@@ -1,3 +1,5 @@
+# ⚠️ DEPRECATED — Aktive v3-Prompts sind in CLAUDE.md konsolidiert. Diese Datei enthält nur noch historische v2-Prompts als Referenz.
+
 # Prompt Templates für Claude Code
 
 ## Template A: Daten/Pipeline-Änderung
@@ -341,38 +343,344 @@ python3 -m pytest tests/test_insights.py -q --tb=short
 Wenn IRGENDEINE Verifikation fehlschlägt, STOPPE und erkläre warum.
 ```
 
----
-
-## Beispiel: Konkreter Prompt für FE-01 (Charts reparieren)
+### v2-AP6a: Bottom-Up Validation — Backend-Erweiterung (keine Abhängigkeiten)
 
 ```
 ## KONTEXT
 - Projekt: AI Industry Value Estimator
-- Betroffene Dateien: frontend/src/components/charts/TimeseriesChart.tsx
-- API: GET /api/v1/forecasts?segment=ai_hardware&valuation=nominal
-- Aktueller Zustand: Chart zeigt Linien, aber CI-Bänder sind kaum sichtbar,
-  Achsenbeschriftung fehlt, keine Legende, Tooltip zeigt keine Werte
+- Lies CLAUDE.md für Architektur-Überblick
+- Betroffene Dateien: src/ingestion/edgar_capex.py, src/narratives/insight_generator.py, tests/test_bottom_up.py (NEU)
+- Aktueller Zustand: edgar_capex.py existiert bereits mit compile_bottom_up_validation(). bottom_up_validation.parquet hat 4 Rows (nur 2024, ein Segment pro Zeile). revenue_attribution_ai.parquet hat 15 Companies mit ai_revenue_usd_billions, segment, year. Die Daten sind da, aber nur für ein Jahr und ohne Narrativ-Integration.
 
 ## AUFGABE
-1. CI-Bänder als halbtransparente Flächen (AreaSeries) statt dashed Lines
-2. Y-Achse: "$0B" bis auto-scaled Maximum, Ticks alle $50B
-3. X-Achse: Quarterly labels "Q1'17", "Q2'17" etc.
-4. Tooltip: Segment-Name, Datum, Point Estimate, CI80 Range, CI95 Range
-5. Legende: "Historical" (grau), "Forecast" (orange), "CI80" (hell-orange), "CI95" (sehr hell-orange)
+1. In edgar_capex.py die Funktion compile_bottom_up_validation() erweitern:
+   - Statt nur 2024: alle verfügbaren Jahre aus revenue_attribution_ai.parquet einbeziehen (erwarte 2022-2024)
+   - Pro Zeile zusätzlich: top_3_companies (Namen + Beträge der Top-3-Beiträger), coverage_trend (Veränderung der coverage_ratio vs. Vorjahr, NaN für erstes Jahr)
+   - Output: bottom_up_validation.parquet mit ~12 Rows (4 Segmente × 3 Jahre)
+
+2. In insight_generator.py eine neue Insight-Funktion _bottom_up_insight(segment) hinzufügen:
+   - Lädt bottom_up_validation.parquet
+   - Generiert Insight: "ai_hardware top-down estimate of $XB is Y% verifiable through public disclosures (Z companies: [top 3]). Coverage has [improved/declined] from A% to B% since 2022."
+   - Wenn coverage_ratio > 0.8: "high confidence — bottom-up validates top-down"
+   - Wenn coverage_ratio < 0.5: "significant gap — $XB likely from private companies and long-tail vendors"
+   - In generate_segment_insights() als 6. Insight-Typ einbauen
+
+3. Test schreiben: test_bottom_up.py prüft:
+   - bottom_up_validation.parquet Shape (expect >= 8 rows, 4 segments × min 2 years)
+   - coverage_ratio zwischen 0.0 und 1.5 (>1.0 ist möglich wenn Bottom-Up > Top-Down)
+   - Kein NaN in coverage_ratio oder bottom_up_sum
+   - Insight-Generator liefert bottom_up Insight für mindestens ai_hardware
 
 ## CONSTRAINTS
-- Nutze lightweight-charts v4 API (bereits installiert)
-- Farben: Historical #64748b, Forecast #f97316, CI80 rgba(249,115,22,0.3), CI95 rgba(249,115,22,0.1)
-- Keine neuen Dependencies
+- Ändere NUR die oben genannten Dateien
+- Nutze nur pandas/numpy (keine neuen Dependencies)
+- Die bestehende compile_bottom_up_validation() Logik erweitern, nicht ersetzen
+- revenue_attribution_ai.parquet ist die Datenquelle — NICHT edgar_ai_raw.parquet (das hat nur Total Company Revenue, nicht AI-spezifisch)
+- Wenn du unsicher bist über die attribution-Daten, FRAGE statt zu raten
 
 ## VERIFIKATION
-1. cd frontend && npm run build
-2. curl http://localhost:8000/api/v1/forecasts?segment=ai_hardware&valuation=nominal | python3 -c "
+Führe nach ALLEN Änderungen diesen Code aus und zeige das VOLLSTÄNDIGE Ergebnis:
+
+python3 -c "
+import pandas as pd
+
+# 1. Bottom-Up Validation
+buv = pd.read_parquet('data/processed/bottom_up_validation.parquet')
+print(f'VERIFY: Shape = {buv.shape} (expect >= 8 rows)')
+print(f'VERIFY: Segments = {sorted(buv.segment.unique())} (expect 4)')
+print(f'VERIFY: Years = {sorted(buv.year.unique())} (expect 2-3 years)')
+print(f'VERIFY: NaN in coverage_ratio = {buv.coverage_ratio.isna().sum()} (expect 0)')
+print(f'VERIFY: coverage_ratio range = [{buv.coverage_ratio.min():.2f}, {buv.coverage_ratio.max():.2f}]')
+print()
+for _, row in buv.sort_values(['segment','year']).iterrows():
+    print(f'{row.segment} {row.year}: bottom_up={row.bottom_up_sum:.1f}B, top_down={row.top_down_estimate:.1f}B, coverage={row.coverage_ratio:.1%}, n={row.n_companies}')
+print()
+
+# 2. Insight Integration
+from src.narratives.insight_generator import generate_segment_insights
+hw_insights = generate_segment_insights('ai_hardware')
+bu_insights = [i for i in hw_insights if 'verifiable' in i.get('text','').lower() or 'bottom' in i.get('text','').lower() or 'coverage' in i.get('text','').lower()]
+print(f'VERIFY: Bottom-up insights for ai_hardware = {len(bu_insights)} (expect >= 1)')
+for ins in bu_insights:
+    print(f'  → {ins}')
+"
+
+python3 -m pytest tests/test_bottom_up.py -q --tb=short
+
+Wenn IRGENDEINE Verifikation fehlschlägt, STOPPE und erkläre warum.
+```
+
+### v2-AP6b: Bottom-Up Validation — Frontend (nach v2-AP6a)
+
+```
+## KONTEXT
+- Projekt: AI Industry Value Estimator, Frontend in frontend/
+- Stack: Next.js 15 + React 19 + TypeScript + TailwindCSS
+- API läuft auf localhost:8000 (FastAPI)
+- Betroffene Dateien: api/routers/forecasts.py, frontend/src/components/charts/BottomUpChart.tsx (NEU), frontend/src/app/segments/[segment]/page.tsx
+- Abhängig von: bottom_up_validation.parquet (v2-AP6a muss abgeschlossen sein)
+- Aktueller Zustand: Bottom-Up-Daten existieren in Parquet, aber kein API-Endpoint und keine Visualisierung.
+
+## AUFGABE
+1. Neuen API-Endpoint: GET /api/v1/bottom-up?segment=ai_hardware → liefert JSON-Array mit {year, bottom_up_sum, top_down_estimate, coverage_ratio, gap_usd_billions, n_companies, top_3_companies} pro Jahr.
+2. Neue React-Komponente BottomUpChart.tsx: Gestapeltes Balkendiagramm (recharts BarChart):
+   - Pro Jahr ein Bar mit zwei Segmenten: "Verified (Bottom-Up)" in orange-500, "Unverified Gap" in slate-600
+   - Gesamthöhe = Top-Down-Estimate, orangener Teil = Bottom-Up-Sum
+   - Coverage-Ratio als Prozent-Label über jedem Bar
+   - Tooltip mit Company-Breakdown (Top 3 Contributors)
+3. BottomUpChart in Segment-Detailseite integrieren, unterhalb der Dispersion-Visualisierung.
+
+## CONSTRAINTS
+- Bloomberg-Style: bg-slate-900, text-slate-100, orange-500 / slate-600 für Bars
+- Nutze recharts BarChart (bereits installiert)
+- Wenn nur 1 Jahr Daten vorhanden: einzelnen Bar anzeigen, kein leeres Chart
+- Loading State und "No bottom-up data available" Fallback sind Pflicht
+
+## VERIFIKATION
+1. curl http://localhost:8000/api/v1/bottom-up?segment=ai_hardware | python3 -c "
 import json, sys
 data = json.load(sys.stdin)
-print(f'VERIFY: Rows = {len(data)}')
-print(f'VERIFY: First row keys = {list(data[0].keys()) if data else \"EMPTY\"}')
-print(f'VERIFY: Has CI columns = {\"ci80_lower_nominal\" in data[0] if data else False}')
+print(f'VERIFY: Rows = {len(data)} (expect 2-3 years)')
+print(f'VERIFY: Keys = {list(data[0].keys())}')
+for d in data:
+    print(f'  {d[\"year\"]}: BU={d[\"bottom_up_sum\"]:.1f}B, TD={d[\"top_down_estimate\"]:.1f}B, coverage={d[\"coverage_ratio\"]:.1%}')
 "
-3. Beschreibe was der User auf /segments/ai_hardware sieht
+2. cd frontend && npm run build  (muss ohne Error durchlaufen)
+3. Beschreibe was der User auf /segments/ai_hardware sieht (Text-Mockup des Stacked Bar Charts)
+
+Wenn IRGENDEINE Verifikation fehlschlägt, STOPPE und erkläre warum.
+```
+
+---
+
+## Phase 3 Prompts: Frontend Bloomberg-Grade + Portfolio
+
+Reihenfolge: v3-AP1 + v3-AP3 + v3-AP4 parallel → v3-AP5 + v3-AP7 parallel → v3-AP6 → v3-AP2.
+
+### v3-AP1: README Rewrite + Architecture Diagram (keine Abhängigkeiten)
+
+```
+## KONTEXT
+- Projekt: AI Industry Value Estimator
+- Lies CLAUDE.md für Architektur-Überblick
+- Betroffene Dateien: README.md
+- Aktueller Zustand: README ist veraltet. Referenziert run_dashboard.py (gelöscht), run_reports.py, "$200B 2023 consensus baseline" (nicht mehr korrekt). Keine Screenshots, kein Architecture-Diagram, keine Erwähnung von Dispersion Index, Scenario Engine, Insight Narratives, Bottom-Up Validation.
+
+## AUFGABE
+1. README komplett neu schreiben. Struktur:
+   - **Header:** Projekt-Name + 1-Satz-Pitch ("Institutional-grade AI market sizing platform combining econometric models with analyst consensus data")
+   - **Badge-Leiste:** Python 3.13, Next.js 15, FastAPI, License MIT (oder was aktuell gilt)
+   - **Screenshot-Platzhalter:** `![Dashboard](docs/screenshots/dashboard.png)` — 3 Platzhalter (Dashboard, Segment Detail, Diagnostics)
+   - **Key Features:** 5-6 Punkte (Ensemble Forecasting, Analyst Dispersion, Scenario Engine, Bottom-Up Validation, Automated Insights, Bloomberg-Style UI) — jeweils 1 Satz
+   - **Architecture:** Mermaid-Diagram inline (Ingestion → Processing → Models → API → Frontend)
+   - **Quick Start:** Docker Compose (3 Befehle), alternativ manual setup
+   - **Data Sources:** Tabelle mit 4-5 Quellen (EDGAR, LSEG, World Bank, OECD, 12 Analyst Firms)
+   - **Model Performance:** Tabelle mit MAPE/CI Coverage pro Segment (aus CLAUDE.md Gate 3)
+   - **Tech Stack:** Tabelle oder Liste
+   - **License + Disclaimer**
+2. Maximal 150 Zeilen. Kein Absatz länger als 3 Sätze.
+3. Alle Referenzen auf run_dashboard.py, run_reports.py, run_statistical_pipeline.py entfernen.
+
+## CONSTRAINTS
+- Ändere NUR README.md
+- Englisch (Portfolio-Publikum ist international)
+- Keine Emojis im Text (professionell)
+- Mermaid-Diagram muss auf GitHub renderbar sein
+- Screenshot-Platzhalter als relative Pfade (docs/screenshots/)
+
+## VERIFIKATION
+1. Zeige die vollständige README.md
+2. Zähle die Zeilen: wc -l README.md (expect <= 150)
+3. Prüfe auf veraltete Referenzen: grep -i "run_dashboard\|run_reports\|run_statistical\|200B\|PCA" README.md (expect 0 matches)
+4. Prüfe Mermaid-Syntax: der Mermaid-Block muss mit ```mermaid beginnen und enden
+
+Wenn IRGENDEINE Verifikation fehlschlägt, STOPPE und erkläre warum.
+```
+
+### v3-AP3: Chart Professionalisierung (keine Abhängigkeiten)
+
+```
+## KONTEXT
+- Projekt: AI Industry Value Estimator, Frontend in frontend/
+- Stack: Next.js 15 + React 19 + TypeScript + TailwindCSS
+- API läuft auf localhost:8000 (FastAPI)
+- Betroffene Dateien: frontend/src/components/charts/TimeseriesChart.tsx
+- Chart-Library: lightweight-charts v5.1.0 (bereits installiert)
+- Aktueller Zustand: Forecast-Chart zeigt Linien, aber CI-Bänder sind kaum sichtbar oder fehlen, Achsenbeschriftung unvollständig, Tooltip zeigt keine Werte, keine Legende.
+
+## AUFGABE
+1. TimeseriesChart.tsx komplett überarbeiten:
+   - Historical-Daten (is_forecast=false): durchgehende Linie in slate-500 (#64748b)
+   - Forecast-Daten (is_forecast=true): durchgehende Linie in orange-500 (#f97316)
+   - CI80: halbtransparente Fläche (AreaSeries) in rgba(249,115,22,0.25)
+   - CI95: halbtransparente Fläche in rgba(249,115,22,0.08)
+   - Vertikale gestrichelte Linie am Übergang Historical→Forecast (mit Label "Forecast Start")
+2. Y-Achse: "$0B" Format, auto-scaled, rechts positioniert (Bloomberg-Konvention)
+3. X-Achse: "Q1'17", "Q2'17" Format für Quarterly-Daten
+4. Tooltip: Segment-Name, Datum (Q1 2024), Point Estimate ($XX.XB), CI80 Range, CI95 Range
+5. Legende oberhalb des Charts: Historical (grau) | Forecast (orange) | CI80 | CI95
+
+## CONSTRAINTS
+- Bloomberg-Style: bg-slate-900, border-border, orange Akzente
+- Nutze lightweight-charts v5 API (createChart, addLineSeries, addAreaSeries)
+- Wenn lightweight-charts AreaSeries nicht unterstützt für CI-Bänder: wechsle zu recharts (bereits in node_modules oder installierbar) — aber nur als Fallback
+- Keine neuen npm Dependencies außer recharts falls nötig
+- Chart muss responsive sein (resize on container change)
+
+## VERIFIKATION
+1. cd frontend && npm run build  (muss ohne Error durchlaufen)
+2. Beschreibe visuell was der User auf /segments/ai_hardware sieht:
+   - Welche Farben hat die Historical-Linie?
+   - Sind CI-Bänder als Flächen sichtbar?
+   - Was zeigt der Tooltip beim Hover?
+   - Gibt es eine Legende?
+3. curl http://localhost:8000/api/v1/forecasts?segment=ai_hardware | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+forecast = [d for d in data if d.get('is_forecast')]
+print(f'VERIFY: Total rows = {len(data)}')
+print(f'VERIFY: Forecast rows = {len(forecast)}')
+print(f'VERIFY: Has CI80 = {\"ci80_lower_nominal\" in data[0]}')
+print(f'VERIFY: Has CI95 = {\"ci95_lower_nominal\" in data[0]}')
+"
+
+Wenn der Build fehlschlägt, STOPPE und fixe den Error bevor du weitermachst.
+```
+
+### v3-AP4: Diagnostics Page (keine Abhängigkeiten)
+
+```
+## KONTEXT
+- Projekt: AI Industry Value Estimator, Frontend in frontend/
+- Stack: Next.js 15 + React 19 + TypeScript + TailwindCSS + recharts
+- API: localhost:8000, Endpunkt GET /api/v1/diagnostics existiert bereits
+- Betroffene Dateien: frontend/src/app/diagnostics/page.tsx, api/routers/diagnostics.py
+- Aktueller Zustand: Diagnostics-Page existiert aber ist unvollständig. API-Endpunkt liefert Basis-Metriken.
+
+## AUFGABE
+1. API-Endpunkt /api/v1/diagnostics erweitern um:
+   - mape_matrix: Segment × Year MAPE-Werte (aus Backtesting-Ergebnissen)
+   - ci_coverage: {segment, ci80_target: 0.80, ci80_actual, ci95_target: 0.95, ci95_actual}
+   - regime_comparison: {segment, pre_genai_mape (2017-2021), post_genai_mape (2022+)}
+   - data_sources: [{source_name, segments_covered, years_covered, n_entries}]
+2. Frontend diagnostics/page.tsx mit Tab-Layout (4 Tabs):
+   - Tab 1 "Model Performance": MAPE-Heatmap (recharts oder custom Grid) — Farb-Encoding: grün <15%, gelb 15-30%, orange 30-50%, rot >50%
+   - Tab 2 "CI Coverage": Balkendiagramm CI80 Actual vs Target (80%) und CI95 Actual vs Target (95%) pro Segment
+   - Tab 3 "Regime Analysis": Grouped Bar Chart Pre-GenAI vs Post-GenAI MAPE pro Segment
+   - Tab 4 "Data Sources": Tabelle mit Quellen, Coverage, Eintrags-Anzahl
+3. Jeder Tab hat einen erklärenden 1-Satz-Subtitle.
+
+## CONSTRAINTS
+- Bloomberg-Style: bg-slate-900, Tabs als Pill-Buttons (wie ScenarioSelector)
+- Nutze recharts für alle Charts
+- MAPE-Werte aus CLAUDE.md Gate 3 als Referenz
+- Loading States pro Tab
+- Mobile: Tabs stacken vertikal auf <768px
+
+## VERIFIKATION
+1. curl http://localhost:8000/api/v1/diagnostics | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+print(f'VERIFY: Keys = {list(data.keys())}')
+print(f'VERIFY: Has mape_matrix = {\"mape_matrix\" in data}')
+print(f'VERIFY: Has ci_coverage = {\"ci_coverage\" in data}')
+print(f'VERIFY: Has regime_comparison = {\"regime_comparison\" in data}')
+print(f'VERIFY: Has data_sources = {\"data_sources\" in data}')
+if 'ci_coverage' in data:
+    for c in data['ci_coverage']:
+        print(f'  {c[\"segment\"]}: CI80={c[\"ci80_actual\"]:.0%} (target 80%), CI95={c[\"ci95_actual\"]:.0%} (target 95%)')
+"
+2. cd frontend && npm run build  (muss ohne Error durchlaufen)
+3. Beschreibe die 4 Tabs: was sieht der User jeweils?
+
+Wenn IRGENDEINE Verifikation fehlschlägt, STOPPE und erkläre warum.
+```
+
+### v3-AP5: Methodology Paper als PDF (nach v3-AP3)
+
+```
+## KONTEXT
+- Projekt: AI Industry Value Estimator
+- Lies CLAUDE.md für Architektur, Modell-Details, und Quality-Gates
+- Lies METHODOLOGY.md und ASSUMPTIONS.md für methodische Details
+- Betroffene Dateien: scripts/generate_methodology_paper.py (NEU), docs/methodology_paper.pdf (Output)
+- Aktueller Zustand: Methodology ist als Markdown und /methodology-Page dokumentiert. Kein standalone PDF im Research-Note-Format.
+
+## AUFGABE
+1. Python-Script scripts/generate_methodology_paper.py erstellen das ein PDF generiert:
+   - Nutze fpdf2 (pip install fpdf2 --break-system-packages)
+   - Format: A4, 3-4 Seiten
+2. PDF-Struktur (Goldman Sachs Research Note Stil):
+   - **Seite 1 Header:** "AI Industry Valuation: A Multi-Source Ensemble Approach" | Datum | "Dr. Matthias Wegner"
+   - **Key Findings Box** (grauer Kasten): 4 Punkte mit Daten aus Parquet-Files
+   - **Methodology (1 Seite):** Data Sources, Ensemble Model, CAGR Calibration, Scope Normalization
+   - **Results (1 Seite):** Segment-Forecasts Tabelle (Base/Conservative/Aggressive), MAPE-Tabelle, CI Coverage
+   - **Data Sources (0.5 Seite):** Source-Tabelle
+   - **Disclaimer Footer**
+3. Daten aus Parquet-Files ziehen — keine hardcoded Werte.
+
+## CONSTRAINTS
+- Englisch (institutionelles Publikum)
+- Professionelles Layout: Schwarz/Grau/Dunkelblau, keine Emojis
+- Tabellen mit Gridlines, rechts-ausgerichtete Zahlen
+- Output nach docs/methodology_paper.pdf
+
+## VERIFIKATION
+1. python3 scripts/generate_methodology_paper.py (muss ohne Error durchlaufen)
+2. ls -la docs/methodology_paper.pdf (expect >50KB)
+3. python3 -c "
+with open('scripts/generate_methodology_paper.py') as f:
+    code = f.read()
+    assert 'read_parquet' in code, 'ERROR: No parquet reads — values might be hardcoded!'
+    print('VERIFY: Script reads from Parquet files')
+    import re
+    suspicious = re.findall(r'(?:estimate|forecast|mape)\s*=\s*[\d.]+', code, re.I)
+    if suspicious:
+        print(f'WARNING: Possibly hardcoded values: {suspicious}')
+    else:
+        print('VERIFY: No suspicious hardcoded values')
+"
+
+Wenn IRGENDEINE Verifikation fehlschlägt, STOPPE und erkläre warum.
+```
+
+### v3-AP7: Excel/CSV Export (keine Abhängigkeiten)
+
+```
+## KONTEXT
+- Projekt: AI Industry Value Estimator
+- API: localhost:8000, Endpunkt GET /api/v1/export existiert bereits (api/routers/export.py)
+- Frontend: ExportButton.tsx Komponente existiert bereits
+- Betroffene Dateien: api/routers/export.py, frontend/src/components/ExportButton.tsx
+- Aktueller Zustand: Export-Infrastruktur existiert aber unklar ob Multi-Sheet und Metadaten-Header funktionieren.
+
+## AUFGABE
+1. api/routers/export.py prüfen und erweitern:
+   - GET /api/v1/export?segment=ai_hardware&scenario=base&format=xlsx
+   - Excel mit 3 Sheets: "Forecasts" (Hauptdaten), "Methodology" (Kurztext + Quellen), "Metadata" (Erstellungsdatum, Segment, Scenario, Datenstand)
+   - Forecasts-Sheet: Header-Zeile, dann Year, Quarter, Point Estimate ($B), CI80 Low/High, CI95 Low/High, Historical/Forecast Flag
+   - Zahlen mit 1 Dezimalstelle
+   - format=csv als Alternative (ohne Multi-Sheet)
+2. ExportButton.tsx: Download-Trigger mit Dropdown "Excel (.xlsx)" / "CSV (.csv)"
+3. ExportButton in Segment-Detailseite integrieren falls noch nicht verlinkt.
+
+## CONSTRAINTS
+- Nutze openpyxl für Excel (bereits in Dependencies)
+- Dateiname: "ai_industry_{segment}_{scenario}_{date}.xlsx"
+- Keine neuen npm-Packages
+
+## VERIFIKATION
+1. curl -o /tmp/test_export.xlsx "http://localhost:8000/api/v1/export?segment=ai_hardware&scenario=base&format=xlsx"
+   ls -la /tmp/test_export.xlsx (expect >10KB)
+2. python3 -c "
+import openpyxl
+wb = openpyxl.load_workbook('/tmp/test_export.xlsx')
+print(f'VERIFY: Sheets = {wb.sheetnames} (expect [Forecasts, Methodology, Metadata])')
+ws = wb['Forecasts']
+print(f'VERIFY: Rows = {ws.max_row} (expect >50)')
+print(f'VERIFY: Cols = {ws.max_column} (expect >=7)')
+"
+3. cd frontend && npm run build
+
+Wenn IRGENDEINE Verifikation fehlschlägt, STOPPE und erkläre warum.
 ```

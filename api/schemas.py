@@ -61,6 +61,10 @@ class DiagnosticsResponse(BaseModel):
     data: list[DiagnosticRow]
     count: int
     summary: dict
+    mape_matrix: list[dict] = []
+    ci_coverage: list[dict] = []
+    regime_comparison: list[dict] = []
+    data_sources: list[dict] = []
 
 
 class SensitivityRow(BaseModel):

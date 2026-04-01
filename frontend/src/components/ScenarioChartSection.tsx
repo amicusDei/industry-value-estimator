@@ -13,9 +13,10 @@ function toTimeStr(year: number, quarter: number): string {
 
 interface Props {
   scenarioData: ScenarioForecastRow[];
+  segmentName?: string;
 }
 
-export default function ScenarioChartSection({ scenarioData }: Props) {
+export default function ScenarioChartSection({ scenarioData, segmentName }: Props) {
   const [scenario, setScenario] = useState<ScenarioId>("base");
 
   const { historical, forecast, ci80, ci95 } = useMemo(() => {
@@ -48,21 +49,7 @@ export default function ScenarioChartSection({ scenarioData }: Props) {
         </h2>
         <ScenarioSelector selected={scenario} onChange={setScenario} />
       </div>
-      <TimeseriesChart historical={historical} forecast={forecast} ci80={ci80} ci95={ci95} />
-      <div className="flex gap-6 mt-3 text-xs text-muted">
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-0.5 bg-[#64748b] inline-block" /> Historical
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-0.5 bg-accent inline-block" /> Forecast
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-0 border-t border-dashed border-[#f9731680] inline-block" /> 80% CI
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-0 border-t border-dashed border-[#f9731640] inline-block" /> 95% CI
-        </span>
-      </div>
+      <TimeseriesChart historical={historical} forecast={forecast} ci80={ci80} ci95={ci95} segmentName={segmentName} />
     </div>
   );
 }

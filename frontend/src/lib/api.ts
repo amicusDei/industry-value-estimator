@@ -60,10 +60,40 @@ export interface DiagnosticRow {
   regime_label: string | null;
 }
 
+export interface MapeMatrixEntry {
+  segment: string;
+  [year: string]: string | number;
+}
+
+export interface CiCoverageEntry {
+  segment: string;
+  ci80_target: number;
+  ci80_actual: number;
+  ci95_target: number;
+  ci95_actual: number;
+}
+
+export interface RegimeComparisonEntry {
+  segment: string;
+  pre_genai_mape: number | null;
+  post_genai_mape: number | null;
+}
+
+export interface DataSourceEntry {
+  source_name: string;
+  segments_covered: string[];
+  years_covered: string;
+  n_entries: number;
+}
+
 export interface DiagnosticsResponse {
   data: DiagnosticRow[];
   count: number;
   summary: Record<string, { mean_mape: number; n_folds: number }>;
+  mape_matrix: MapeMatrixEntry[];
+  ci_coverage: CiCoverageEntry[];
+  regime_comparison: RegimeComparisonEntry[];
+  data_sources: DataSourceEntry[];
 }
 
 export interface SensitivityRow {
@@ -157,8 +187,8 @@ export const getDispersion = (segment?: string) =>
     `/api/v1/dispersion${segment ? `?segment=${segment}` : ""}`
   );
 
-export const getExportUrl = (format: "csv" | "excel", segment?: string) =>
-  `${API_BASE}/api/v1/export/${format}?valuation=nominal${segment ? `&segment=${segment}` : ""}`;
+export const getExportUrl = (format: "csv" | "excel", segment?: string, scenario?: string) =>
+  `${API_BASE}/api/v1/export/${format}?valuation=nominal${segment ? `&segment=${segment}` : ""}${scenario ? `&scenario=${scenario}` : ""}`;
 
 export interface ScenarioForecastRow {
   year: number;
