@@ -31,3 +31,13 @@ reports/templates/*.html
 # Models (serialized — too large for git)
 models/**/*.joblib
 models/**/*.pkl
+
+# Claude Code (local config)
+.claude/
+*.skill
+
+# R
+.Rhistory
+
+# Test artifacts
+data/processed/test_*.parquet

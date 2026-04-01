@@ -983,9 +983,10 @@ entries:
     currency: "nominal_usd"
     scope_includes: "AI software market including platforms, applications, infrastructure software"
     scope_excludes: "Hardware, consulting services"
-    methodology_notes: "Precedence Research AI software market valuation 2024."
+    methodology_notes: "Precedence Research AI software market valuation 2024. SCOPE WARNING: Includes infrastructure software (~$100B+) which maps to ai_infrastructure in our taxonomy. Narrow-scope peers (CB Insights $70B, IDC $64.5B) suggest scope_coefficient ~0.40."
     source_url: "https://www.precedenceresearch.com/artificial-intelligence-software-market"
     confidence: "high"
+    segment_scope_coefficient: 0.40
 
   - source_firm: "Precedence Research"
     report_name: "AI Software Market 2025"
@@ -994,11 +995,12 @@ entries:
     segment: "ai_software"
     as_published_usd_billions: 257.0
     currency: "nominal_usd"
-    scope_includes: "AI software market"
+    scope_includes: "AI software market including platforms, applications, infrastructure software"
     scope_excludes: "Hardware, consulting services"
-    methodology_notes: "Precedence Research AI software market projection 2025."
+    methodology_notes: "Precedence Research AI software market projection 2025. SCOPE WARNING: Same broad scope as 2024 entry — includes infrastructure software. Coefficient 0.40 applied."
     source_url: "https://www.precedenceresearch.com/artificial-intelligence-software-market"
     confidence: "high"
+    segment_scope_coefficient: 0.40
 
   # --- AI Adoption / Enterprise services historical ---
   - source_firm: "Grand View Research"
