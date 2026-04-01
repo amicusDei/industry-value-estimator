@@ -19,6 +19,26 @@ function coverageLabel(ratio: number): string {
   return "Low";
 }
 
+function capexGrowthSignal(growth: number | null): {
+  arrow: string;
+  label: string;
+  color: string;
+} {
+  if (growth === null || growth === undefined) {
+    return { arrow: "--", label: "No data", color: "#6b7280" };
+  }
+  if (growth > 0.2) {
+    return { arrow: "\u2191\u2191", label: "Strong expansion", color: "#22c55e" };
+  }
+  if (growth > 0) {
+    return { arrow: "\u2191", label: "Growing", color: "#86efac" };
+  }
+  if (growth > -0.1) {
+    return { arrow: "\u2192", label: "Stable", color: "#eab308" };
+  }
+  return { arrow: "\u2193", label: "Contracting", color: "#ef4444" };
+}
+
 export default function ValidationPanel({ data }: ValidationPanelProps) {
   if (!data || data.length === 0) return null;
 
@@ -30,6 +50,7 @@ export default function ValidationPanel({ data }: ValidationPanelProps) {
   const pct = (latest.coverage_ratio * 100).toFixed(1);
   const color = coverageColor(latest.coverage_ratio);
   const barWidth = Math.min(latest.coverage_ratio * 100, 100);
+  const capexSignal = capexGrowthSignal(latest.capex_implied_growth);
 
   return (
     <div className="mb-8">
@@ -37,7 +58,7 @@ export default function ValidationPanel({ data }: ValidationPanelProps) {
       <p className="text-muted text-xs mb-3">
         Cross-reference of top-down analyst consensus with company-level EDGAR
         filings. Shows what fraction of the market is explained by known public
-        companies.
+        companies, with CapEx investment signals.
       </p>
       <div className="bg-surface border border-border rounded-lg p-4">
         {/* Coverage bar */}
@@ -85,7 +106,7 @@ export default function ValidationPanel({ data }: ValidationPanelProps) {
         </div>
 
         {/* Metrics row */}
-        <div className="grid grid-cols-3 gap-3 mb-3">
+        <div className="grid grid-cols-4 gap-3 mb-3">
           <div className="text-center">
             <div
               className="font-mono text-lg font-semibold"
@@ -103,11 +124,47 @@ export default function ValidationPanel({ data }: ValidationPanelProps) {
           </div>
           <div className="text-center">
             <div className="font-mono text-lg font-semibold text-text">
+              {latest.capex_intensity > 0
+                ? `${latest.capex_intensity.toFixed(2)}x`
+                : "N/A"}
+            </div>
+            <div className="text-[10px] text-muted">CapEx/Revenue</div>
+          </div>
+          <div className="text-center">
+            <div className="font-mono text-lg font-semibold text-text">
               {latest.n_companies}
             </div>
             <div className="text-[10px] text-muted">Companies</div>
           </div>
         </div>
+
+        {/* CapEx-implied growth signal */}
+        {latest.company_capex_sum > 0 && (
+          <div className="flex items-center gap-2 mb-3 px-2 py-1.5 rounded bg-[#ffffff06] border border-border">
+            <span
+              className="font-mono text-sm font-bold"
+              style={{ color: capexSignal.color }}
+            >
+              {capexSignal.arrow}
+            </span>
+            <span className="text-xs text-muted">
+              CapEx Signal:{" "}
+              <span
+                className="font-medium"
+                style={{ color: capexSignal.color }}
+              >
+                {capexSignal.label}
+              </span>
+              {latest.capex_implied_growth !== null && (
+                <span className="font-mono ml-1">
+                  ({(latest.capex_implied_growth * 100).toFixed(0)}% YoY)
+                </span>
+              )}
+              {" "}
+              | AI CapEx: ${latest.company_capex_sum.toFixed(1)}B
+            </span>
+          </div>
+        )}
 
         {/* Top contributors */}
         {latest.top_contributors.length > 0 && (
@@ -119,12 +176,21 @@ export default function ValidationPanel({ data }: ValidationPanelProps) {
           </div>
         )}
 
-        {/* Gap narrative */}
+        {/* Gap narrative with capex context */}
         {latest.gap_usd_billions > 0 && (
           <div className="mt-2 text-xs text-muted">
             <span className="font-mono text-accent">${latest.gap_usd_billions.toFixed(1)}B</span>{" "}
             unexplained market opportunity — likely comprised of private companies, smaller public
             players, and emerging AI startups not yet in EDGAR filings.
+            {latest.capex_intensity > 0 && (
+              <span>
+                {" "}CapEx intensity of{" "}
+                <span className="font-mono">{latest.capex_intensity.toFixed(2)}x</span>{" "}
+                suggests {latest.capex_intensity > 1.0
+                  ? "heavy infrastructure investment ahead of revenue realization."
+                  : "capital-efficient growth relative to revenue."}
+              </span>
+            )}
           </div>
         )}
       </div>

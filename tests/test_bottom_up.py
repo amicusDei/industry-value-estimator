@@ -1,9 +1,14 @@
-"""Tests for bottom-up validation module (v2-AP6)."""
+"""Tests for bottom-up validation module with CapEx-based validation."""
 
 import pandas as pd
 import pytest
 
-from src.ingestion.edgar_capex import compile_bottom_up_validation, write_bottom_up_validation
+from src.ingestion.edgar_capex import (
+    AI_CAPEX_RATIOS,
+    CAPEX_XBRL_CONCEPTS,
+    compile_bottom_up_validation,
+    write_bottom_up_validation,
+)
 
 
 @pytest.fixture(scope="module")
@@ -15,8 +20,43 @@ def validation_df() -> pd.DataFrame:
 EXPECTED_COLUMNS = [
     "segment", "year", "bottom_up_sum", "top_down_estimate",
     "coverage_ratio", "gap_usd_billions", "n_companies", "top_contributors",
+    "company_capex_sum", "capex_intensity", "capex_implied_growth",
 ]
 
+
+# ---------------------------------------------------------------------------
+# CapEx constants tests
+# ---------------------------------------------------------------------------
+
+def test_capex_xbrl_concepts_has_enough_entries():
+    """CAPEX_XBRL_CONCEPTS should have at least 3 entries."""
+    assert len(CAPEX_XBRL_CONCEPTS) >= 3, (
+        f"Expected at least 3 CAPEX_XBRL_CONCEPTS, got {len(CAPEX_XBRL_CONCEPTS)}"
+    )
+
+
+def test_ai_capex_ratios_valid_range():
+    """All AI CapEx ratios should be between 0 and 1."""
+    for company, info in AI_CAPEX_RATIOS.items():
+        ratio = info["ai_capex_ratio"]
+        assert 0.0 <= ratio <= 1.0, (
+            f"{company} has ai_capex_ratio={ratio}, expected [0, 1]"
+        )
+        assert "source" in info, f"{company} missing 'source' key"
+
+
+def test_ai_capex_ratios_has_major_companies():
+    """AI_CAPEX_RATIOS should cover key hyperscalers."""
+    expected = {"NVIDIA Corporation", "Microsoft Corporation", "Alphabet Inc."}
+    actual = set(AI_CAPEX_RATIOS.keys())
+    assert expected.issubset(actual), (
+        f"Missing companies: {expected - actual}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Validation DataFrame tests
+# ---------------------------------------------------------------------------
 
 def test_non_empty_with_correct_columns(validation_df: pd.DataFrame):
     """Bottom-up validation produces non-empty DataFrame with correct columns."""
@@ -39,7 +79,6 @@ def test_n_companies_positive(validation_df: pd.DataFrame):
 
 def test_gap_usd_billions_mostly_positive(validation_df: pd.DataFrame):
     """Top-down should generally exceed bottom-up (gap >= 0 for most rows)."""
-    # Allow a small number of negative gaps due to overlap/double-counting
     negative_count = (validation_df["gap_usd_billions"] < 0).sum()
     total = len(validation_df)
     assert negative_count <= total * 0.5, (
@@ -56,12 +95,25 @@ def test_top_contributors_is_list(validation_df: pd.DataFrame):
         assert len(contrib) <= 3, "Should have at most 3 contributors"
 
 
+def test_capex_intensity_positive_where_data_exists(validation_df: pd.DataFrame):
+    """CapEx intensity should be positive where companies have both capex and revenue."""
+    has_both = validation_df[
+        (validation_df["company_capex_sum"] > 0) & (validation_df["bottom_up_sum"] > 0)
+    ]
+    if not has_both.empty:
+        assert (has_both["capex_intensity"] > 0).all(), (
+            "capex_intensity must be > 0 where both capex and revenue exist"
+        )
+
+
+def test_capex_columns_present(validation_df: pd.DataFrame):
+    """New CapEx columns should be present."""
+    for col in ["company_capex_sum", "capex_intensity", "capex_implied_growth"]:
+        assert col in validation_df.columns, f"Missing column: {col}"
+
+
 def test_write_and_read_roundtrip(validation_df: pd.DataFrame, tmp_path):
     """Write and read back validation data."""
-    import tempfile
-    from pathlib import Path
-
-    # Write to temp location
     out_path = tmp_path / "bottom_up_validation.parquet"
     validation_df.to_parquet(out_path, index=False)
     reloaded = pd.read_parquet(out_path)

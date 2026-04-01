@@ -208,6 +208,9 @@ export interface ValidationRow {
   gap_usd_billions: number;
   n_companies: number;
   top_contributors: string[];
+  company_capex_sum: number;
+  capex_intensity: number;
+  capex_implied_growth: number | null;
 }
 
 export interface ValidationResponse {

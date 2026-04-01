@@ -133,6 +133,9 @@ class ValidationRow(BaseModel):
     gap_usd_billions: float
     n_companies: int
     top_contributors: list[str]
+    company_capex_sum: float
+    capex_intensity: float
+    capex_implied_growth: float | None
 
 
 class ValidationResponse(BaseModel):

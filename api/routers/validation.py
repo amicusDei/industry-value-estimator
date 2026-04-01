@@ -1,5 +1,6 @@
 """Bottom-up validation endpoint (v2-AP6)."""
 
+import pandas as pd
 from fastapi import APIRouter, Query
 
 from api.data_loader import get_bottom_up_validation
@@ -32,6 +33,10 @@ def validation(
             gap_usd_billions=round(float(r["gap_usd_billions"]), 2),
             n_companies=int(r["n_companies"]),
             top_contributors=list(r["top_contributors"]) if r["top_contributors"] is not None else [],
+            company_capex_sum=round(float(r.get("company_capex_sum", 0)), 2),
+            capex_intensity=round(float(r.get("capex_intensity", 0)), 4),
+            capex_implied_growth=round(float(r["capex_implied_growth"]), 4)
+            if pd.notna(r.get("capex_implied_growth")) else None,
         )
         for _, r in df.iterrows()
     ]
