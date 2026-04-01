@@ -215,6 +215,379 @@ def _get_historical_usd_values(
 # Main pipeline
 # ---------------------------------------------------------------------------
 
+def _build_scenario_forecasts(
+    *,
+    cagr_floors: dict[str, float],
+    blend_cfg: dict,
+    ci_floors: dict,
+    forecast_floor_cfg: dict,
+    segment_y_series: dict,
+    segment_prophet_models: dict,
+    segment_residuals: dict,
+    features_df: pd.DataFrame,
+    effective_feature_cols: list[str],
+    macro_df: pd.DataFrame | None,
+    residuals_df: pd.DataFrame,
+    models_ai_dir: Path,
+    scenario_name: str = "base",
+    save_models: bool = True,
+) -> pd.DataFrame:
+    """
+    Run Step 6+ of the pipeline (blend + calibrate + build DataFrame) for a
+    single scenario. Steps 1-5 (model fitting) are shared across scenarios;
+    only the CAGR floors differ.
+
+    Parameters
+    ----------
+    cagr_floors : dict
+        Per-segment CAGR floor values (already multiplied by scenario multiplier).
+    scenario_name : str
+        Label to tag results with (conservative / base / aggressive).
+    save_models : bool
+        Whether to serialize LightGBM models (only for first/base run).
+
+    Returns
+    -------
+    pd.DataFrame
+        Forecast DataFrame with an added 'scenario' column.
+    """
+    _cagr_floors = cagr_floors
+    _blend_cfg = blend_cfg
+    _ci_floors = ci_floors
+    _forecast_floor_cfg = forecast_floor_cfg
+
+    all_segment_forecasts: dict = {}
+    weights_dict: dict = {}
+    summary_rows = []
+    shap_dict_aggregate: dict | None = None
+    shap_X_aggregate = None
+
+    for seg in SEGMENTS:
+        logger.info(f"[{scenario_name}] Processing segment: {seg}")
+
+        y_series = segment_y_series[seg]
+        prophet_model = segment_prophet_models[seg]
+
+        if len(y_series) < 2:
+            logger.warning(f"  Skipping {seg}: insufficient Y series observations")
+            continue
+
+        # Fit ARIMA for blending (optional — Prophet is primary for short series)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            try:
+                arima_order = select_arima_order(y_series)
+                arima_results = fit_arima_segment(y_series, arima_order)
+                arima_forecast_df = forecast_arima(arima_results, steps=FORECAST_STEPS)
+                arima_forecast_80 = forecast_arima(arima_results, steps=FORECAST_STEPS, alpha=0.20)
+                arima_available = True
+            except Exception as exc:
+                logger.warning(f"  ARIMA fit failed: {exc} — using Prophet only")
+                arima_available = False
+
+        # Prophet forecast
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            prophet_forecast = forecast_prophet(prophet_model, periods=FORECAST_STEPS)
+
+        future_prophet_rows = prophet_forecast.tail(FORECAST_STEPS)
+        prophet_point = future_prophet_rows["yhat"].values
+        prophet_ci80_lower = future_prophet_rows["yhat_lower"].values
+        prophet_ci80_upper = future_prophet_rows["yhat_upper"].values
+        prophet_half_80 = (prophet_ci80_upper - prophet_ci80_lower) / 2
+        _ci_expansion_factor = 1.96 / 1.28
+        prophet_ci95_lower = prophet_point - _ci_expansion_factor * prophet_half_80
+        prophet_ci95_upper = prophet_point + _ci_expansion_factor * prophet_half_80
+
+        if arima_available:
+            mean_col = [c for c in arima_forecast_df.columns if "mean" in str(c).lower()][0]
+            lower_col_80 = [c for c in arima_forecast_80.columns if "lower" in str(c).lower()][0]
+            upper_col_80 = [c for c in arima_forecast_80.columns if "upper" in str(c).lower()][0]
+            lower_col_95 = [c for c in arima_forecast_df.columns if "lower" in str(c).lower()][0]
+            upper_col_95 = [c for c in arima_forecast_df.columns if "upper" in str(c).lower()][0]
+
+            arima_point = arima_forecast_df[mean_col].values
+            arima_ci80_lower = arima_forecast_80[lower_col_80].values
+            arima_ci80_upper = arima_forecast_80[upper_col_80].values
+            arima_ci95_lower = arima_forecast_df[lower_col_95].values
+            arima_ci95_upper = arima_forecast_df[upper_col_95].values
+
+            stat_point = (arima_point + prophet_point) / 2
+            stat_ci80_lower = (arima_ci80_lower + prophet_ci80_lower) / 2
+            stat_ci80_upper = (arima_ci80_upper + prophet_ci80_upper) / 2
+            stat_ci95_lower = (arima_ci95_lower + prophet_ci95_lower) / 2
+            stat_ci95_upper = (arima_ci95_upper + prophet_ci95_upper) / 2
+        else:
+            stat_point = prophet_point
+            stat_ci80_lower = prophet_ci80_lower
+            stat_ci80_upper = prophet_ci80_upper
+            stat_ci95_lower = prophet_ci95_lower
+            stat_ci95_upper = prophet_ci95_upper
+
+        # LightGBM residual correction
+        seg_feats = features_df[features_df["segment"] == seg].sort_values("year").copy()
+
+        if len(seg_feats) >= 3:
+            avail_feat_cols = [c for c in effective_feature_cols if c in seg_feats.columns]
+            X = seg_feats[avail_feat_cols].values
+            y = seg_feats["residual"].values
+
+            # LightGBM CV
+            cv_results = lgbm_cv_for_segment(y, X, n_splits=min(3, len(y) - 1))
+            lgbm_cv_rmse = float(np.mean([fold["rmse"] for fold in cv_results]))
+
+            # Compute Prophet CV-RMSE via expanding-window on quarterly series
+            _y_vals = y_series.values
+            _cv_errors = []
+            _min_train = max(12, len(_y_vals) // 2)
+            _step = 4
+            for _split in range(_min_train, len(_y_vals) - _step + 1, _step):
+                _train_slice = _y_vals[:_split]
+                _test_slice = _y_vals[_split:_split + _step]
+                try:
+                    _train_ds = pd.DataFrame({
+                        "ds": y_series.index[:_split],
+                        "y": _train_slice,
+                    })
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        from prophet import Prophet as _Prophet
+                        _cv_model = _Prophet(
+                            yearly_seasonality=False, weekly_seasonality=False,
+                            daily_seasonality=False, growth="linear",
+                        )
+                        _cv_model.fit(_train_ds)
+                        _cv_future = _cv_model.make_future_dataframe(periods=_step, freq="QS")
+                        _cv_pred = _cv_model.predict(_cv_future)
+                        _pred_vals = _cv_pred["yhat"].values[-_step:]
+                    _cv_errors.extend((_test_slice - _pred_vals).tolist())
+                except Exception:
+                    pass
+
+            if len(_cv_errors) >= 4:
+                stat_rmse = float(np.sqrt(np.mean(np.array(_cv_errors) ** 2)))
+                _rmse_method = "expanding-window CV"
+            else:
+                _prophet_resids = segment_residuals[seg][0].values
+                stat_rmse = float(np.sqrt(np.mean(_prophet_resids ** 2))) if len(_prophet_resids) > 0 else 1.0
+                _rmse_method = "in-sample residuals (CV fallback)"
+
+            stat_weight, lgbm_weight = compute_ensemble_weights(stat_rmse, lgbm_cv_rmse)
+            weights_dict[seg] = {"stat_weight": stat_weight, "lgbm_weight": lgbm_weight}
+
+            logger.info(
+                f"  stat_rmse={stat_rmse:.2f}B ({_rmse_method}), lgbm_cv_rmse={lgbm_cv_rmse:.2f}B, "
+                f"stat_w={stat_weight:.3f}, lgbm_w={lgbm_weight:.3f}"
+            )
+
+            # Fit LightGBM point model
+            point_model = fit_lgbm_point(X, y)
+
+            # Build forecast features for LightGBM
+            last_residuals = seg_feats["residual"].values
+            last_lag1 = float(last_residuals[-1])
+            last_lag2 = float(last_residuals[-2]) if len(last_residuals) >= 2 else 0.0
+            X_future = _build_forecast_features_v11(
+                last_lag1, last_lag2, FORECAST_QUARTERS, macro_df=macro_df
+            )
+            if len(avail_feat_cols) != len(effective_feature_cols):
+                X_future = X_future[:, :len(avail_feat_cols)]
+
+            lgbm_correction = point_model.predict(X_future)
+
+            blended_point = blend_forecasts(
+                stat_pred=stat_point,
+                lgbm_correction=lgbm_correction,
+                lgbm_weight=lgbm_weight,
+            )
+
+            # Fit quantile models for CI
+            try:
+                quantile_models = fit_all_quantile_models(X, y)
+                q_preds = {name: qm.predict(X_future) for name, qm in quantile_models.items()}
+
+                blended_ci80_lower = blend_forecasts(
+                    stat_pred=stat_ci80_lower,
+                    lgbm_correction=q_preds["ci80_lower"],
+                    lgbm_weight=lgbm_weight,
+                )
+                blended_ci80_upper = blend_forecasts(
+                    stat_pred=stat_ci80_upper,
+                    lgbm_correction=q_preds["ci80_upper"],
+                    lgbm_weight=lgbm_weight,
+                )
+                blended_ci95_lower = blend_forecasts(
+                    stat_pred=stat_ci95_lower,
+                    lgbm_correction=q_preds["ci95_lower"],
+                    lgbm_weight=lgbm_weight,
+                )
+                blended_ci95_upper = blend_forecasts(
+                    stat_pred=stat_ci95_upper,
+                    lgbm_correction=q_preds["ci95_upper"],
+                    lgbm_weight=lgbm_weight,
+                )
+            except Exception as exc:
+                logger.warning(f"  Quantile models failed ({exc}) — using stat CIs only")
+                blended_ci80_lower = stat_ci80_lower
+                blended_ci80_upper = stat_ci80_upper
+                blended_ci95_lower = stat_ci95_lower
+                blended_ci95_upper = stat_ci95_upper
+
+            # SHAP (only for first/base scenario to avoid redundant computation)
+            if save_models:
+                try:
+                    from src.inference.shap_analysis import compute_shap_values
+                    X_df = pd.DataFrame(X, columns=avail_feat_cols)
+                    shap_dict_aggregate = compute_shap_values(point_model, X_df, avail_feat_cols)
+                    shap_X_aggregate = X_df
+                except Exception as exc:
+                    logger.warning(f"  SHAP computation failed: {exc}")
+
+            # Serialize models (only once, for base scenario)
+            if save_models:
+                joblib.dump(point_model, models_ai_dir / f"{seg}_lgbm_point.joblib")
+        else:
+            logger.warning(
+                f"  Insufficient feature rows for {seg} ({len(seg_feats)}) — "
+                "using statistical model only (no LightGBM correction)"
+            )
+            blended_point = stat_point
+            blended_ci80_lower = stat_ci80_lower
+            blended_ci80_upper = stat_ci80_upper
+            blended_ci95_lower = stat_ci95_lower
+            blended_ci95_upper = stat_ci95_upper
+            weights_dict[seg] = {"stat_weight": 1.0, "lgbm_weight": 0.0}
+
+        # Analyst consensus calibration with scenario-specific CAGR floors
+        _min_cagr = _cagr_floors.get(seg, 0.15)
+        _last_real = float(y_series.iloc[-1])
+        blended_point_arr = np.array(blended_point).ravel()
+        blended_point_arr_uncalibrated = blended_point_arr.copy()
+
+        if len(blended_point_arr) > 0:
+            _model_end = float(blended_point_arr[-1])
+            _n_forecast_years = 5
+            _model_cagr = (_model_end / _last_real) ** (1.0 / _n_forecast_years) - 1.0 if _last_real > 0 else 0
+            if _model_cagr < _min_cagr:
+                _quarterly_growth = (1 + _min_cagr) ** 0.25
+                _calibrated = np.array([_last_real * _quarterly_growth ** (i + 1) for i in range(FORECAST_STEPS)])
+                _consensus_cagr = _min_cagr
+
+                if _model_cagr < 0:
+                    _model_w = 0.0
+                elif _model_cagr < _min_cagr:
+                    _denom = _model_cagr - _consensus_cagr
+                    if abs(_denom) > 1e-10:
+                        _model_w = (_min_cagr - _consensus_cagr) / _denom
+                        _model_w = max(0.0, float(np.clip(_model_w, 0.0, 0.5)))
+                    else:
+                        _model_w = 0.0
+                else:
+                    _model_w = _blend_cfg["model_weight"]
+
+                _consensus_w = 1.0 - _model_w
+                blended_point_arr = _model_w * blended_point_arr + _consensus_w * _calibrated
+                blended_point = blended_point_arr
+
+                logger.info(
+                    f"  [{scenario_name}] Calibrating {seg}: model CAGR {_model_cagr:.1%} < floor {_min_cagr:.0%}, "
+                    f"adaptive weights model_w={_model_w:.3f} consensus_w={_consensus_w:.3f}"
+                )
+
+        # Bootstrap CIs from Prophet residuals
+        prophet_resids = segment_residuals[seg][0]
+        resid_arr = prophet_resids.values
+        blended_point_arr = np.array(blended_point).ravel()
+
+        if len(resid_arr) >= 5:
+            ci = bootstrap_confidence_intervals(resid_arr, blended_point_arr)
+            blended_ci80_lower = ci["ci80_lower"]
+            blended_ci80_upper = ci["ci80_upper"]
+            blended_ci95_lower = ci["ci95_lower"]
+            blended_ci95_upper = ci["ci95_upper"]
+        else:
+            logger.warning(f"  {seg}: <5 residuals, using parametric CI fallback with elevated floors")
+            sigma = float(np.abs(resid_arr).std()) if len(resid_arr) > 1 else float(blended_point_arr.mean() * 0.20)
+            ci80_half = max(1.28 * sigma, blended_point_arr * 0.30)
+            ci95_half = max(1.96 * sigma, blended_point_arr * 0.50)
+            blended_ci80_lower = blended_point_arr - ci80_half
+            blended_ci80_upper = blended_point_arr + ci80_half
+            blended_ci95_lower = blended_point_arr - ci95_half
+            blended_ci95_upper = blended_point_arr + ci95_half
+
+        # Scale CI bands proportionally with CAGR calibration
+        if len(blended_point_arr_uncalibrated) > 0:
+            calibration_ratio = np.where(
+                blended_point_arr_uncalibrated > 0,
+                blended_point_arr / blended_point_arr_uncalibrated,
+                1.0,
+            )
+            calibration_ratio = np.where(np.isfinite(calibration_ratio), calibration_ratio, 1.0)
+            blended_ci80_lower = blended_ci80_lower * calibration_ratio
+            blended_ci80_upper = blended_ci80_upper * calibration_ratio
+            blended_ci95_lower = blended_ci95_lower * calibration_ratio
+            blended_ci95_upper = blended_ci95_upper * calibration_ratio
+
+        # Enforce minimum CI width floors
+        _ci80_floor = blended_point_arr * _ci_floors["ci80_fraction"]
+        _ci95_floor = blended_point_arr * _ci_floors["ci95_fraction"]
+        _ci80_half_actual = (blended_ci80_upper - blended_ci80_lower) / 2
+        _ci95_half_actual = (blended_ci95_upper - blended_ci95_lower) / 2
+        _ci80_half_final = np.maximum(_ci80_half_actual, _ci80_floor)
+        _ci95_half_final = np.maximum(_ci95_half_actual, _ci95_floor)
+        blended_ci80_lower = blended_point_arr - _ci80_half_final
+        blended_ci80_upper = blended_point_arr + _ci80_half_final
+        blended_ci95_lower = blended_point_arr - _ci95_half_final
+        blended_ci95_upper = blended_point_arr + _ci95_half_final
+
+        # Floor all values to prevent negative forecasts
+        _min_forecast_floor = max(
+            _last_real * _forecast_floor_cfg["last_value_fraction"],
+            _forecast_floor_cfg["absolute_minimum_usd_billions"],
+        )
+        blended_point = np.maximum(np.array(blended_point).ravel(), _min_forecast_floor)
+        blended_ci80_lower = np.maximum(blended_ci80_lower, _min_forecast_floor * 0.5)
+        blended_ci95_lower = np.maximum(blended_ci95_lower, _min_forecast_floor * 0.25)
+
+        # Build historical values from USD Y series (quarterly)
+        prophet_resids = segment_residuals[seg][0]
+        hist_data = _get_historical_usd_values(y_series, prophet_resids, _ci_floors)
+
+        # Combine historical + forecast
+        all_year_quarters = hist_data["year_quarters"] + FORECAST_QUARTERS
+        all_point = np.concatenate([hist_data["point_estimates"], blended_point])
+        all_ci80_lower = np.concatenate([hist_data["ci80_lower"], blended_ci80_lower])
+        all_ci80_upper = np.concatenate([hist_data["ci80_upper"], np.array(blended_ci80_upper).ravel()])
+        all_ci95_lower = np.concatenate([hist_data["ci95_lower"], blended_ci95_lower])
+        all_ci95_upper = np.concatenate([hist_data["ci95_upper"], np.array(blended_ci95_upper).ravel()])
+        all_is_forecast = hist_data["is_forecast"] + [True] * len(FORECAST_QUARTERS)
+
+        all_segment_forecasts[seg] = {
+            "year_quarters": all_year_quarters,
+            "point_estimates": all_point,
+            "ci80_lower": all_ci80_lower,
+            "ci80_upper": all_ci80_upper,
+            "ci95_lower": all_ci95_lower,
+            "ci95_upper": all_ci95_upper,
+            "is_forecast": all_is_forecast,
+        }
+
+        summary_rows.append({
+            "segment": seg,
+            "lgbm_available": len(seg_feats) >= 3,
+            "stat_weight": weights_dict[seg]["stat_weight"],
+            "lgbm_weight": weights_dict[seg]["lgbm_weight"],
+            "y_obs": len(y_series),
+        })
+
+    # Build forecast DataFrame
+    vintage = get_data_vintage(residuals_df)
+    forecast_df = build_forecast_dataframe(all_segment_forecasts, vintage)
+    forecast_df["scenario"] = scenario_name
+
+    return forecast_df, weights_dict, summary_rows, shap_dict_aggregate, shap_X_aggregate
+
+
 def run_pipeline() -> None:
     """
     End-to-end v1.1 ensemble ML pipeline:
@@ -223,8 +596,8 @@ def run_pipeline() -> None:
     3. Regenerate residuals_statistical.parquet from USD-trained models
     4. Assert residuals are in USD billions range (abs max < 50)
     5. Build LightGBM features, fit point + quantile models
-    6. Blend forecasts, build output DataFrame
-    7. Write forecasts_ensemble.parquet
+    6. Blend forecasts, build output DataFrame (per scenario)
+    7. Write forecasts_ensemble.parquet (base only) + forecasts_scenarios.parquet (all 3)
     8. Verify CAGR and log results
     9. Attach source disagreement columns
     10. Run contract assertions
@@ -236,6 +609,7 @@ def run_pipeline() -> None:
     _blend_cfg = _cal["calibration_blend"]
     _ci_floors = _cal["ci_width_floors"]
     _forecast_floor_cfg = _cal["forecast_floor"]
+    _scenarios = _cal.get("scenarios", {})
 
     # Ensure output directories exist
     models_ai_dir = MODELS_DIR / "ai_industry"
@@ -255,9 +629,7 @@ def run_pipeline() -> None:
 
     segment_residuals: dict[str, tuple[pd.Series, str]] = {}
     segment_prophet_models = {}
-    segment_arima_results = {}
     segment_y_series = {}
-    summary_rows = []
     normality_results: dict[str, dict] = {}  # segment -> {stat, p_val, label}
 
     for seg in SEGMENTS:
@@ -375,382 +747,78 @@ def run_pipeline() -> None:
     logger.info(f"  Feature columns: {effective_feature_cols}")
 
     # ---------------------------------------------------------------------------
-    # Step 6: Per-segment LightGBM fit + forecast blend
+    # Step 6: Run scenario engine — conservative / base / aggressive
+    # Each scenario applies a multiplier to the CAGR floors from ai.yaml.
+    # Steps 1-5 (model fitting) are shared; only calibration floors differ.
     # ---------------------------------------------------------------------------
-    logger.info("\n=== Step 6: Per-segment LightGBM fit + forecast blend ===\n")
+    logger.info("\n=== Step 6: Scenario Engine (conservative / base / aggressive) ===\n")
 
-    all_segment_forecasts: dict = {}
-    weights_dict: dict = {}
-    shap_dict_aggregate: dict | None = None
-    shap_X_aggregate = None
+    # Build scenario-specific CAGR floors
+    # Assumption: if scenarios config is missing, fall back to single "base" at 1.3x
+    if not _scenarios:
+        logger.warning("  No scenarios block in ai.yaml — using default base (1.3x)")
+        _scenarios = {"base": {"multiplier": 1.3, "description": "default base"}}
 
-    for seg in SEGMENTS:
-        logger.info(f"Processing segment: {seg}")
+    scenario_order = ["conservative", "base", "aggressive"]
+    scenario_dfs = []
+    base_forecast_df = None
+    base_weights_dict = None
+    base_summary_rows = None
+    base_shap_dict = None
+    base_shap_X = None
 
-        y_series = segment_y_series[seg]
-        prophet_model = segment_prophet_models[seg]
+    # Shared kwargs for _build_scenario_forecasts
+    _shared_kwargs = dict(
+        blend_cfg=_blend_cfg,
+        ci_floors=_ci_floors,
+        forecast_floor_cfg=_forecast_floor_cfg,
+        segment_y_series=segment_y_series,
+        segment_prophet_models=segment_prophet_models,
+        segment_residuals=segment_residuals,
+        features_df=features_df,
+        effective_feature_cols=effective_feature_cols,
+        macro_df=macro_df,
+        residuals_df=residuals_df,
+        models_ai_dir=models_ai_dir,
+    )
 
-        if len(y_series) < 2:
-            logger.warning(f"  Skipping {seg}: insufficient Y series observations")
+    for scenario_name in scenario_order:
+        if scenario_name not in _scenarios:
+            logger.warning(f"  Scenario '{scenario_name}' not in config — skipping")
             continue
-
-        # Fit ARIMA for blending (optional — Prophet is primary for short series)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            try:
-                arima_order = select_arima_order(y_series)
-                arima_results = fit_arima_segment(y_series, arima_order)
-                arima_forecast_df = forecast_arima(arima_results, steps=FORECAST_STEPS)
-                # 80% CI from ARIMA (alpha=0.20)
-                arima_forecast_80 = forecast_arima(arima_results, steps=FORECAST_STEPS, alpha=0.20)
-                arima_available = True
-                logger.info(f"  ARIMA({arima_order}) fitted successfully")
-            except Exception as exc:
-                logger.warning(f"  ARIMA fit failed: {exc} — using Prophet only")
-                arima_available = False
-
-        # Prophet forecast (24 quarterly steps: 2025Q1-2030Q4)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            prophet_forecast = forecast_prophet(prophet_model, periods=FORECAST_STEPS)
-
-        # Extract 2025Q1-2030Q4 Prophet forecasts
-        # forecast_prophet returns history + future; last FORECAST_STEPS rows are forecast
-        future_prophet_rows = prophet_forecast.tail(FORECAST_STEPS)
-        prophet_point = future_prophet_rows["yhat"].values
-        prophet_ci80_lower = future_prophet_rows["yhat_lower"].values
-        prophet_ci80_upper = future_prophet_rows["yhat_upper"].values
-        # Prophet gives 80% CI by default (yhat_lower/upper); use symmetric for 95%
-        prophet_half_80 = (prophet_ci80_upper - prophet_ci80_lower) / 2
-        # Expand 80% CI to 95% CI: z_95/z_80 = 1.96/1.28 ≈ 1.53
-        _ci_expansion_factor = 1.96 / 1.28  # ≈ 1.53 — 95% CI MUST be wider than 80% CI
-        prophet_ci95_lower = prophet_point - _ci_expansion_factor * prophet_half_80
-        prophet_ci95_upper = prophet_point + _ci_expansion_factor * prophet_half_80
-
-        if arima_available:
-            mean_col = [c for c in arima_forecast_df.columns if "mean" in str(c).lower()][0]
-            lower_col_80 = [c for c in arima_forecast_80.columns if "lower" in str(c).lower()][0]
-            upper_col_80 = [c for c in arima_forecast_80.columns if "upper" in str(c).lower()][0]
-            lower_col_95 = [c for c in arima_forecast_df.columns if "lower" in str(c).lower()][0]
-            upper_col_95 = [c for c in arima_forecast_df.columns if "upper" in str(c).lower()][0]
-
-            arima_point = arima_forecast_df[mean_col].values
-            arima_ci80_lower = arima_forecast_80[lower_col_80].values
-            arima_ci80_upper = arima_forecast_80[upper_col_80].values
-            arima_ci95_lower = arima_forecast_df[lower_col_95].values
-            arima_ci95_upper = arima_forecast_df[upper_col_95].values
-
-            # Equal-weight ensemble of ARIMA and Prophet
-            stat_point = (arima_point + prophet_point) / 2
-            stat_ci80_lower = (arima_ci80_lower + prophet_ci80_lower) / 2
-            stat_ci80_upper = (arima_ci80_upper + prophet_ci80_upper) / 2
-            stat_ci95_lower = (arima_ci95_lower + prophet_ci95_lower) / 2
-            stat_ci95_upper = (arima_ci95_upper + prophet_ci95_upper) / 2
-        else:
-            # Prophet only
-            stat_point = prophet_point
-            stat_ci80_lower = prophet_ci80_lower
-            stat_ci80_upper = prophet_ci80_upper
-            stat_ci95_lower = prophet_ci95_lower
-            stat_ci95_upper = prophet_ci95_upper
-
-        # LightGBM residual correction
-        seg_feats = features_df[features_df["segment"] == seg].sort_values("year").copy()
-
-        if len(seg_feats) >= 3:
-            avail_feat_cols = [c for c in effective_feature_cols if c in seg_feats.columns]
-            X = seg_feats[avail_feat_cols].values
-            y = seg_feats["residual"].values
-
-            # LightGBM CV
-            logger.info(f"  Running LightGBM CV ({len(y)} samples, {len(avail_feat_cols)} features)...")
-            cv_results = lgbm_cv_for_segment(y, X, n_splits=min(3, len(y) - 1))
-            lgbm_cv_rmse = float(np.mean([fold["rmse"] for fold in cv_results]))
-
-            # Compute Prophet CV-RMSE via expanding-window on quarterly series
-            # Each fold: train on first N quarters, predict next 4, collect errors
-            _y_vals = y_series.values
-            _cv_errors = []
-            _min_train = max(12, len(_y_vals) // 2)  # at least 12 quarters for training
-            _step = 4  # predict 4 quarters ahead (1 year)
-            for _split in range(_min_train, len(_y_vals) - _step + 1, _step):
-                _train_slice = _y_vals[:_split]
-                _test_slice = _y_vals[_split:_split + _step]
-                try:
-                    _train_ds = pd.DataFrame({
-                        "ds": y_series.index[:_split],
-                        "y": _train_slice,
-                    })
-                    with warnings.catch_warnings():
-                        warnings.simplefilter("ignore")
-                        from prophet import Prophet as _Prophet
-                        _cv_model = _Prophet(
-                            yearly_seasonality=False, weekly_seasonality=False,
-                            daily_seasonality=False, growth="linear",
-                        )
-                        _cv_model.fit(_train_ds)
-                        _cv_future = _cv_model.make_future_dataframe(periods=_step, freq="QS")
-                        _cv_pred = _cv_model.predict(_cv_future)
-                        _pred_vals = _cv_pred["yhat"].values[-_step:]
-                    _cv_errors.extend((_test_slice - _pred_vals).tolist())
-                except Exception:
-                    pass
-
-            if len(_cv_errors) >= 4:
-                stat_rmse = float(np.sqrt(np.mean(np.array(_cv_errors) ** 2)))
-                _rmse_method = "expanding-window CV"
-            else:
-                # Fallback: in-sample residual RMSE
-                _prophet_resids = segment_residuals[seg][0].values
-                stat_rmse = float(np.sqrt(np.mean(_prophet_resids ** 2))) if len(_prophet_resids) > 0 else 1.0
-                _rmse_method = "in-sample residuals (CV fallback)"
-
-            stat_weight, lgbm_weight = compute_ensemble_weights(stat_rmse, lgbm_cv_rmse)
-            weights_dict[seg] = {"stat_weight": stat_weight, "lgbm_weight": lgbm_weight}
-
-            logger.info(
-                f"  stat_rmse={stat_rmse:.2f}B ({_rmse_method}), lgbm_cv_rmse={lgbm_cv_rmse:.2f}B, "
-                f"stat_w={stat_weight:.3f}, lgbm_w={lgbm_weight:.3f}"
-            )
-
-            # Fit LightGBM point model
-            point_model = fit_lgbm_point(X, y)
-
-            # Build forecast features for LightGBM
-            last_residuals = seg_feats["residual"].values
-            last_lag1 = float(last_residuals[-1])
-            last_lag2 = float(last_residuals[-2]) if len(last_residuals) >= 2 else 0.0
-            X_future = _build_forecast_features_v11(
-                last_lag1, last_lag2, FORECAST_QUARTERS, macro_df=macro_df
-            )
-            # Restrict to available columns
-            if len(avail_feat_cols) != len(effective_feature_cols):
-                # Some macro cols missing — use only available cols
-                X_future = X_future[:, :len(avail_feat_cols)]
-
-            lgbm_correction = point_model.predict(X_future)
-
-            # Blended forecast: stat model + LightGBM correction
-            blended_point = blend_forecasts(
-                stat_pred=stat_point,
-                lgbm_correction=lgbm_correction,
-                lgbm_weight=lgbm_weight,
-            )
-
-            # Fit quantile models for CI
-            try:
-                quantile_models = fit_all_quantile_models(X, y)
-                q_preds = {name: qm.predict(X_future) for name, qm in quantile_models.items()}
-
-                blended_ci80_lower = blend_forecasts(
-                    stat_pred=stat_ci80_lower,
-                    lgbm_correction=q_preds["ci80_lower"],
-                    lgbm_weight=lgbm_weight,
-                )
-                blended_ci80_upper = blend_forecasts(
-                    stat_pred=stat_ci80_upper,
-                    lgbm_correction=q_preds["ci80_upper"],
-                    lgbm_weight=lgbm_weight,
-                )
-                blended_ci95_lower = blend_forecasts(
-                    stat_pred=stat_ci95_lower,
-                    lgbm_correction=q_preds["ci95_lower"],
-                    lgbm_weight=lgbm_weight,
-                )
-                blended_ci95_upper = blend_forecasts(
-                    stat_pred=stat_ci95_upper,
-                    lgbm_correction=q_preds["ci95_upper"],
-                    lgbm_weight=lgbm_weight,
-                )
-            except Exception as exc:
-                logger.warning(f"  Quantile models failed ({exc}) — using stat CIs only")
-                blended_ci80_lower = stat_ci80_lower
-                blended_ci80_upper = stat_ci80_upper
-                blended_ci95_lower = stat_ci95_lower
-                blended_ci95_upper = stat_ci95_upper
-
-            # SHAP
-            try:
-                from src.inference.shap_analysis import compute_shap_values
-                X_df = pd.DataFrame(X, columns=avail_feat_cols)
-                shap_dict_aggregate = compute_shap_values(point_model, X_df, avail_feat_cols)
-                shap_X_aggregate = X_df
-            except Exception as exc:
-                logger.warning(f"  SHAP computation failed: {exc}")
-
-            # Serialize models
-            joblib.dump(point_model, models_ai_dir / f"{seg}_lgbm_point.joblib")
-        else:
-            logger.warning(
-                f"  Insufficient feature rows for {seg} ({len(seg_feats)}) — "
-                "using statistical model only (no LightGBM correction)"
-            )
-            blended_point = stat_point
-            blended_ci80_lower = stat_ci80_lower
-            blended_ci80_upper = stat_ci80_upper
-            blended_ci95_lower = stat_ci95_lower
-            blended_ci95_upper = stat_ci95_upper
-            weights_dict[seg] = {"stat_weight": 1.0, "lgbm_weight": 0.0}
-
-        # Analyst consensus calibration: The AI market is in a structural growth phase.
-        # When ARIMA/Prophet produce flat or declining forecasts due to noisy short training
-        # data, we calibrate using a minimum growth rate derived from analyst consensus.
-        _min_cagr = _cagr_floors.get(seg, 0.15)
-        _last_real = float(y_series.iloc[-1])
-        blended_point_arr = np.array(blended_point).ravel()
-        blended_point_arr_uncalibrated = blended_point_arr.copy()
-
-        # Check if model CAGR is below the consensus floor
-        # Compare Q4 2025 (last real) to Q4 2030 (last forecast) for annual CAGR
-        if len(blended_point_arr) > 0:
-            _model_end = float(blended_point_arr[-1])  # Q4 2030
-            _n_forecast_years = 5  # 2026-2030 = 5 years from Q4 2025 baseline
-            _model_cagr = (_model_end / _last_real) ** (1.0 / _n_forecast_years) - 1.0 if _last_real > 0 else 0
-            if _model_cagr < _min_cagr:
-                # Generate a growth path at the minimum CAGR from the last real value
-                # For quarterly: each quarter grows at (1 + annual_cagr)^(1/4)
-                _quarterly_growth = (1 + _min_cagr) ** 0.25
-                _calibrated = np.array([_last_real * _quarterly_growth ** (i + 1) for i in range(FORECAST_STEPS)])
-                _consensus_cagr = _min_cagr  # calibrated path grows at exactly the floor rate
-
-                # Adaptive weighting: ensure blended CAGR >= floor
-                if _model_cagr < 0:
-                    # Model is shrinking — use 100% calibrated path
-                    _model_w = 0.0
-                elif _model_cagr < _min_cagr:
-                    # Compute weight that achieves exactly floor CAGR:
-                    # blend_cagr = model_w * model_cagr + (1 - model_w) * consensus_cagr = floor
-                    # model_w = (floor - consensus_cagr) / (model_cagr - consensus_cagr)
-                    _denom = _model_cagr - _consensus_cagr
-                    if abs(_denom) > 1e-10:
-                        _model_w = (_min_cagr - _consensus_cagr) / _denom
-                        _model_w = max(0.0, float(np.clip(_model_w, 0.0, 0.5)))
-                    else:
-                        _model_w = 0.0
-                else:
-                    _model_w = _blend_cfg["model_weight"]
-
-                _consensus_w = 1.0 - _model_w
-                blended_point_arr = _model_w * blended_point_arr + _consensus_w * _calibrated
-                blended_point = blended_point_arr
-
-                logger.info(
-                    f"  Calibrating {seg}: model CAGR {_model_cagr:.1%} < floor {_min_cagr:.0%}, "
-                    f"adaptive weights model_w={_model_w:.3f} consensus_w={_consensus_w:.3f}"
-                )
-
-        # Bootstrap CIs from Prophet residuals (replaces parametric z-score approach)
-        prophet_resids = segment_residuals[seg][0]
-        resid_arr = prophet_resids.values
-        blended_point_arr = np.array(blended_point).ravel()
-
-        if len(resid_arr) >= 5:
-            ci = bootstrap_confidence_intervals(resid_arr, blended_point_arr)
-            blended_ci80_lower = ci["ci80_lower"]
-            blended_ci80_upper = ci["ci80_upper"]
-            blended_ci95_lower = ci["ci95_lower"]
-            blended_ci95_upper = ci["ci95_upper"]
-        else:
-            # Fallback: parametric CIs with elevated floors for sparse data
-            logger.warning(f"  {seg}: <5 residuals, using parametric CI fallback with elevated floors")
-            sigma = float(np.abs(resid_arr).std()) if len(resid_arr) > 1 else float(blended_point_arr.mean() * 0.20)
-            ci80_half = max(1.28 * sigma, blended_point_arr * 0.30)
-            ci95_half = max(1.96 * sigma, blended_point_arr * 0.50)
-            blended_ci80_lower = blended_point_arr - ci80_half
-            blended_ci80_upper = blended_point_arr + ci80_half
-            blended_ci95_lower = blended_point_arr - ci95_half
-            blended_ci95_upper = blended_point_arr + ci95_half
-
-        # Scale CI bands proportionally with CAGR calibration
-        if len(blended_point_arr_uncalibrated) > 0:
-            calibration_ratio = np.where(
-                blended_point_arr_uncalibrated > 0,
-                blended_point_arr / blended_point_arr_uncalibrated,
-                1.0,
-            )
-            calibration_ratio = np.where(np.isfinite(calibration_ratio), calibration_ratio, 1.0)
-            blended_ci80_lower = blended_ci80_lower * calibration_ratio
-            blended_ci80_upper = blended_ci80_upper * calibration_ratio
-            blended_ci95_lower = blended_ci95_lower * calibration_ratio
-            blended_ci95_upper = blended_ci95_upper * calibration_ratio
-
-        # Enforce minimum CI width floors
-        _ci80_floor = blended_point_arr * _ci_floors["ci80_fraction"]
-        _ci95_floor = blended_point_arr * _ci_floors["ci95_fraction"]
-        _ci80_half_actual = (blended_ci80_upper - blended_ci80_lower) / 2
-        _ci95_half_actual = (blended_ci95_upper - blended_ci95_lower) / 2
-        _ci80_half_final = np.maximum(_ci80_half_actual, _ci80_floor)
-        _ci95_half_final = np.maximum(_ci95_half_actual, _ci95_floor)
-        blended_ci80_lower = blended_point_arr - _ci80_half_final
-        blended_ci80_upper = blended_point_arr + _ci80_half_final
-        blended_ci95_lower = blended_point_arr - _ci95_half_final
-        blended_ci95_upper = blended_point_arr + _ci95_half_final
-
-        # Floor all values to prevent negative forecasts
-        _min_forecast_floor = max(
-            _last_real * _forecast_floor_cfg["last_value_fraction"],
-            _forecast_floor_cfg["absolute_minimum_usd_billions"],
+        multiplier = float(_scenarios[scenario_name]["multiplier"])
+        scaled_floors = {seg: floor * multiplier for seg, floor in _cagr_floors.items()}
+        logger.info(
+            f"  Running scenario '{scenario_name}' (multiplier={multiplier:.1f}x, "
+            f"floors={{{', '.join(f'{s}: {v:.0%}' for s, v in scaled_floors.items())}}})"
         )
-        blended_point = np.maximum(np.array(blended_point).ravel(), _min_forecast_floor)
-        blended_ci80_lower = np.maximum(blended_ci80_lower, _min_forecast_floor * 0.5)
-        blended_ci95_lower = np.maximum(blended_ci95_lower, _min_forecast_floor * 0.25)
 
-        # Build historical values from USD Y series (quarterly)
-        prophet_resids = segment_residuals[seg][0]
-        hist_data = _get_historical_usd_values(y_series, prophet_resids, _ci_floors)
+        # save_models=True only for base scenario (serialize LightGBM + SHAP once)
+        is_base = scenario_name == "base"
+        sc_df, sc_weights, sc_summary, sc_shap, sc_shap_X = _build_scenario_forecasts(
+            cagr_floors=scaled_floors,
+            scenario_name=scenario_name,
+            save_models=is_base,
+            **_shared_kwargs,
+        )
+        scenario_dfs.append(sc_df)
 
-        # Combine historical + forecast
-        all_year_quarters = hist_data["year_quarters"] + FORECAST_QUARTERS
-        all_point = np.concatenate([
-            hist_data["point_estimates"],
-            blended_point,
-        ])
-        all_ci80_lower = np.concatenate([
-            hist_data["ci80_lower"],
-            blended_ci80_lower,
-        ])
-        all_ci80_upper = np.concatenate([
-            hist_data["ci80_upper"],
-            np.array(blended_ci80_upper).ravel(),
-        ])
-        all_ci95_lower = np.concatenate([
-            hist_data["ci95_lower"],
-            blended_ci95_lower,
-        ])
-        all_ci95_upper = np.concatenate([
-            hist_data["ci95_upper"],
-            np.array(blended_ci95_upper).ravel(),
-        ])
-        all_is_forecast = hist_data["is_forecast"] + [True] * len(FORECAST_QUARTERS)
-
-        all_segment_forecasts[seg] = {
-            "year_quarters": all_year_quarters,
-            "point_estimates": all_point,
-            "ci80_lower": all_ci80_lower,
-            "ci80_upper": all_ci80_upper,
-            "ci95_lower": all_ci95_lower,
-            "ci95_upper": all_ci95_upper,
-            "is_forecast": all_is_forecast,
-        }
-
-        summary_rows.append({
-            "segment": seg,
-            "lgbm_available": len(seg_feats) >= 3,
-            "stat_weight": weights_dict[seg]["stat_weight"],
-            "lgbm_weight": weights_dict[seg]["lgbm_weight"],
-            "y_obs": len(y_series),
-        })
-        logger.info(f"  {seg}: {len(all_year_quarters)} total quarters, 2025Q1-2030Q4 forecast added")
+        if is_base:
+            base_forecast_df = sc_df.copy()
+            base_weights_dict = sc_weights
+            base_summary_rows = sc_summary
+            base_shap_dict = sc_shap
+            base_shap_X = sc_shap_X
 
     # ---------------------------------------------------------------------------
-    # Step 7: Build and save forecasts_ensemble.parquet
+    # Step 7: Build and save forecasts_ensemble.parquet (base only, backwards compat)
     # ---------------------------------------------------------------------------
-    logger.info("\n=== Step 7: Building forecasts_ensemble.parquet ===\n")
+    logger.info("\n=== Step 7: Building forecasts_ensemble.parquet (base scenario) ===\n")
 
-    vintage = get_data_vintage(residuals_df)
     forecast_path = DATA_PROCESSED / "forecasts_ensemble.parquet"
 
-    forecast_df = build_forecast_dataframe(all_segment_forecasts, vintage)
+    # Drop the scenario column for backwards compatibility
+    forecast_df = base_forecast_df.drop(columns=["scenario"])
     logger.info(f"  Shape: {forecast_df.shape}")
     logger.info(f"  Columns: {forecast_df.columns.tolist()}")
 
@@ -788,27 +856,33 @@ def run_pipeline() -> None:
     logger.info(f"  Saved: {forecast_path}")
 
     # ---------------------------------------------------------------------------
-    # Step 8: Verify CAGR 2026-2030
+    # Step 7b: Merge all scenarios and save forecasts_scenarios.parquet
+    # ---------------------------------------------------------------------------
+    logger.info("\n=== Step 7b: Building forecasts_scenarios.parquet (all scenarios) ===\n")
+
+    scenarios_df = pd.concat(scenario_dfs, ignore_index=True)
+    scenarios_path = DATA_PROCESSED / "forecasts_scenarios.parquet"
+    scenarios_df.to_parquet(scenarios_path, index=False)
+    logger.info(
+        f"  Saved: {scenarios_path} — shape {scenarios_df.shape}, "
+        f"scenarios: {sorted(scenarios_df['scenario'].unique())}"
+    )
+
+    # ---------------------------------------------------------------------------
+    # Step 8: Verify CAGR 2026-2030 (base scenario)
     # ---------------------------------------------------------------------------
     logger.info("\n=== Step 8: CAGR 2026-2030 Verification (MODL-05) ===\n")
 
     cagr_results = verify_cagr_range(forecast_df, SEGMENTS, start_year=2026, end_year=2030)
-    print("\nCAGR 2026-2030 per segment:")
+    print("\nCAGR 2026-2030 per segment (base scenario):")
     print("-" * 45)
     for seg, cagr in cagr_results.items():
         cagr_pct = cagr * 100
         in_target = "OK (25-40%)" if 25 <= cagr_pct <= 40 else f"OUTSIDE target — {cagr_pct:.1f}%"
         print(f"  {seg:<22} {cagr_pct:>6.1f}% CAGR   {in_target}")
 
-    # Document divergence for CAGR values outside 25-40%
-    # MODL-05 rationale: models trained on real USD anchors with only 2-4 real
-    # observations per segment. Short training windows cause Prophet to extrapolate
-    # recent trends aggressively. ai_hardware (2023-2024 only) and ai_infrastructure
-    # may show higher CAGR due to the GenAI surge in the training window. The wider
-    # 15-60% contract test gate (test_contract_usd_billions.py) captures this.
-
     # ---------------------------------------------------------------------------
-    # Step 10: Contract assertions
+    # Step 10: Contract assertions (base scenario)
     # ---------------------------------------------------------------------------
     logger.info("\n=== Step 10: Contract assertions ===\n")
 
@@ -818,7 +892,6 @@ def run_pipeline() -> None:
     assert (forecast_df["point_estimate_real_2020"] > 1.0).any(), (
         "FAIL: No point_estimate_real_2020 > 1.0 — values appear to be in index units, not USD billions"
     )
-    # Use Q4 values for total market size (annual snapshot)
     total_2026 = forecast_df[(forecast_df["year"] == 2026) & (forecast_df["quarter"] == 4)]["point_estimate_real_2020"].sum()
     logger.info(f"  Total market 2026 (first forecast year): ${total_2026:.0f}B")
     logger.info("  Basic contract assertions: PASSED")
@@ -838,27 +911,27 @@ def run_pipeline() -> None:
     # ---------------------------------------------------------------------------
     # SHAP summary plot
     # ---------------------------------------------------------------------------
-    if shap_dict_aggregate is not None and shap_X_aggregate is not None:
+    if base_shap_dict is not None and base_shap_X is not None:
         try:
             from src.inference.shap_analysis import save_shap_summary_plot
             shap_plot_path = models_ai_dir / "shap_summary.png"
-            save_shap_summary_plot(shap_dict_aggregate, shap_X_aggregate, shap_plot_path)
+            save_shap_summary_plot(base_shap_dict, base_shap_X, shap_plot_path)
             logger.info(f"  SHAP summary plot: {shap_plot_path}")
         except Exception as exc:
             logger.warning(f"  SHAP plot failed: {exc}")
 
-    # Serialize ensemble weights
+    # Serialize ensemble weights (base scenario)
     weights_path = models_ai_dir / "ensemble_weights.joblib"
-    joblib.dump(weights_dict, weights_path)
+    joblib.dump(base_weights_dict, weights_path)
     logger.info(f"  Ensemble weights: {weights_path}")
 
     # ---------------------------------------------------------------------------
-    # Summary table
+    # Summary table (base scenario)
     # ---------------------------------------------------------------------------
     print("\n" + "=" * 75)
     print(f"{'Segment':<22} {'Y obs':>6} {'Stat W':>8} {'LGBM W':>8} {'LightGBM':>10}")
     print("-" * 75)
-    for row in summary_rows:
+    for row in base_summary_rows:
         lgbm_str = "YES" if row["lgbm_available"] else "NO"
         print(
             f"{row['segment']:<22} {row['y_obs']:>6} "
@@ -877,8 +950,27 @@ def run_pipeline() -> None:
             print(f"  {seg:<22} W={nres['stat']:.3f}  p={nres['p_val']:.3f}  {nres['label']}")
     print("=" * 75)
 
-    print(f"\nOutputs:")
+    # Scenario comparison summary
+    print("\n" + "=" * 75)
+    print("Scenario Comparison (Q4 2030 point estimates, nominal USD billions)")
+    print("-" * 75)
+    for scenario_name in scenario_order:
+        sc_slice = scenarios_df[
+            (scenarios_df["scenario"] == scenario_name)
+            & (scenarios_df["year"] == 2030)
+            & (scenarios_df["quarter"] == 4)
+        ]
+        total = sc_slice["point_estimate_nominal"].sum()
+        seg_vals = ", ".join(
+            f"{row['segment'].replace('ai_', '')}: ${row['point_estimate_nominal']:.0f}B"
+            for _, row in sc_slice.iterrows()
+        )
+        print(f"  {scenario_name:<14} Total: ${total:.0f}B  ({seg_vals})")
+    print("=" * 75)
+
+    print("\nOutputs:")
     print(f"  Forecast parquet:   {forecast_path}")
+    print(f"  Scenarios parquet:  {scenarios_path}")
     print(f"  Residuals parquet:  {residuals_path}")
     print(f"  Models directory:   {models_ai_dir}")
     print(f"  Ensemble weights:   {weights_path}")

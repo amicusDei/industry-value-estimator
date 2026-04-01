@@ -345,3 +345,116 @@ class TestPercentileOrder:
                 f"median_real ({row['median_usd_billions_real_2020']:.4f}) > "
                 f"p75_real ({row['p75_usd_billions_real_2020']:.4f})"
             )
+
+
+# ============================================================
+# v2-AP1 tests: Analyst Dispersion Index
+# ============================================================
+
+DISPERSION_PARQUET_PATH = Path(__file__).parent.parent / "data" / "processed" / "analyst_dispersion.parquet"
+
+
+class TestAnalystDispersion:
+    """v2-AP1: Analyst Dispersion Index — IQR, std, min, max per segment/year."""
+
+    def test_analyst_dispersion_shape(self):
+        """compute_analyst_dispersion returns a DataFrame with expected columns and non-zero rows."""
+        from src.ingestion.market_anchors import compute_analyst_dispersion, load_analyst_registry
+        from src.ingestion.market_anchors import _disaggregate_totals
+        from config.settings import DATA_RAW, load_industry_config
+
+        # Reproduce the raw_df as it exists right before aggregation
+        registry_path = DATA_RAW / "market_anchors" / "ai_analyst_registry.yaml"
+        raw_df = load_analyst_registry(registry_path)
+        config = load_industry_config("ai")
+        scope_table = config.get("scope_mapping_table", [])
+        scope_map = {entry["firm"]: entry["scope_coefficient"] for entry in scope_table}
+        raw_df["scope_coefficient"] = raw_df["source_firm"].map(scope_map).fillna(1.0)
+
+        def _apply_scope(row):
+            if row["segment"] == "total":
+                return row["as_published_usd_billions"] * row["scope_coefficient"]
+            seg_coeff = row.get("segment_scope_coefficient")
+            if pd.notna(seg_coeff) and seg_coeff != 1.0:
+                return row["as_published_usd_billions"] * float(seg_coeff)
+            return row["as_published_usd_billions"]
+
+        raw_df["scope_normalized_usd_billions"] = raw_df.apply(_apply_scope, axis=1)
+        segment_ids = [s["id"] for s in config.get("segments", [])]
+        if segment_ids:
+            raw_df = _disaggregate_totals(raw_df, segment_ids)
+
+        disp = compute_analyst_dispersion(raw_df)
+
+        # Check expected columns
+        expected_cols = {
+            "segment", "year", "iqr_usd_billions", "std_usd_billions",
+            "min_usd_billions", "max_usd_billions", "n_sources", "dispersion_ratio",
+        }
+        assert expected_cols.issubset(set(disp.columns)), (
+            f"Missing columns: {expected_cols - set(disp.columns)}"
+        )
+
+        # Non-empty
+        assert len(disp) > 0, "Dispersion DataFrame is empty"
+
+    def test_no_nan_where_sufficient_sources(self):
+        """IQR should not be NaN where n_sources >= 3."""
+        from src.ingestion.market_anchors import compute_analyst_dispersion, load_analyst_registry
+        from src.ingestion.market_anchors import _disaggregate_totals
+        from config.settings import DATA_RAW, load_industry_config
+
+        registry_path = DATA_RAW / "market_anchors" / "ai_analyst_registry.yaml"
+        raw_df = load_analyst_registry(registry_path)
+        config = load_industry_config("ai")
+        scope_table = config.get("scope_mapping_table", [])
+        scope_map = {entry["firm"]: entry["scope_coefficient"] for entry in scope_table}
+        raw_df["scope_coefficient"] = raw_df["source_firm"].map(scope_map).fillna(1.0)
+
+        def _apply_scope(row):
+            if row["segment"] == "total":
+                return row["as_published_usd_billions"] * row["scope_coefficient"]
+            seg_coeff = row.get("segment_scope_coefficient")
+            if pd.notna(seg_coeff) and seg_coeff != 1.0:
+                return row["as_published_usd_billions"] * float(seg_coeff)
+            return row["as_published_usd_billions"]
+
+        raw_df["scope_normalized_usd_billions"] = raw_df.apply(_apply_scope, axis=1)
+        segment_ids = [s["id"] for s in config.get("segments", [])]
+        if segment_ids:
+            raw_df = _disaggregate_totals(raw_df, segment_ids)
+
+        disp = compute_analyst_dispersion(raw_df)
+        sufficient = disp[disp["n_sources"] >= 3]
+        nan_iqr = sufficient["iqr_usd_billions"].isna().sum()
+        assert nan_iqr == 0, f"Found {nan_iqr} NaN IQR values where n_sources >= 3"
+
+    def test_iqr_non_negative(self):
+        """IQR must be >= 0 for all rows."""
+        from src.ingestion.market_anchors import compute_analyst_dispersion, load_analyst_registry
+        from src.ingestion.market_anchors import _disaggregate_totals
+        from config.settings import DATA_RAW, load_industry_config
+
+        registry_path = DATA_RAW / "market_anchors" / "ai_analyst_registry.yaml"
+        raw_df = load_analyst_registry(registry_path)
+        config = load_industry_config("ai")
+        scope_table = config.get("scope_mapping_table", [])
+        scope_map = {entry["firm"]: entry["scope_coefficient"] for entry in scope_table}
+        raw_df["scope_coefficient"] = raw_df["source_firm"].map(scope_map).fillna(1.0)
+
+        def _apply_scope(row):
+            if row["segment"] == "total":
+                return row["as_published_usd_billions"] * row["scope_coefficient"]
+            seg_coeff = row.get("segment_scope_coefficient")
+            if pd.notna(seg_coeff) and seg_coeff != 1.0:
+                return row["as_published_usd_billions"] * float(seg_coeff)
+            return row["as_published_usd_billions"]
+
+        raw_df["scope_normalized_usd_billions"] = raw_df.apply(_apply_scope, axis=1)
+        segment_ids = [s["id"] for s in config.get("segments", [])]
+        if segment_ids:
+            raw_df = _disaggregate_totals(raw_df, segment_ids)
+
+        disp = compute_analyst_dispersion(raw_df)
+        negative_iqr = (disp["iqr_usd_billions"] < 0).sum()
+        assert negative_iqr == 0, f"Found {negative_iqr} negative IQR values"

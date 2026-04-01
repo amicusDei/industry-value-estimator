@@ -136,5 +136,65 @@ export interface DataQualityResponse {
 
 export const getDataQuality = () => fetchJSON<DataQualityResponse>("/api/v1/data-quality");
 
+export interface DispersionRow {
+  segment: string;
+  year: number;
+  iqr_usd_billions: number;
+  std_usd_billions: number;
+  min_usd_billions: number;
+  max_usd_billions: number;
+  n_sources: number;
+  dispersion_ratio: number;
+}
+
+export interface DispersionResponse {
+  data: DispersionRow[];
+  count: number;
+}
+
+export const getDispersion = (segment?: string) =>
+  fetchJSON<DispersionResponse>(
+    `/api/v1/dispersion${segment ? `?segment=${segment}` : ""}`
+  );
+
 export const getExportUrl = (format: "csv" | "excel", segment?: string) =>
   `${API_BASE}/api/v1/export/${format}?valuation=nominal${segment ? `&segment=${segment}` : ""}`;
+
+export interface ScenarioForecastRow {
+  year: number;
+  quarter: number;
+  segment: string;
+  scenario: string;
+  point_estimate: number;
+  ci80_lower: number;
+  ci80_upper: number;
+  ci95_lower: number;
+  ci95_upper: number;
+  is_forecast: boolean;
+}
+
+export interface ScenarioResponse {
+  data: ScenarioForecastRow[];
+  count: number;
+  data_vintage: string | null;
+}
+
+export const getScenarioForecasts = (segment?: string, scenario?: string) =>
+  fetchJSON<ScenarioResponse>(
+    `/api/v1/scenarios?${segment ? `segment=${segment}` : ""}${scenario ? `&scenario=${scenario}` : ""}`
+  );
+
+export interface InsightItem {
+  type: string;
+  text: string;
+  priority: number;
+}
+
+export interface InsightsResponse {
+  data: InsightItem[];
+  count: number;
+  segment: string;
+}
+
+export const getInsights = (segment: string) =>
+  fetchJSON<InsightsResponse>(`/api/v1/insights?segment=${segment}`);

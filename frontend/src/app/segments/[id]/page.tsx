@@ -1,7 +1,11 @@
-import { getForecasts, getSegments, getDataQuality } from "@/lib/api";
+import { getForecasts, getSegments, getDataQuality, getDispersion, getScenarioForecasts, getInsights } from "@/lib/api";
+import type { DispersionRow, ScenarioForecastRow, InsightItem } from "@/lib/api";
 import { formatUsdB } from "@/lib/formatters";
 import TimeseriesChart from "@/components/charts/TimeseriesChart";
+import DispersionChart from "@/components/charts/DispersionChart";
 import ExportButton from "@/components/ExportButton";
+import ScenarioChartSection from "@/components/ScenarioChartSection";
+import InsightPanel from "@/components/InsightPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -16,13 +20,26 @@ export default async function SegmentPage({ params }: { params: Promise<{ id: st
   let segmentName = id;
   let forecasts: Awaited<ReturnType<typeof getForecasts>>["data"] = [];
   let dq: Awaited<ReturnType<typeof getDataQuality>> | null = null;
+  let dispersionData: DispersionRow[] = [];
+  let scenarioData: ScenarioForecastRow[] = [];
+  let insightsData: InsightItem[] = [];
 
   try {
-    const [segRes, fcRes, dqRes] = await Promise.all([getSegments(), getForecasts(id), getDataQuality()]);
+    const [segRes, fcRes, dqRes, dispRes, scenRes, insRes] = await Promise.all([
+      getSegments(),
+      getForecasts(id),
+      getDataQuality(),
+      getDispersion(id),
+      getScenarioForecasts(id).catch(() => ({ data: [] as ScenarioForecastRow[], count: 0, data_vintage: null })),
+      getInsights(id).catch(() => ({ data: [] as InsightItem[], count: 0, segment: id })),
+    ]);
     const seg = segRes.segments.find((s) => s.id === id);
     if (seg) segmentName = seg.display_name;
     forecasts = fcRes.data;
     dq = dqRes;
+    dispersionData = dispRes.data;
+    scenarioData = scenRes.data;
+    insightsData = insRes.data;
   } catch {
     return <div className="text-muted">API offline or segment not found.</div>;
   }
@@ -93,15 +110,35 @@ export default async function SegmentPage({ params }: { params: Promise<{ id: st
         </div>
       )}
 
-      <div className="bg-surface border border-border rounded-lg p-4 mb-8">
-        <TimeseriesChart historical={historical} forecast={forecast} ci80={ci80} ci95={ci95} />
-        <div className="flex gap-6 mt-3 text-xs text-muted">
-          <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-[#64748b] inline-block" /> Historical</span>
-          <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-accent inline-block" /> Forecast</span>
-          <span className="flex items-center gap-1.5"><span className="w-3 h-0 border-t border-dashed border-[#f9731680] inline-block" /> 80% CI</span>
-          <span className="flex items-center gap-1.5"><span className="w-3 h-0 border-t border-dashed border-[#f9731640] inline-block" /> 95% CI</span>
+      <InsightPanel insights={insightsData} />
+
+      {scenarioData.length > 0 ? (
+        <ScenarioChartSection scenarioData={scenarioData} />
+      ) : (
+        <div className="bg-surface border border-border rounded-lg p-4 mb-8">
+          <TimeseriesChart historical={historical} forecast={forecast} ci80={ci80} ci95={ci95} />
+          <div className="flex gap-6 mt-3 text-xs text-muted">
+            <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-[#64748b] inline-block" /> Historical</span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-accent inline-block" /> Forecast</span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-0 border-t border-dashed border-[#f9731680] inline-block" /> 80% CI</span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-0 border-t border-dashed border-[#f9731640] inline-block" /> 95% CI</span>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Analyst Dispersion */}
+      {dispersionData.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-1">Analyst Dispersion</h2>
+          <p className="text-muted text-xs mb-3">
+            Spread of analyst estimates by year. Narrowing IQR signals converging market consensus;
+            widening IQR indicates fundamental uncertainty across research firms.
+          </p>
+          <div className="bg-surface border border-border rounded-lg p-4">
+            <DispersionChart data={dispersionData} />
+          </div>
+        </div>
+      )}
 
       <h2 className="text-lg font-semibold mb-3">Annual Data (Q4 Snapshots)</h2>
       <div className="overflow-x-auto">

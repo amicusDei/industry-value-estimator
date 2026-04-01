@@ -58,3 +58,11 @@ def get_backtesting() -> pd.DataFrame:
 
 def get_market_anchors() -> pd.DataFrame:
     return _load_cached("market_anchors_ai.parquet")
+
+
+def get_dispersion() -> pd.DataFrame:
+    return _load_cached("analyst_dispersion.parquet")
+
+
+def get_scenario_forecasts() -> pd.DataFrame:
+    return _load_cached("forecasts_scenarios.parquet")

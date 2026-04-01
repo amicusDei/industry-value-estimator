@@ -36,6 +36,8 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
+import statsmodels.api as sm
+from scipy import stats
 from prophet import Prophet
 from sklearn.model_selection import TimeSeriesSplit
 

@@ -228,11 +228,28 @@ attribution_subsegment_ratios:
 # ============================================================
 model_calibration:
   # CAGR calibration floors per segment (analyst consensus lower bounds)
+  # These are the baseline (conservative) floors. Scenario multipliers scale them.
   cagr_floors:
     ai_hardware: 0.15    # Statista/Gartner AI semiconductor CAGR
     ai_infrastructure: 0.25  # IDC/GVR AI data center CAGR 24-32%
     ai_software: 0.20    # Precedence Research AI software CAGR
     ai_adoption: 0.15    # GVR/Mordor Intelligence enterprise AI CAGR
+
+  # Scenario definitions for Bull/Base/Bear analysis (v2-AP2)
+  # Each scenario multiplies the base cagr_floors above.
+  # conservative = current analyst consensus floors (1.0x)
+  # base = moderate upside reflecting GenAI acceleration (1.3x)
+  # aggressive = bull case assuming broad AI adoption wave (1.8x)
+  scenarios:
+    conservative:
+      multiplier: 1.0
+      description: "Analyst consensus lower bounds — current CAGR floors unchanged"
+    base:
+      multiplier: 1.3
+      description: "Moderate upside — GenAI acceleration lifts growth 30% above consensus floors"
+    aggressive:
+      multiplier: 1.8
+      description: "Bull case — broad enterprise AI adoption wave drives 80% above consensus floors"
 
   # Model vs consensus blend ratio when model CAGR < floor
   calibration_blend:

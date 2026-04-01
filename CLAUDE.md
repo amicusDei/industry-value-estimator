@@ -111,7 +111,7 @@ ASSUMPTIONS.md, ARCHITECTURE.md, METHODOLOGY.md, README.md alle auf v1.1 konsoli
 
 ## Arbeitsregeln für Claude Code
 
-1. **Lies REFACTORING_PROMPT.md vor jeder Session** — enthält den vollständigen Arbeitsplan mit 4 Arbeitspaketen.
+1. **Lies diese Datei (CLAUDE.md) vollständig vor jeder Session** — enthält Vision, Architektur, Arbeitsplan und Qualitäts-Gates. Für fertige Prompts: siehe PROMPT_TEMPLATES.md. Für priorisierte Tasks: siehe BACKLOG.md.
 
 2. **Ein AP-Schritt pro Session.** Nicht mehrere APs in einer Session mischen. Lieber einen Schritt sauber als drei halb.
 
@@ -125,12 +125,49 @@ ASSUMPTIONS.md, ARCHITECTURE.md, METHODOLOGY.md, README.md alle auf v1.1 konsoli
 
 7. **Contract Tests als Abnahme.** Bevor ein AP als "done" markiert wird, müssen die relevanten Quality-Gates bestehen. Wenn ein Gate failt, ist das AP nicht done — egal was der Code tut.
 
-## Vollständiger Arbeitsplan
+## Strategische Vision (v2 — Research-Intelligence-Plattform)
 
-Siehe `REFACTORING_PROMPT.md` für die detaillierten Arbeitspakete:
-- **AP1:** v1.0 Cleanup, Doku-Konsolidierung, Bug-Fixes
-- **AP2:** Earnings-basierte AI-Revenue-Attribution (Hybrid Regex + LLM)
-- **AP3:** Bloomberg-Style Frontend (Next.js + FastAPI + TradingView Charts)
-- **AP4:** Modellqualität auf institutionelles Niveau (Quarterly-Daten, CI-Fix, Private Integration, Backtesting)
+Das Projekt entwickelt sich vom Forecast-Dashboard zur Research-Intelligence-Plattform. Der Kern-Differentiator gegenüber Bloomberg/FactSet ist die Kombination aus Open-Source-Transparenz, Analyst-Dispersion-als-Signal, und automatisierter Narrativ-Generierung. Ein Analyst bei einer Bank nutzt Bloomberg für Rohdaten — und dieses Tool für Interpretation und Szenario-Analyse.
 
-Ausführungsreihenfolge: AP1 → AP4.1+4.2 → AP2 → AP4.3-4.5 → AP3 → AP4.6
+### Drei Dimensionen die den Unterschied machen
+
+1. **Dispersion als Signal:** Nicht nur Konsensus-Mediane, sondern Inter-Quartile-Range der Analystenschätzungen über Zeit tracken. Sinkende Dispersion = konvergierende Marktmeinung = höhere Forecast-Konfidenz. Steigende Dispersion = fundamentale Unsicherheit.
+
+2. **Scenario Engine:** Bull/Base/Bear-Cases mit jeweils eigenem Parametersatz, pre-computed und vergleichbar. Nicht ein Widget mit Slider, sondern drei vollständige Forecast-Sets die den ganzen Stack durchlaufen.
+
+3. **Automatisierte Narrativ-Ebene:** Zahlen in argumentative Kontexte setzen. "ai_hardware wächst mit 15% CAGR — getrieben durch Hyperscaler-Capex (+40% YoY), sinkende Inference-Kosten, und Edge-Deployment TAM-Erweiterung." Regelbasiert, kein LLM nötig.
+
+### Reference-Class: Was die Top-Player machen
+
+- **Bloomberg ASKB:** Agentenbasierte mehrstufige Research-Workflows, Earnings-Call-Cross-Examination
+- **Visible Alpha:** 250+ Broker, 28M Analyst Line Items, Dispersion-Tracking, 24h Revisions-Freshness
+- **FactSet:** Makro-zu-Mikro Drill-Down, Bottom-Up vs. Top-Down Kreuzvalidierung
+
+## Arbeitsplan
+
+### Phase 1 (abgeschlossen): Foundation
+
+Siehe `REFACTORING_PROMPT.md` für historischen Kontext:
+- ~~**AP1:** v1.0 Cleanup, Doku-Konsolidierung, Bug-Fixes~~ ✓
+- ~~**AP2:** Earnings-basierte AI-Revenue-Attribution~~ ✓
+- ~~**AP4.1-4.5:** Quarterly-Daten, CI-Fix, Private Integration, Backtesting, Scope-Normalisierung~~ ✓
+
+### Phase 2 (aktiv): Research-Intelligence Features
+
+| AP | Feature | Dateien | Abhängig von | Aufwand |
+|---|---|---|---|---|
+| **v2-AP1** | Analyst Dispersion Index | `src/ingestion/market_anchors.py`, `analyst_dispersion.parquet` | — | 2-3h |
+| **v2-AP2** | Scenario Engine (Bull/Base/Bear) | `ai.yaml`, `run_ensemble_pipeline.py`, `forecasts_scenarios.parquet` | — | 3-4h |
+| **v2-AP3** | Dispersion-Visualisierung (Frontend) | `DispersionChart.tsx`, Segment-Pages, API | v2-AP1 | 2-3h |
+| **v2-AP4** | Scenario-Switcher (Frontend) | `ScenarioSelector.tsx`, Segment-Pages, API | v2-AP2 | 2-3h |
+| **v2-AP5** | Automated Insight Narratives | `src/narratives/insight_generator.py`, API, `InsightPanel.tsx` | v2-AP1, v2-AP2 | 3-4h |
+| **v2-AP6** | Bottom-Up Validation (EDGAR Capex) | `src/ingestion/edgar_capex.py`, `company_level_ai_revenue.parquet` | — | 4-5h |
+
+**Ausführungsreihenfolge:** v2-AP1 + v2-AP2 parallel → v2-AP3 + v2-AP4 parallel → v2-AP5 → v2-AP6
+
+### Phase 3 (noch nicht begonnen): Frontend Bloomberg-Grade + Portfolio
+
+- **AP3:** Bloomberg-Style Frontend Finishing (Charts, Dark Mode, Export)
+- Methodology Paper, Docker-Demo, Portfolio-Showcase
+
+Fertige Copy-Paste-Prompts für jedes v2-AP: siehe `PROMPT_TEMPLATES.md`.

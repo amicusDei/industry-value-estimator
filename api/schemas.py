@@ -75,3 +75,50 @@ class SensitivityRow(BaseModel):
 class SensitivityResponse(BaseModel):
     anchor_shift: float
     data: list[SensitivityRow]
+
+
+class DispersionRow(BaseModel):
+    segment: str
+    year: int
+    iqr_usd_billions: float
+    std_usd_billions: float
+    min_usd_billions: float
+    max_usd_billions: float
+    n_sources: int
+    dispersion_ratio: float
+
+
+class DispersionResponse(BaseModel):
+    data: list[DispersionRow]
+    count: int
+
+
+class ScenarioForecastRow(BaseModel):
+    year: int
+    quarter: int
+    segment: str
+    scenario: str
+    point_estimate: float
+    ci80_lower: float
+    ci80_upper: float
+    ci95_lower: float
+    ci95_upper: float
+    is_forecast: bool
+
+
+class ScenarioResponse(BaseModel):
+    data: list[ScenarioForecastRow]
+    count: int
+    data_vintage: str | None
+
+
+class InsightItem(BaseModel):
+    type: str
+    text: str
+    priority: int
+
+
+class InsightsResponse(BaseModel):
+    data: list[InsightItem]
+    count: int
+    segment: str

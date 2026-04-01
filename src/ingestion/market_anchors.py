@@ -101,6 +101,190 @@ def scope_normalize(as_published_usd_billions: float, scope_coefficient: float) 
     return round(as_published_usd_billions * scope_coefficient, 6)
 
 
+def _disaggregate_totals(raw_df: pd.DataFrame, segments: list[str]) -> pd.DataFrame:
+    """
+    Disaggregate total-market entries into segment-level synthetic anchors.
+
+    Uses time-varying proportions computed from existing segment-specific entries.
+    For each total entry, creates len(segments) synthetic rows with
+    disaggregated_from_total=True, preserving source provenance.
+
+    This increases real data density per segment from ~7 to ~15-20 entries,
+    reducing interpolation dominance in the training data.
+
+    Parameters
+    ----------
+    raw_df : pd.DataFrame
+        Raw registry DataFrame with scope_normalized_usd_billions already computed.
+    segments : list[str]
+        List of segment IDs to disaggregate into.
+
+    Returns
+    -------
+    pd.DataFrame
+        Original DataFrame with synthetic segment rows appended.
+    """
+    # Step 1: Compute time-varying segment proportions from direct data
+    seg_only = raw_df[raw_df["segment"].isin(segments)].copy()
+
+    # For each year, compute median per segment and derive proportions
+    year_proportions = {}
+    for year in sorted(seg_only["estimate_year"].unique()):
+        year_data = seg_only[seg_only["estimate_year"] == year]
+        medians = {}
+        for seg in segments:
+            vals = year_data[year_data["segment"] == seg]["scope_normalized_usd_billions"].values
+            if len(vals) > 0:
+                medians[seg] = float(np.median(vals))
+
+        if len(medians) >= 3:  # need at least 3 of 4 segments for meaningful proportions
+            total = sum(medians.values())
+            if total > 0:
+                # Fill missing segment with residual
+                missing = [s for s in segments if s not in medians]
+                if missing:
+                    known_pct = sum(v / total for v in medians.values())
+                    residual = 1.0 - known_pct
+                    for s in missing:
+                        medians[s] = total * (residual / len(missing))
+                    total = sum(medians.values())
+
+                year_proportions[year] = {s: v / total for s, v in medians.items()}
+
+    if not year_proportions:
+        return raw_df  # no segment data to derive proportions from
+
+    # Step 2: For years without proportions, interpolate from nearest known year
+    known_years = sorted(year_proportions.keys())
+
+    def get_proportions(year: int) -> dict[str, float]:
+        if year in year_proportions:
+            return year_proportions[year]
+        # Find nearest known year
+        diffs = [(abs(y - year), y) for y in known_years]
+        nearest = min(diffs, key=lambda x: x[0])[1]
+        return year_proportions[nearest]
+
+    # Step 3: Disaggregate each total entry
+    total_rows = raw_df[raw_df["segment"] == "total"].copy()
+    synthetic_records = []
+
+    for _, row in total_rows.iterrows():
+        year = int(row["estimate_year"])
+        props = get_proportions(year)
+        normalized_total = float(row["scope_normalized_usd_billions"])
+
+        for seg in segments:
+            proportion = props.get(seg, 0.25)  # fallback to equal split
+            synthetic = row.to_dict()
+            synthetic["segment"] = seg
+            synthetic["as_published_usd_billions"] = round(normalized_total * proportion, 2)
+            synthetic["scope_normalized_usd_billions"] = round(normalized_total * proportion, 6)
+            synthetic["scope_coefficient"] = 1.0  # already normalized
+            synthetic["disaggregated_from_total"] = True
+            synthetic["methodology_notes"] = (
+                f"Disaggregated from {row['source_firm']} total estimate "
+                f"(${normalized_total:.1f}B) using {proportion:.1%} segment proportion."
+            )
+            synthetic_records.append(synthetic)
+
+    if synthetic_records:
+        synthetic_df = pd.DataFrame(synthetic_records)
+        # Append to original (keeping original totals for reference)
+        result = pd.concat([raw_df, synthetic_df], ignore_index=True)
+        # Ensure disaggregated_from_total is False for original rows
+        result["disaggregated_from_total"] = result["disaggregated_from_total"].fillna(False)
+        result["disaggregated_from_total"] = result["disaggregated_from_total"].infer_objects(copy=False).astype(bool)
+        return result
+
+    return raw_df
+
+
+def compute_analyst_dispersion(raw_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute dispersion statistics for individual analyst estimates per segment/year.
+
+    Must be called BEFORE median aggregation, while individual estimates are still
+    available. Computes IQR, standard deviation, min, max, n_sources, and
+    dispersion_ratio (IQR / median) for the scope_normalized_usd_billions column.
+
+    Assumption: raw_df has already been scope-normalized and disaggregated, with
+    'total' rows filtered out, so only segment-level entries remain.
+
+    Parameters
+    ----------
+    raw_df : pd.DataFrame
+        DataFrame with individual analyst estimates. Must contain columns:
+        - segment (str)
+        - estimate_year (int)
+        - scope_normalized_usd_billions (float)
+
+    Returns
+    -------
+    pd.DataFrame
+        Dispersion statistics with columns: segment, year, iqr_usd_billions,
+        std_usd_billions, min_usd_billions, max_usd_billions, n_sources,
+        dispersion_ratio.
+    """
+    # Filter to segment-level entries only (no 'total')
+    df = raw_df[raw_df["segment"] != "total"].copy()
+
+    records = []
+    for (year, segment), group in df.groupby(["estimate_year", "segment"], sort=True):
+        values = group["scope_normalized_usd_billions"].values.astype(float)
+        n = len(values)
+
+        q1, median, q3 = np.percentile(values, [25, 50, 75], method="linear")
+        iqr = q3 - q1
+        std = float(np.std(values, ddof=1)) if n >= 2 else 0.0
+        # dispersion_ratio: IQR / Median. Guard against zero median.
+        dispersion_ratio = iqr / median if median > 0 else np.nan
+
+        records.append({
+            "segment": str(segment),
+            "year": int(year),
+            "iqr_usd_billions": float(iqr),
+            "std_usd_billions": float(std),
+            "min_usd_billions": float(np.min(values)),
+            "max_usd_billions": float(np.max(values)),
+            "n_sources": n,
+            "dispersion_ratio": float(dispersion_ratio) if not np.isnan(dispersion_ratio) else np.nan,
+        })
+
+    dispersion_df = pd.DataFrame(records)
+    return dispersion_df
+
+
+def _write_analyst_dispersion(dispersion_df: pd.DataFrame) -> Path:
+    """
+    Write analyst dispersion DataFrame to data/processed/analyst_dispersion.parquet.
+
+    Parameters
+    ----------
+    dispersion_df : pd.DataFrame
+        Output of compute_analyst_dispersion().
+
+    Returns
+    -------
+    Path
+        Path to the written Parquet file.
+    """
+    DATA_PROCESSED.mkdir(parents=True, exist_ok=True)
+    output_path = DATA_PROCESSED / "analyst_dispersion.parquet"
+
+    table = pa.Table.from_pandas(dispersion_df, preserve_index=False)
+    existing_meta = table.schema.metadata or {}
+    custom_meta = {
+        b"source": b"analyst_dispersion",
+        b"description": b"Inter-analyst dispersion statistics per segment/year (v2-AP1)",
+        b"fetched_at": datetime.now(tz=timezone.utc).isoformat().encode(),
+    }
+    table = table.replace_schema_metadata({**existing_meta, **custom_meta})
+    pq.write_table(table, output_path, compression="snappy")
+
+    return output_path
+
+
 def compile_market_anchors(industry_id: str = "ai") -> pd.DataFrame:
     """
     Full analyst estimate compilation pipeline.
@@ -152,21 +336,40 @@ def compile_market_anchors(industry_id: str = "ai") -> pd.DataFrame:
     raw_df["scope_coefficient"] = raw_df["source_firm"].map(scope_map).fillna(1.0)
 
     # Step 4: Compute scope-normalized estimate
-    # IMPORTANT: Scope coefficients only apply to "total" market estimates.
-    # Segment-specific entries (ai_hardware, ai_software, etc.) already represent
-    # that specific segment's scope — applying a total-market coefficient would
-    # distort them (e.g., Gartner's $44B AI semiconductor estimate × 0.18 = $7.9B is wrong).
-    raw_df["scope_normalized_usd_billions"] = raw_df.apply(
-        lambda row: row["as_published_usd_billions"] * row["scope_coefficient"]
-        if row["segment"] == "total"
-        else row["as_published_usd_billions"],  # no scope adjustment for segment-specific entries
-        axis=1,
-    )
+    # Total-market estimates use firm-level scope_coefficient from scope_mapping_table.
+    # Segment-specific entries default to 1.0 (no adjustment) UNLESS they carry a
+    # per-entry segment_scope_coefficient in the YAML — used when a firm's segment
+    # definition is known to be materially broader/narrower than ours (e.g., Precedence
+    # Research ai_software includes infrastructure software → coefficient 0.40).
+    def _apply_scope(row):
+        if row["segment"] == "total":
+            return row["as_published_usd_billions"] * row["scope_coefficient"]
+        # Check for per-entry segment scope coefficient (overrides default 1.0)
+        seg_coeff = row.get("segment_scope_coefficient")
+        if pd.notna(seg_coeff) and seg_coeff != 1.0:
+            return row["as_published_usd_billions"] * float(seg_coeff)
+        return row["as_published_usd_billions"]
 
-    # Step 5: Determine estimated_flag — True if estimate_year > publication_year (forward forecast)
+    raw_df["scope_normalized_usd_billions"] = raw_df.apply(_apply_scope, axis=1)
+
+    # Step 5: Disaggregate total-market entries into segment-level synthetic anchors
+    # This increases data density per segment from ~7 to ~15-20 real data points.
+    segment_ids = [s["id"] for s in config.get("segments", [])]
+    if segment_ids:
+        raw_df = _disaggregate_totals(raw_df, segment_ids)
+
+    # Step 5b: Determine estimated_flag — True if estimate_year > publication_year (forward forecast)
     raw_df["estimated_flag"] = raw_df["estimate_year"] > raw_df["publication_year"]
 
     # Step 6: Group by (estimate_year, segment) and compute percentile statistics
+    # Filter to segment-level entries only (totals are kept for reference but not aggregated)
+    raw_df = raw_df[raw_df["segment"] != "total"].copy()
+
+    # Step 6a: Compute and write analyst dispersion BEFORE median aggregation
+    # (v2-AP1: Analyst Dispersion Index — captures IQR, std, min, max per segment/year)
+    dispersion_df = compute_analyst_dispersion(raw_df)
+    _write_analyst_dispersion(dispersion_df)
+
     records = []
     for (estimate_year, segment), group in raw_df.groupby(["estimate_year", "segment"], sort=True):
         values = group["scope_normalized_usd_billions"].values.astype(float)
