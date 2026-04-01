@@ -268,3 +268,83 @@ export const getValidation = (segment?: string) =>
   fetchJSON<ValidationResponse>(
     `/api/v1/validation${segment ? `?segment=${segment}` : ""}`
   );
+
+// --- Bubble Index ---
+
+export interface BubbleIndexRow {
+  year: number;
+  half: number;
+  capex_intensity_score: number;
+  concentration_score: number;
+  dc_build_score: number;
+  credit_score: number;
+  shadow_score: number;
+  enterprise_roi_score: number;
+  productivity_gap_score: number;
+  dotcom_parallel_score: number;
+  composite_score: number;
+  classification: string;
+  capex_intensity_ratio: number;
+  top5_pct_sp500: number;
+  dc_yoy_growth_pct: number;
+  credit_total_usd_b: number;
+  bis_risk_rating: number;
+  revenue_and_cost_impact_pct: number;
+  us_productivity_growth_pct: number;
+  ai_capex_growth_yoy_pct: number;
+}
+
+export interface DotcomParallelPoint {
+  year: number;
+  half?: number;
+  years_into_cycle: number;
+  composite_score: number;
+}
+
+export interface DotcomParallelResponse {
+  ai: DotcomParallelPoint[];
+  dotcom: DotcomParallelPoint[];
+}
+
+export interface DCRiskBuildRate {
+  year: number;
+  half: number;
+  new_capacity_mw: number;
+  yoy_growth_pct: number;
+  cumulative_mw: number;
+}
+
+export interface DCRiskCreditStack {
+  year: number;
+  half: number;
+  bonds_usd_b: number;
+  private_credit_usd_b: number;
+  off_balance_sheet_usd_b: number;
+  total_usd_b: number;
+}
+
+export interface DCRiskRefinancing {
+  year: number;
+  maturing_bonds_usd_b: number;
+  maturing_private_credit_usd_b: number;
+}
+
+export interface DCRiskResponse {
+  build_rate: DCRiskBuildRate[];
+  credit_stack: DCRiskCreditStack[];
+  refinancing_calendar: DCRiskRefinancing[];
+  asset_life_mismatch: {
+    dc_assumed_life_years: number;
+    gpu_upgrade_cycle_months: number;
+    mismatch_factor: number;
+  };
+}
+
+export const getBubbleIndex = () =>
+  fetchJSON<BubbleIndexRow[]>("/api/v1/bubble-index");
+
+export const getDotcomParallel = () =>
+  fetchJSON<DotcomParallelResponse>("/api/v1/bubble-index/dotcom-parallel");
+
+export const getDCRisk = () =>
+  fetchJSON<DCRiskResponse>("/api/v1/bubble-index/dc-risk");

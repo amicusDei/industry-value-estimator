@@ -1,0 +1,119 @@
+{
+  "ai": [
+    {
+      "year": 2020,
+      "half": 1,
+      "years_into_cycle": 0,
+      "composite_score": 14.7
+    },
+    {
+      "year": 2020,
+      "half": 2,
+      "years_into_cycle": 0.5,
+      "composite_score": 16.3
+    },
+    {
+      "year": 2021,
+      "half": 1,
+      "years_into_cycle": 1,
+      "composite_score": 17.1
+    },
+    {
+      "year": 2021,
+      "half": 2,
+      "years_into_cycle": 1.5,
+      "composite_score": 28.8
+    },
+    {
+      "year": 2022,
+      "half": 1,
+      "years_into_cycle": 2,
+      "composite_score": 25.7
+    },
+    {
+      "year": 2022,
+      "half": 2,
+      "years_into_cycle": 2.5,
+      "composite_score": 27.9
+    },
+    {
+      "year": 2023,
+      "half": 1,
+      "years_into_cycle": 3,
+      "composite_score": 36.6
+    },
+    {
+      "year": 2023,
+      "half": 2,
+      "years_into_cycle": 3.5,
+      "composite_score": 45.0
+    },
+    {
+      "year": 2024,
+      "half": 1,
+      "years_into_cycle": 4,
+      "composite_score": 48.0
+    },
+    {
+      "year": 2024,
+      "half": 2,
+      "years_into_cycle": 4.5,
+      "composite_score": 56.3
+    },
+    {
+      "year": 2025,
+      "half": 1,
+      "years_into_cycle": 5,
+      "composite_score": 60.1
+    },
+    {
+      "year": 2025,
+      "half": 2,
+      "years_into_cycle": 5.5,
+      "composite_score": 60.1
+    },
+    {
+      "year": 2026,
+      "half": 1,
+      "years_into_cycle": 6,
+      "composite_score": 63.1
+    }
+  ],
+  "dotcom": [
+    {
+      "year": 1996,
+      "years_into_cycle": 0,
+      "composite_score": 15.3
+    },
+    {
+      "year": 1997,
+      "years_into_cycle": 1,
+      "composite_score": 26.4
+    },
+    {
+      "year": 1998,
+      "years_into_cycle": 2,
+      "composite_score": 42.1
+    },
+    {
+      "year": 1999,
+      "years_into_cycle": 3,
+      "composite_score": 64.6
+    },
+    {
+      "year": 2000,
+      "years_into_cycle": 4,
+      "composite_score": 66.0
+    },
+    {
+      "year": 2001,
+      "years_into_cycle": 5,
+      "composite_score": 14.8
+    },
+    {
+      "year": 2002,
+      "years_into_cycle": 6,
+      "composite_score": 4.8
+    }
+  ]
+}

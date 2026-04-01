@@ -70,3 +70,7 @@ def get_scenario_forecasts() -> pd.DataFrame:
 
 def get_bottom_up_validation() -> pd.DataFrame:
     return _load_cached("bottom_up_validation.parquet")
+
+
+def get_bubble_index() -> pd.DataFrame:
+    return _load_cached("bubble_index.parquet")

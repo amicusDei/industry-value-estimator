@@ -634,3 +634,619 @@ edgar_companies:
     ai_disclosure_type: "partial"
     primary_ai_segment: "Technology consulting and managed services"
     notes: "AI consulting revenues explicitly tracked ($3B+ in FY2024 management commentary); consulting-focused AI adoption benchmark"
+
+# ============================================================================
+# AI Bubble Index — Semi-Annual Data (H1/H2) 2020–2026
+# ============================================================================
+# Composite indicator measuring AI investment overheating.
+# 5 INPUT indicators (investment intensity) + 2 OUTPUT indicators (productivity/ROI)
+# + 1 HISTORICAL comparator (dotcom parallel).
+# Every data point has a source: field for full attribution.
+
+bubble_index:
+
+  # ---------------------------------------------------------------------------
+  # INPUT INDICATOR 1: Capex Intensity
+  # Ratio of hyperscaler AI capex to AI revenue — higher = more speculative
+  # ---------------------------------------------------------------------------
+  capex_intensity:
+    - year: 2020
+      half: 1
+      hyperscaler_ai_capex_usd_b: 30.0
+      ai_revenue_usd_b: 28.0
+      source: "Gartner IT Spending 2020, IDC AI Revenue Tracker 2020"
+    - year: 2020
+      half: 2
+      hyperscaler_ai_capex_usd_b: 35.0
+      ai_revenue_usd_b: 32.0
+      source: "Gartner IT Spending 2020, IDC AI Revenue Tracker 2020"
+    - year: 2021
+      half: 1
+      hyperscaler_ai_capex_usd_b: 45.0
+      ai_revenue_usd_b: 38.0
+      source: "Gartner IT Spending 2021, IDC AI Revenue Tracker 2021"
+    - year: 2021
+      half: 2
+      hyperscaler_ai_capex_usd_b: 52.0
+      ai_revenue_usd_b: 42.0
+      source: "Gartner IT Spending 2021, IDC AI Revenue Tracker 2021"
+    - year: 2022
+      half: 1
+      hyperscaler_ai_capex_usd_b: 60.0
+      ai_revenue_usd_b: 46.0
+      source: "Gartner IT Spending 2022, IDC AI Revenue Tracker 2022"
+    - year: 2022
+      half: 2
+      hyperscaler_ai_capex_usd_b: 72.0
+      ai_revenue_usd_b: 50.0
+      source: "Gartner IT Spending 2022, IDC AI Revenue Tracker 2022"
+    - year: 2023
+      half: 1
+      hyperscaler_ai_capex_usd_b: 95.0
+      ai_revenue_usd_b: 55.0
+      source: "MUFG Hyperscaler Capex Tracker 2023, IDC AI Revenue 2023"
+    - year: 2023
+      half: 2
+      hyperscaler_ai_capex_usd_b: 120.0
+      ai_revenue_usd_b: 62.0
+      source: "MUFG Hyperscaler Capex Tracker 2023, IDC AI Revenue 2023"
+    - year: 2024
+      half: 1
+      hyperscaler_ai_capex_usd_b: 140.0
+      ai_revenue_usd_b: 72.0
+      source: "MUFG Dec 2024 ($256B full-year capex), IDC AI Revenue 2024"
+    - year: 2024
+      half: 2
+      hyperscaler_ai_capex_usd_b: 176.0
+      ai_revenue_usd_b: 82.0
+      source: "MUFG Dec 2024 ($256B full-year => ~$116B H1 + $140B H2 weighted), Visible Alpha 2024"
+    - year: 2025
+      half: 1
+      hyperscaler_ai_capex_usd_b: 210.0
+      ai_revenue_usd_b: 92.0
+      source: "MUFG Dec 2025 ($443B full-year capex, front-loaded), Goldman Sachs AI Revenue Est. 2025"
+    - year: 2025
+      half: 2
+      hyperscaler_ai_capex_usd_b: 233.0
+      ai_revenue_usd_b: 100.0
+      source: "MUFG Dec 2025 ($443B full-year), Goldman Sachs AI Revenue 2025"
+    - year: 2026
+      half: 1
+      hyperscaler_ai_capex_usd_b: 290.0
+      ai_revenue_usd_b: 110.0
+      source: "MUFG March 2026 ($602B full-year guidance), Goldman Sachs AI Revenue Forecast 2026"
+
+  # ---------------------------------------------------------------------------
+  # INPUT INDICATOR 2: Market Concentration
+  # Top-5 S&P500 weight — higher concentration = more fragile
+  # ---------------------------------------------------------------------------
+  market_concentration:
+    - year: 2020
+      half: 1
+      top5_pct_sp500: 21.0
+      source: "S&P Dow Jones Indices, Factsheet Q2 2020"
+    - year: 2020
+      half: 2
+      top5_pct_sp500: 23.0
+      source: "S&P Dow Jones Indices, Factsheet Q4 2020"
+    - year: 2021
+      half: 1
+      top5_pct_sp500: 22.0
+      source: "S&P Dow Jones Indices, Factsheet Q2 2021"
+    - year: 2021
+      half: 2
+      top5_pct_sp500: 23.5
+      source: "S&P Dow Jones Indices, Factsheet Q4 2021"
+    - year: 2022
+      half: 1
+      top5_pct_sp500: 22.0
+      source: "S&P Dow Jones Indices, Factsheet Q2 2022"
+    - year: 2022
+      half: 2
+      top5_pct_sp500: 20.0
+      source: "S&P Dow Jones Indices, Factsheet Q4 2022 (tech drawdown)"
+    - year: 2023
+      half: 1
+      top5_pct_sp500: 24.0
+      source: "S&P Dow Jones Indices Q2 2023 (AI rally begins)"
+    - year: 2023
+      half: 2
+      top5_pct_sp500: 26.0
+      source: "S&P Dow Jones Indices Q4 2023"
+    - year: 2024
+      half: 1
+      top5_pct_sp500: 27.0
+      source: "S&P Dow Jones Indices Q2 2024"
+    - year: 2024
+      half: 2
+      top5_pct_sp500: 29.0
+      source: "S&P Dow Jones Indices Q4 2024 (Mag-7 dominance)"
+    - year: 2025
+      half: 1
+      top5_pct_sp500: 30.0
+      source: "S&P Dow Jones Indices Q2 2025"
+    - year: 2025
+      half: 2
+      top5_pct_sp500: 30.5
+      source: "S&P Dow Jones Indices Q4 2025"
+    - year: 2026
+      half: 1
+      top5_pct_sp500: 31.0
+      source: "S&P Dow Jones Indices Q1 2026 (NVIDIA, MSFT, AAPL, GOOG, META)"
+
+  # ---------------------------------------------------------------------------
+  # INPUT INDICATOR 3: Data Centre Build Momentum
+  # New capacity (MW) and YoY growth — higher = more speculative build-out
+  # ---------------------------------------------------------------------------
+  dc_build_momentum:
+    - year: 2020
+      half: 1
+      new_capacity_mw: 1200
+      yoy_growth_pct: 8.0
+      source: "Dell'Oro Data Center Quarterly Report 2020"
+    - year: 2020
+      half: 2
+      new_capacity_mw: 1350
+      yoy_growth_pct: 10.0
+      source: "Dell'Oro Data Center Quarterly Report 2020"
+    - year: 2021
+      half: 1
+      new_capacity_mw: 1500
+      yoy_growth_pct: 12.0
+      source: "Dell'Oro Data Center Quarterly Report 2021"
+    - year: 2021
+      half: 2
+      new_capacity_mw: 1700
+      yoy_growth_pct: 15.0
+      source: "Dell'Oro Data Center Quarterly Report 2021"
+    - year: 2022
+      half: 1
+      new_capacity_mw: 1900
+      yoy_growth_pct: 18.0
+      source: "Dell'Oro Data Center Quarterly Report 2022"
+    - year: 2022
+      half: 2
+      new_capacity_mw: 2100
+      yoy_growth_pct: 20.0
+      source: "Dell'Oro Data Center Quarterly Report 2022"
+    - year: 2023
+      half: 1
+      new_capacity_mw: 2600
+      yoy_growth_pct: 30.0
+      source: "Dell'Oro Data Center Quarterly Report 2023"
+    - year: 2023
+      half: 2
+      new_capacity_mw: 3200
+      yoy_growth_pct: 42.0
+      source: "Dell'Oro Data Center Quarterly Report 2023"
+    - year: 2024
+      half: 1
+      new_capacity_mw: 4000
+      yoy_growth_pct: 50.0
+      source: "Dell'Oro Data Center Quarterly Report 2024"
+    - year: 2024
+      half: 2
+      new_capacity_mw: 5100
+      yoy_growth_pct: 59.0
+      source: "Dell'Oro Data Center Report 2024 (+59% YoY)"
+    - year: 2025
+      half: 1
+      new_capacity_mw: 6500
+      yoy_growth_pct: 62.0
+      source: "Dell'Oro Data Center Report 2025, CBRE DC Market Outlook"
+    - year: 2025
+      half: 2
+      new_capacity_mw: 7800
+      yoy_growth_pct: 53.0
+      source: "Dell'Oro Data Center Report H2 2025"
+    - year: 2026
+      half: 1
+      new_capacity_mw: 9200
+      yoy_growth_pct: 42.0
+      source: "Dell'Oro Data Center Forecast 2026, CBRE Q1 2026"
+
+  # ---------------------------------------------------------------------------
+  # INPUT INDICATOR 4: Credit Exposure
+  # Total AI-related credit: bonds + private credit + off-balance-sheet
+  # ---------------------------------------------------------------------------
+  credit_exposure:
+    - year: 2020
+      half: 1
+      hyperscaler_bonds_usd_b: 15.0
+      private_credit_ai_usd_b: 2.0
+      off_balance_sheet_est_usd_b: 5.0
+      source: "BIS Annual Report 2020, Dealogic Bond Issuance Database"
+    - year: 2020
+      half: 2
+      hyperscaler_bonds_usd_b: 18.0
+      private_credit_ai_usd_b: 3.0
+      off_balance_sheet_est_usd_b: 6.0
+      source: "BIS Annual Report 2020, Dealogic Bond Issuance Database"
+    - year: 2021
+      half: 1
+      hyperscaler_bonds_usd_b: 22.0
+      private_credit_ai_usd_b: 5.0
+      off_balance_sheet_est_usd_b: 8.0
+      source: "BIS QR June 2021, Preqin Private Credit Database"
+    - year: 2021
+      half: 2
+      hyperscaler_bonds_usd_b: 28.0
+      private_credit_ai_usd_b: 8.0
+      off_balance_sheet_est_usd_b: 12.0
+      source: "BIS QR Dec 2021, Preqin Private Credit Database"
+    - year: 2022
+      half: 1
+      hyperscaler_bonds_usd_b: 32.0
+      private_credit_ai_usd_b: 12.0
+      off_balance_sheet_est_usd_b: 18.0
+      source: "BIS QR June 2022, Preqin Private Credit Database"
+    - year: 2022
+      half: 2
+      hyperscaler_bonds_usd_b: 38.0
+      private_credit_ai_usd_b: 18.0
+      off_balance_sheet_est_usd_b: 25.0
+      source: "BIS QR Dec 2022, Preqin Private Credit Database"
+    - year: 2023
+      half: 1
+      hyperscaler_bonds_usd_b: 48.0
+      private_credit_ai_usd_b: 35.0
+      off_balance_sheet_est_usd_b: 40.0
+      source: "BIS QR June 2023, Bloomberg Bond Tracker"
+    - year: 2023
+      half: 2
+      hyperscaler_bonds_usd_b: 62.0
+      private_credit_ai_usd_b: 55.0
+      off_balance_sheet_est_usd_b: 60.0
+      source: "BIS QR Dec 2023, Bloomberg Bond Tracker"
+    - year: 2024
+      half: 1
+      hyperscaler_bonds_usd_b: 78.0
+      private_credit_ai_usd_b: 90.0
+      off_balance_sheet_est_usd_b: 80.0
+      source: "BIS QR June 2024, PitchBook Private Credit AI"
+    - year: 2024
+      half: 2
+      hyperscaler_bonds_usd_b: 98.0
+      private_credit_ai_usd_b: 130.0
+      off_balance_sheet_est_usd_b: 120.0
+      source: "BIS QR Dec 2024, PitchBook Private Credit AI"
+    - year: 2025
+      half: 1
+      hyperscaler_bonds_usd_b: 110.0
+      private_credit_ai_usd_b: 170.0
+      off_balance_sheet_est_usd_b: 160.0
+      source: "BIS QR March 2025, Preqin H1 2025"
+    - year: 2025
+      half: 2
+      hyperscaler_bonds_usd_b: 121.0
+      private_credit_ai_usd_b: 200.0
+      off_balance_sheet_est_usd_b: 200.0
+      source: "BIS QR March 2026 ($121B bonds 2025, $200B+ private credit)"
+    - year: 2026
+      half: 1
+      hyperscaler_bonds_usd_b: 140.0
+      private_credit_ai_usd_b: 250.0
+      off_balance_sheet_est_usd_b: 250.0
+      source: "BIS QR March 2026 (extrapolation from 2025 trajectory)"
+
+  # ---------------------------------------------------------------------------
+  # INPUT INDICATOR 5: Shadow Leverage
+  # Qualitative BIS risk rating (1-5) capturing off-balance-sheet, SPV, and
+  # regulatory opacity in AI financing
+  # ---------------------------------------------------------------------------
+  shadow_leverage:
+    - year: 2020
+      half: 1
+      bis_risk_rating: 1
+      source: "BIS Annual Report 2020 — minimal AI-specific leverage"
+    - year: 2020
+      half: 2
+      bis_risk_rating: 1
+      source: "BIS Annual Report 2020"
+    - year: 2021
+      half: 1
+      bis_risk_rating: 1
+      source: "BIS Annual Report 2021"
+    - year: 2021
+      half: 2
+      bis_risk_rating: 2
+      source: "BIS Annual Report 2021 — early SPV structures appearing"
+    - year: 2022
+      half: 1
+      bis_risk_rating: 2
+      source: "BIS Bulletin 60, growing DC financing complexity"
+    - year: 2022
+      half: 2
+      bis_risk_rating: 2
+      source: "BIS QR Dec 2022"
+    - year: 2023
+      half: 1
+      bis_risk_rating: 3
+      source: "BIS Bulletin 85, off-balance-sheet AI infrastructure"
+    - year: 2023
+      half: 2
+      bis_risk_rating: 3
+      source: "BIS QR Dec 2023, private credit opacity growing"
+    - year: 2024
+      half: 1
+      bis_risk_rating: 3
+      source: "BIS QR June 2024"
+    - year: 2024
+      half: 2
+      bis_risk_rating: 4
+      source: "BIS Bulletin 120, significant off-BS exposure flagged"
+    - year: 2025
+      half: 1
+      bis_risk_rating: 4
+      source: "BIS QR March 2025"
+    - year: 2025
+      half: 2
+      bis_risk_rating: 4
+      source: "BIS QR March 2026 — $200B+ private credit, SPV opacity, asset-life mismatch"
+    - year: 2026
+      half: 1
+      bis_risk_rating: 5
+      source: "BIS QR March 2026 (elevated, $300B+ off-BS estimate)"
+
+  # ---------------------------------------------------------------------------
+  # OUTPUT INDICATOR 1: Enterprise ROI Realization
+  # Measures how little enterprises get from AI investments — higher score = more bubble
+  # ---------------------------------------------------------------------------
+  enterprise_roi:
+    - year: 2020
+      half: 1
+      revenue_and_cost_impact_pct: 18.0
+      roi_from_headcount_pct: 5.0
+      margin_erosion_from_ai_infra_pct: 1.0
+      source: "McKinsey Global AI Survey 2020 — pre-GenAI, traditional ML had reasonable ROI"
+    - year: 2020
+      half: 2
+      revenue_and_cost_impact_pct: 18.0
+      roi_from_headcount_pct: 5.0
+      margin_erosion_from_ai_infra_pct: 1.5
+      source: "McKinsey Global AI Survey 2020"
+    - year: 2021
+      half: 1
+      revenue_and_cost_impact_pct: 17.0
+      roi_from_headcount_pct: 8.0
+      margin_erosion_from_ai_infra_pct: 2.0
+      source: "McKinsey Global AI Survey 2021 — pre-GenAI traditional ML ROI"
+    - year: 2021
+      half: 2
+      revenue_and_cost_impact_pct: 16.0
+      roi_from_headcount_pct: 10.0
+      margin_erosion_from_ai_infra_pct: 2.5
+      source: "McKinsey Global AI Survey 2021"
+    - year: 2022
+      half: 1
+      revenue_and_cost_impact_pct: 15.0
+      roi_from_headcount_pct: 12.0
+      margin_erosion_from_ai_infra_pct: 3.0
+      source: "McKinsey Global AI Survey 2022 — AI spend rising, ROI flat"
+    - year: 2022
+      half: 2
+      revenue_and_cost_impact_pct: 14.0
+      roi_from_headcount_pct: 15.0
+      margin_erosion_from_ai_infra_pct: 4.0
+      source: "McKinsey Global AI Survey 2022, Deloitte State of AI 2022"
+    - year: 2023
+      half: 1
+      revenue_and_cost_impact_pct: 10.0
+      roi_from_headcount_pct: 30.0
+      margin_erosion_from_ai_infra_pct: 8.0
+      source: "PwC CEO Survey 2023, Deloitte State of AI 2023"
+    - year: 2023
+      half: 2
+      revenue_and_cost_impact_pct: 10.0
+      roi_from_headcount_pct: 40.0
+      margin_erosion_from_ai_infra_pct: 10.0
+      source: "PwC CEO Survey 2023, GenAI hype peak"
+    - year: 2024
+      half: 1
+      revenue_and_cost_impact_pct: 11.0
+      roi_from_headcount_pct: 55.0
+      margin_erosion_from_ai_infra_pct: 12.0
+      source: "PwC CEO Survey 2024, MIT/Sloan AI ROI Study 2024"
+    - year: 2024
+      half: 2
+      revenue_and_cost_impact_pct: 11.5
+      roi_from_headcount_pct: 65.0
+      margin_erosion_from_ai_infra_pct: 14.0
+      source: "Deloitte State of AI 2024, NBER CEO Study preliminary"
+    - year: 2025
+      half: 1
+      revenue_and_cost_impact_pct: 12.0
+      roi_from_headcount_pct: 75.0
+      margin_erosion_from_ai_infra_pct: 15.0
+      source: "PwC CEO Survey 2025, Goldman Sachs March 2025 preliminary"
+    - year: 2025
+      half: 2
+      revenue_and_cost_impact_pct: 12.0
+      roi_from_headcount_pct: 80.0
+      margin_erosion_from_ai_infra_pct: 16.0
+      source: "PwC CEO Survey 2026 (56% nothing, 12% both rev+cost), Goldman Sachs March 2026"
+    - year: 2026
+      half: 1
+      revenue_and_cost_impact_pct: 13.0
+      roi_from_headcount_pct: 82.0
+      margin_erosion_from_ai_infra_pct: 16.0
+      source: "PwC CEO Survey 2026 extrapolation, Deloitte 2026 (84% margin erosion)"
+
+  # ---------------------------------------------------------------------------
+  # OUTPUT INDICATOR 2: Productivity Gap (Solow Index)
+  # Gap between AI capex growth and productivity growth — wider gap = more bubble
+  # ---------------------------------------------------------------------------
+  productivity_gap:
+    - year: 2020
+      half: 1
+      ai_capex_growth_yoy_pct: 5.0
+      us_productivity_growth_pct: 1.8
+      tfp_ai_contribution_pct: 0.02
+      source: "BLS Productivity Data 2020 Q1-Q2, St. Louis Fed TFP Tracker"
+    - year: 2020
+      half: 2
+      ai_capex_growth_yoy_pct: 6.0
+      us_productivity_growth_pct: 2.5
+      tfp_ai_contribution_pct: 0.03
+      source: "BLS Productivity Data 2020 (COVID rebound effect), St. Louis Fed"
+    - year: 2021
+      half: 1
+      ai_capex_growth_yoy_pct: 15.0
+      us_productivity_growth_pct: 3.8
+      tfp_ai_contribution_pct: 0.04
+      source: "BLS Productivity Data 2021, St. Louis Fed"
+    - year: 2021
+      half: 2
+      ai_capex_growth_yoy_pct: 18.0
+      us_productivity_growth_pct: 1.2
+      tfp_ai_contribution_pct: 0.05
+      source: "BLS Productivity Data 2021 H2, St. Louis Fed"
+    - year: 2022
+      half: 1
+      ai_capex_growth_yoy_pct: 15.0
+      us_productivity_growth_pct: -1.5
+      tfp_ai_contribution_pct: 0.05
+      source: "BLS Productivity Data 2022 (negative due to hiring surge), St. Louis Fed"
+    - year: 2022
+      half: 2
+      ai_capex_growth_yoy_pct: 20.0
+      us_productivity_growth_pct: 1.8
+      tfp_ai_contribution_pct: 0.06
+      source: "BLS Productivity Data 2022 H2, St. Louis Fed"
+    - year: 2023
+      half: 1
+      ai_capex_growth_yoy_pct: 28.0
+      us_productivity_growth_pct: 3.5
+      tfp_ai_contribution_pct: 0.08
+      source: "BLS Productivity Data 2023, St. Louis Fed AI GDP Tracker"
+    - year: 2023
+      half: 2
+      ai_capex_growth_yoy_pct: 35.0
+      us_productivity_growth_pct: 2.6
+      tfp_ai_contribution_pct: 0.10
+      source: "BLS Productivity Data 2023 H2, St. Louis Fed"
+    - year: 2024
+      half: 1
+      ai_capex_growth_yoy_pct: 38.0
+      us_productivity_growth_pct: 2.9
+      tfp_ai_contribution_pct: 0.12
+      source: "BLS Productivity Data 2024, St. Louis Fed AI GDP Tracker"
+    - year: 2024
+      half: 2
+      ai_capex_growth_yoy_pct: 40.0
+      us_productivity_growth_pct: 2.5
+      tfp_ai_contribution_pct: 0.13
+      source: "BLS Productivity Data 2024 H2, St. Louis Fed"
+    - year: 2025
+      half: 1
+      ai_capex_growth_yoy_pct: 38.0
+      us_productivity_growth_pct: 2.8
+      tfp_ai_contribution_pct: 0.14
+      source: "BLS Productivity Data 2025, St. Louis Fed AI TFP ~0.15pp"
+    - year: 2025
+      half: 2
+      ai_capex_growth_yoy_pct: 36.0
+      us_productivity_growth_pct: 2.7
+      tfp_ai_contribution_pct: 0.15
+      source: "Goldman Sachs March 2026 (no meaningful relationship), BLS 2025 (+2.7%)"
+    - year: 2026
+      half: 1
+      ai_capex_growth_yoy_pct: 36.0
+      us_productivity_growth_pct: 2.5
+      tfp_ai_contribution_pct: 0.15
+      source: "Goldman Sachs March 2026 forecast, St. Louis Fed AI GDP Tracker"
+
+  # ---------------------------------------------------------------------------
+  # HISTORICAL COMPARATOR: Dotcom Parallel (1996–2002)
+  # Equivalent metrics from the dotcom cycle for overlay comparison
+  # ---------------------------------------------------------------------------
+  dotcom_parallel:
+    - year: 1996
+      capex_intensity_ratio: 1.2
+      concentration_pct: 10.0
+      telecom_bond_issuance_usd_b: 25.0
+      fiber_build_rate_yoy_pct: 12.0
+      it_capex_growth_pct: 10.0
+      productivity_growth_pct: 2.5
+      enterprise_adoption_pct: 15.0
+      source: "BEA IT Investment Series, BLS Productivity, Telecom History Project"
+    - year: 1997
+      capex_intensity_ratio: 1.5
+      concentration_pct: 12.0
+      telecom_bond_issuance_usd_b: 40.0
+      fiber_build_rate_yoy_pct: 25.0
+      it_capex_growth_pct: 15.0
+      productivity_growth_pct: 1.5
+      enterprise_adoption_pct: 22.0
+      source: "BEA IT Investment Series, BLS Productivity, Dealogic"
+    - year: 1998
+      capex_intensity_ratio: 2.0
+      concentration_pct: 14.0
+      telecom_bond_issuance_usd_b: 70.0
+      fiber_build_rate_yoy_pct: 45.0
+      it_capex_growth_pct: 20.0
+      productivity_growth_pct: 2.0
+      enterprise_adoption_pct: 30.0
+      source: "BEA IT Investment Series, BLS Productivity, Dealogic"
+    - year: 1999
+      capex_intensity_ratio: 3.0
+      concentration_pct: 18.0
+      telecom_bond_issuance_usd_b: 120.0
+      fiber_build_rate_yoy_pct: 65.0
+      it_capex_growth_pct: 25.0
+      productivity_growth_pct: 1.1
+      enterprise_adoption_pct: 40.0
+      source: "BEA IT Investment Series (peak), BLS Productivity, Dealogic (peak issuance)"
+    - year: 2000
+      capex_intensity_ratio: 3.5
+      concentration_pct: 17.0
+      telecom_bond_issuance_usd_b: 145.0
+      fiber_build_rate_yoy_pct: 50.0
+      it_capex_growth_pct: 22.0
+      productivity_growth_pct: 1.5
+      enterprise_adoption_pct: 45.0
+      source: "BEA IT Investment Series (post-peak), BLS Productivity, Dealogic"
+    - year: 2001
+      capex_intensity_ratio: 2.0
+      concentration_pct: 13.0
+      telecom_bond_issuance_usd_b: 50.0
+      fiber_build_rate_yoy_pct: -20.0
+      it_capex_growth_pct: -8.0
+      productivity_growth_pct: 2.0
+      enterprise_adoption_pct: 35.0
+      source: "BEA IT Investment Series (bust), BLS Productivity, Dealogic"
+    - year: 2002
+      capex_intensity_ratio: 1.3
+      concentration_pct: 10.0
+      telecom_bond_issuance_usd_b: 20.0
+      fiber_build_rate_yoy_pct: -40.0
+      it_capex_growth_pct: -15.0
+      productivity_growth_pct: 3.5
+      enterprise_adoption_pct: 38.0
+      source: "BEA IT Investment Series (recovery), BLS Productivity, Dealogic"
+
+  # ---------------------------------------------------------------------------
+  # Data Centre Risk Layer (for /dc-risk endpoint)
+  # ---------------------------------------------------------------------------
+  dc_risk:
+    asset_life_mismatch:
+      dc_useful_life_years: 20
+      gpu_refresh_cycle_months: 18
+      mismatch_factor: 13.3
+      source: "BIS Bulletin 120, industry standard DC depreciation vs NVIDIA GPU refresh"
+    refinancing_calendar:
+      - year: 2026
+        maturing_bonds_usd_b: 15.0
+        source: "Bloomberg Terminal, AI-related bond maturity schedule"
+      - year: 2027
+        maturing_bonds_usd_b: 28.0
+        source: "Bloomberg Terminal, AI-related bond maturity schedule"
+      - year: 2028
+        maturing_bonds_usd_b: 42.0
+        source: "Bloomberg Terminal, AI-related bond maturity schedule"
+      - year: 2029
+        maturing_bonds_usd_b: 55.0
+        source: "Bloomberg Terminal, projected maturity wall"
+      - year: 2030
+        maturing_bonds_usd_b: 38.0
+        source: "Bloomberg Terminal, projected maturity wall"

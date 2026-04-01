@@ -2,6 +2,7 @@ import Link from "next/link";
 
 const NAV_ITEMS = [
   { href: "/", label: "Overview" },
+  { href: "/bubble-index", label: "Bubble Index" },
   { href: "/segments", label: "Segments" },
   { href: "/companies", label: "Companies" },
   { href: "/consensus", label: "Sources" },

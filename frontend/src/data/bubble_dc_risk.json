@@ -1,0 +1,238 @@
+{
+  "build_rate": [
+    {
+      "year": 2020,
+      "half": 1,
+      "new_capacity_mw": 1200,
+      "yoy_growth_pct": 8.0,
+      "cumulative_mw": 1200
+    },
+    {
+      "year": 2020,
+      "half": 2,
+      "new_capacity_mw": 1350,
+      "yoy_growth_pct": 10.0,
+      "cumulative_mw": 2550
+    },
+    {
+      "year": 2021,
+      "half": 1,
+      "new_capacity_mw": 1500,
+      "yoy_growth_pct": 12.0,
+      "cumulative_mw": 4050
+    },
+    {
+      "year": 2021,
+      "half": 2,
+      "new_capacity_mw": 1700,
+      "yoy_growth_pct": 15.0,
+      "cumulative_mw": 5750
+    },
+    {
+      "year": 2022,
+      "half": 1,
+      "new_capacity_mw": 1900,
+      "yoy_growth_pct": 18.0,
+      "cumulative_mw": 7650
+    },
+    {
+      "year": 2022,
+      "half": 2,
+      "new_capacity_mw": 2100,
+      "yoy_growth_pct": 20.0,
+      "cumulative_mw": 9750
+    },
+    {
+      "year": 2023,
+      "half": 1,
+      "new_capacity_mw": 2600,
+      "yoy_growth_pct": 30.0,
+      "cumulative_mw": 12350
+    },
+    {
+      "year": 2023,
+      "half": 2,
+      "new_capacity_mw": 3200,
+      "yoy_growth_pct": 42.0,
+      "cumulative_mw": 15550
+    },
+    {
+      "year": 2024,
+      "half": 1,
+      "new_capacity_mw": 4000,
+      "yoy_growth_pct": 50.0,
+      "cumulative_mw": 19550
+    },
+    {
+      "year": 2024,
+      "half": 2,
+      "new_capacity_mw": 5100,
+      "yoy_growth_pct": 59.0,
+      "cumulative_mw": 24650
+    },
+    {
+      "year": 2025,
+      "half": 1,
+      "new_capacity_mw": 6500,
+      "yoy_growth_pct": 62.0,
+      "cumulative_mw": 31150
+    },
+    {
+      "year": 2025,
+      "half": 2,
+      "new_capacity_mw": 7800,
+      "yoy_growth_pct": 53.0,
+      "cumulative_mw": 38950
+    },
+    {
+      "year": 2026,
+      "half": 1,
+      "new_capacity_mw": 9200,
+      "yoy_growth_pct": 42.0,
+      "cumulative_mw": 48150
+    }
+  ],
+  "credit_stack": [
+    {
+      "year": 2020,
+      "half": 1,
+      "bonds_usd_b": 15.0,
+      "private_credit_usd_b": 2.0,
+      "off_balance_sheet_usd_b": 5.0,
+      "total_usd_b": 22.0
+    },
+    {
+      "year": 2020,
+      "half": 2,
+      "bonds_usd_b": 18.0,
+      "private_credit_usd_b": 3.0,
+      "off_balance_sheet_usd_b": 6.0,
+      "total_usd_b": 27.0
+    },
+    {
+      "year": 2021,
+      "half": 1,
+      "bonds_usd_b": 22.0,
+      "private_credit_usd_b": 5.0,
+      "off_balance_sheet_usd_b": 8.0,
+      "total_usd_b": 35.0
+    },
+    {
+      "year": 2021,
+      "half": 2,
+      "bonds_usd_b": 28.0,
+      "private_credit_usd_b": 8.0,
+      "off_balance_sheet_usd_b": 12.0,
+      "total_usd_b": 48.0
+    },
+    {
+      "year": 2022,
+      "half": 1,
+      "bonds_usd_b": 32.0,
+      "private_credit_usd_b": 12.0,
+      "off_balance_sheet_usd_b": 18.0,
+      "total_usd_b": 62.0
+    },
+    {
+      "year": 2022,
+      "half": 2,
+      "bonds_usd_b": 38.0,
+      "private_credit_usd_b": 18.0,
+      "off_balance_sheet_usd_b": 25.0,
+      "total_usd_b": 81.0
+    },
+    {
+      "year": 2023,
+      "half": 1,
+      "bonds_usd_b": 48.0,
+      "private_credit_usd_b": 35.0,
+      "off_balance_sheet_usd_b": 40.0,
+      "total_usd_b": 123.0
+    },
+    {
+      "year": 2023,
+      "half": 2,
+      "bonds_usd_b": 62.0,
+      "private_credit_usd_b": 55.0,
+      "off_balance_sheet_usd_b": 60.0,
+      "total_usd_b": 177.0
+    },
+    {
+      "year": 2024,
+      "half": 1,
+      "bonds_usd_b": 78.0,
+      "private_credit_usd_b": 90.0,
+      "off_balance_sheet_usd_b": 80.0,
+      "total_usd_b": 248.0
+    },
+    {
+      "year": 2024,
+      "half": 2,
+      "bonds_usd_b": 98.0,
+      "private_credit_usd_b": 130.0,
+      "off_balance_sheet_usd_b": 120.0,
+      "total_usd_b": 348.0
+    },
+    {
+      "year": 2025,
+      "half": 1,
+      "bonds_usd_b": 110.0,
+      "private_credit_usd_b": 170.0,
+      "off_balance_sheet_usd_b": 160.0,
+      "total_usd_b": 440.0
+    },
+    {
+      "year": 2025,
+      "half": 2,
+      "bonds_usd_b": 121.0,
+      "private_credit_usd_b": 200.0,
+      "off_balance_sheet_usd_b": 200.0,
+      "total_usd_b": 521.0
+    },
+    {
+      "year": 2026,
+      "half": 1,
+      "bonds_usd_b": 140.0,
+      "private_credit_usd_b": 250.0,
+      "off_balance_sheet_usd_b": 250.0,
+      "total_usd_b": 640.0
+    }
+  ],
+  "refinancing_calendar": [
+    {
+      "year": 2027,
+      "maturing_bonds_usd_b": 15,
+      "maturing_private_credit_usd_b": 25
+    },
+    {
+      "year": 2028,
+      "maturing_bonds_usd_b": 25,
+      "maturing_private_credit_usd_b": 40
+    },
+    {
+      "year": 2029,
+      "maturing_bonds_usd_b": 35,
+      "maturing_private_credit_usd_b": 55
+    },
+    {
+      "year": 2030,
+      "maturing_bonds_usd_b": 30,
+      "maturing_private_credit_usd_b": 50
+    },
+    {
+      "year": 2031,
+      "maturing_bonds_usd_b": 20,
+      "maturing_private_credit_usd_b": 35
+    },
+    {
+      "year": 2032,
+      "maturing_bonds_usd_b": 10,
+      "maturing_private_credit_usd_b": 20
+    }
+  ],
+  "asset_life_mismatch": {
+    "dc_assumed_life_years": 20,
+    "gpu_upgrade_cycle_months": 18,
+    "mismatch_factor": 13.3
+  }
+}
