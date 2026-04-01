@@ -66,3 +66,7 @@ def get_dispersion() -> pd.DataFrame:
 
 def get_scenario_forecasts() -> pd.DataFrame:
     return _load_cached("forecasts_scenarios.parquet")
+
+
+def get_bottom_up_validation() -> pd.DataFrame:
+    return _load_cached("bottom_up_validation.parquet")

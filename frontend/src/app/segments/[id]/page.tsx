@@ -1,11 +1,12 @@
-import { getForecasts, getSegments, getDataQuality, getDispersion, getScenarioForecasts, getInsights } from "@/lib/api";
-import type { DispersionRow, ScenarioForecastRow, InsightItem } from "@/lib/api";
+import { getForecasts, getSegments, getDataQuality, getDispersion, getScenarioForecasts, getInsights, getValidation } from "@/lib/api";
+import type { DispersionRow, ScenarioForecastRow, InsightItem, ValidationRow } from "@/lib/api";
 import { formatUsdB } from "@/lib/formatters";
 import TimeseriesChart from "@/components/charts/TimeseriesChart";
 import DispersionChart from "@/components/charts/DispersionChart";
 import ExportButton from "@/components/ExportButton";
 import ScenarioChartSection from "@/components/ScenarioChartSection";
 import InsightPanel from "@/components/InsightPanel";
+import ValidationPanel from "@/components/ValidationPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -23,15 +24,17 @@ export default async function SegmentPage({ params }: { params: Promise<{ id: st
   let dispersionData: DispersionRow[] = [];
   let scenarioData: ScenarioForecastRow[] = [];
   let insightsData: InsightItem[] = [];
+  let validationData: ValidationRow[] = [];
 
   try {
-    const [segRes, fcRes, dqRes, dispRes, scenRes, insRes] = await Promise.all([
+    const [segRes, fcRes, dqRes, dispRes, scenRes, insRes, valRes] = await Promise.all([
       getSegments(),
       getForecasts(id),
       getDataQuality(),
       getDispersion(id),
       getScenarioForecasts(id).catch(() => ({ data: [] as ScenarioForecastRow[], count: 0, data_vintage: null })),
       getInsights(id).catch(() => ({ data: [] as InsightItem[], count: 0, segment: id })),
+      getValidation(id).catch(() => ({ data: [] as ValidationRow[], count: 0 })),
     ]);
     const seg = segRes.segments.find((s) => s.id === id);
     if (seg) segmentName = seg.display_name;
@@ -40,6 +43,7 @@ export default async function SegmentPage({ params }: { params: Promise<{ id: st
     dispersionData = dispRes.data;
     scenarioData = scenRes.data;
     insightsData = insRes.data;
+    validationData = valRes.data;
   } catch {
     return <div className="text-muted">API offline or segment not found.</div>;
   }
@@ -111,6 +115,8 @@ export default async function SegmentPage({ params }: { params: Promise<{ id: st
       )}
 
       <InsightPanel insights={insightsData} />
+
+      <ValidationPanel data={validationData} />
 
       {scenarioData.length > 0 ? (
         <ScenarioChartSection scenarioData={scenarioData} />

@@ -122,3 +122,19 @@ class InsightsResponse(BaseModel):
     data: list[InsightItem]
     count: int
     segment: str
+
+
+class ValidationRow(BaseModel):
+    segment: str
+    year: int
+    bottom_up_sum: float
+    top_down_estimate: float
+    coverage_ratio: float
+    gap_usd_billions: float
+    n_companies: int
+    top_contributors: list[str]
+
+
+class ValidationResponse(BaseModel):
+    data: list[ValidationRow]
+    count: int

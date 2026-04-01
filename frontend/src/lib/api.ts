@@ -198,3 +198,24 @@ export interface InsightsResponse {
 
 export const getInsights = (segment: string) =>
   fetchJSON<InsightsResponse>(`/api/v1/insights?segment=${segment}`);
+
+export interface ValidationRow {
+  segment: string;
+  year: number;
+  bottom_up_sum: number;
+  top_down_estimate: number;
+  coverage_ratio: number;
+  gap_usd_billions: number;
+  n_companies: number;
+  top_contributors: string[];
+}
+
+export interface ValidationResponse {
+  data: ValidationRow[];
+  count: number;
+}
+
+export const getValidation = (segment?: string) =>
+  fetchJSON<ValidationResponse>(
+    `/api/v1/validation${segment ? `?segment=${segment}` : ""}`
+  );
