@@ -1,7 +1,19 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+function getApiBase(): string {
+  // If explicitly set, use that (e.g. for local dev pointing at FastAPI)
+  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+  // On Vercel (server-side), use the deployment URL
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  // Client-side or local dev: relative URL
+  if (typeof window !== 'undefined') return '';
+  // Fallback for local SSR
+  return 'http://localhost:3000';
+}
+
+const API_BASE = getApiBase();
 
 async function fetchJSON<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, { next: { revalidate: 60 } });
+  const base = getApiBase();
+  const res = await fetch(`${base}${path}`, { next: { revalidate: 60 } });
   if (!res.ok) throw new Error(`API ${path}: ${res.status}`);
   return res.json();
 }
@@ -187,8 +199,12 @@ export const getDispersion = (segment?: string) =>
     `/api/v1/dispersion${segment ? `?segment=${segment}` : ""}`
   );
 
-export const getExportUrl = (format: "csv" | "excel", segment?: string, scenario?: string) =>
-  `${API_BASE}/api/v1/export/${format}?valuation=nominal${segment ? `&segment=${segment}` : ""}${scenario ? `&scenario=${scenario}` : ""}`;
+export const getExportUrl = (format: "csv" | "excel", segment?: string, scenario?: string) => {
+  const base = process.env.NEXT_PUBLIC_API_URL || '';
+  // In serverless mode (no explicit API_URL), only CSV is available
+  const effectiveFormat = base ? format : "csv";
+  return `${base}/api/v1/export/${effectiveFormat}?valuation=nominal${segment ? `&segment=${segment}` : ""}${scenario ? `&scenario=${scenario}` : ""}`;
+};
 
 export interface ScenarioForecastRow {
   year: number;
