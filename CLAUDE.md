@@ -109,6 +109,109 @@ Kein Verweis auf PCA-Composite, value_chain_multiplier, oder run_statistical_pip
 ASSUMPTIONS.md, ARCHITECTURE.md, METHODOLOGY.md, README.md alle auf v1.1 konsolidiert.
 ```
 
+### Gate 6: Bubble Index — Datenqualität (YAML-Validierung)
+
+Prüft die Rohdaten in `config/industries/ai.yaml` → `bubble_index` auf Vollständigkeit, Plausibilität und Quellen-Attribution. Jede Verletzung ist ein Hard Fail.
+
+```
+VOLLSTÄNDIGKEIT:
+- Alle 8 Indikatoren müssen für jeden Semi-Annual-Datenpunkt (2020 H1 bis 2026 H1) befüllt sein
+- Kein Indikator darf mehr als 1 fehlenden Datenpunkt haben (sonst: Interpolation kennzeichnen)
+- Jeder Datenpunkt MUSS ein `source:` Feld haben (z.B. "BIS QR March 2026", "MUFG Dec 2025")
+- Datenpunkte ohne Source sind VERBOTEN — lieber `estimated: true` + `source: "Extrapolation from [X]"` als kein Source
+
+PLAUSIBILITÄTSBÄNDER (Hard Bounds — Verletzung = sofortiger Stopp):
+  capex_intensity_ratio:       [0.5, 8.0]     # Unter 0.5 wäre keine AI-Industrie, über 8 physisch unmöglich
+  market_concentration_pct:    [5.0, 50.0]     # S&P500 Top-5 Anteil — historisch nie unter 5%, über 50% Kartell-Niveau
+  dc_build_yoy_growth_pct:     [-20.0, 150.0]  # Negativwachstum möglich (Rezession), über 150% physisch unmöglich
+  credit_total_usd_b:          [0.0, 2000.0]   # Obere Schranke: gesamter US IG Bond-Markt
+  bis_risk_rating:             [1, 5]          # Definierte Skala
+  revenue_and_cost_impact_pct: [0.0, 100.0]    # Prozentangabe
+  roi_from_headcount_pct:      [0.0, 100.0]    # Anteil
+  margin_erosion_from_ai_infra_pct: [0.0, 100.0] # Anteil — gleicher Feldname wie in YAML/Code
+  ai_capex_growth_yoy_pct:     [-50.0, 200.0]  # Extremszenarien
+  us_productivity_growth_pct:  [-5.0, 10.0]    # Historisch nie außerhalb dieses Bands
+  solow_gap_ratio:             [0.1, 50.0]     # Ratio — 50× wäre absolutes Extrem
+  headcount_reduction_pct:     [0.0, 100.0]    # Anteil
+
+TREND-MONOTONIE (Soft Checks — Warning, kein Hard Fail):
+- capex_intensity_ratio: Muss 2020→2026 insgesamt steigend sein (erlaubt: max 1 Dip von max -15%)
+- credit_total: Muss 2022→2026 strikt steigend sein (BIS: "from near zero to $200B+ in 3 years")
+- dc_build_momentum: Muss 2021→2025 insgesamt steigend sein
+- Ein Trendbruch ist nicht verboten, aber MUSS kommentiert werden (warum der Bruch?)
+
+DOTCOM-PARALLEL-KONSISTENZ:
+- dotcom_parallel Sektion muss exakt 7 Datenpunkte haben (1996-2002)
+- Peak-Jahr MUSS 1999 oder 2000 sein (für capex_intensity und concentration)
+- Werte müssen mit bekannten Dotcom-Referenzen übereinstimmen:
+  - Telecom Bond Issuance 1999-2000: $100-150B Range
+  - IT Capex Growth Peak: 20-30% Range
+  - S&P Top-5 Concentration Peak: 15-20% Range
+```
+
+### Gate 7: Bubble Index — Modellqualität (Score-Validierung)
+
+Prüft die berechneten Scores in `bubble_index.parquet` auf mathematische Korrektheit, interne Konsistenz und Plausibilität gegen Referenzdaten.
+
+```
+SCORE-INTEGRITÄT:
+- Alle 8 Subscores: Wertebereich [0, 100], keine NaN, keine Inf
+- Composite Score: Wertebereich [0, 100], keine NaN
+- Composite = gewichtete Summe der 8 Subscores (Toleranz ±0.5 Punkte wegen Rundung)
+- Gewichte summieren sich auf 100% (15+10+10+15+10+15+15+10 = 100) ✓
+
+KLASSIFIKATIONS-KONSISTENZ:
+- <30 → "Healthy Expansion" (MUSS)
+- 30-50 → "Elevated Valuations" (MUSS)
+- 50-70 → "Bubble Warning" (MUSS)
+- >70 → "Critical Overheating" (MUSS)
+- Keine Row darf eine Klassifikation haben die nicht zum Score passt
+
+ZEITREIHEN-PLAUSIBILITÄT:
+- 2020 H1 Composite: MUSS < 30 sein (pre-GenAI, kein Bubble-Signal)
+- 2022 H2 Composite: MUSS < 45 sein (ChatGPT gerade launched, Investitionswelle beginnt erst)
+- 2025 H2 / 2026 H1 Composite: MUSS > 45 sein (Peak der aktuellen Welle)
+- Composite darf zwischen aufeinanderfolgenden Halbjahren max ±20 Punkte springen
+  (Sprung > 20 = entweder Datenfehler oder Regime-Change der kommentiert werden muss)
+
+CROSS-REFERENZ-VALIDIERUNG (bekannte Fakten):
+- capex_intensity 2025: Ratio MUSS > 3.0 sein (MUFG: $443B Capex vs ~$100B Revenue)
+- credit_exposure 2025 total: MUSS > $300B sein (BIS: $121B Bonds + $200B Private Credit)
+- enterprise_roi_score 2025/2026: MUSS > 50 sein (PwC: 56% CEOs report "nothing")
+- productivity_gap_score 2025: MUSS > 40 sein (Capex +36% vs Productivity +2.7% → Ratio ~13×)
+- dotcom_parallel_score: MUSS für 2025/2026 > 30 sein (AI hat Dotcom in Capex Intensity übertroffen)
+- market_concentration 2025: MUSS > 25% sein (NVIDIA, MSFT, AAPL, GOOG, META ~30% S&P500)
+
+INVERTIERTE-LOGIK-CHECK (Output-Indikatoren):
+- enterprise_roi_score MUSS steigen wenn revenue_and_cost_impact_pct sinkt (invertierte Beziehung)
+- productivity_gap_score MUSS steigen wenn solow_gap_ratio steigt (direkte Beziehung)
+- Wenn headcount_reduction_pct steigt UND roi_from_headcount_pct steigt → enterprise_roi_score MUSS steigen
+  (mehr "ROI" aus Personalabbau = höheres Bubble-Signal)
+
+GEWICHTUNGS-SENSITIVITÄT (Robustness Check):
+- Berechne Composite mit ±5pp Gewichtsverschiebung (z.B. Input 55%/Output 35%/Parallel 10%)
+- Wenn Klassifikation sich ändert → WARNING: "Score is near classification boundary, sensitive to weights"
+- Akzeptabel wenn Score ±3 Punkte vom Boundary entfernt ist
+```
+
+### Gate 8: API-Contract-Tests (Bubble Index Endpoints)
+
+```
+ENDPOINT-VERFÜGBARKEIT:
+- GET /api/v1/bubble-index → 200 OK, JSON Array mit >= 12 Rows
+- GET /api/v1/bubble-index/dotcom-parallel → 200 OK, JSON mit ai[] und dotcom[] Arrays
+- GET /api/v1/bubble-index/dc-risk → 200 OK, JSON mit build_rate[], credit_stack[], refinancing_calendar[], asset_life_mismatch{}
+
+SCHEMA-VALIDIERUNG:
+- /bubble-index Response: Jede Row hat year, half, composite_score, classification, plus alle 8 Subscore-Felder
+- /dotcom-parallel Response: ai[] und dotcom[] haben jeweils year + composite_score
+- /dc-risk Response: credit_stack[].total_usd_b existiert und ist numerisch
+
+KONSISTENZ:
+- /bubble-index composite_score == das was in bubble_index.parquet steht (kein Drift zwischen File und API)
+- /dotcom-parallel ai[] Werte == /bubble-index composite_score Werte für gleiche Jahre
+```
+
 ## Arbeitsregeln für Claude Code
 
 1. **Lies diese Datei (CLAUDE.md) vollständig vor jeder Session** — enthält Vision, Architektur, Arbeitsplan, Qualitäts-Gates und fertige Prompts. Alles in einer Datei, keine externen Leitdateien nötig.
@@ -125,23 +228,35 @@ ASSUMPTIONS.md, ARCHITECTURE.md, METHODOLOGY.md, README.md alle auf v1.1 konsoli
 
 7. **Contract Tests als Abnahme.** Bevor ein AP als "done" markiert wird, müssen die relevanten Quality-Gates bestehen. Wenn ein Gate failt, ist das AP nicht done — egal was der Code tut.
 
-## Strategische Vision (v2 — Research-Intelligence-Plattform)
+## Strategische Vision (v3 — Risk-Intelligence + Bubble Analytics)
 
-Das Projekt entwickelt sich vom Forecast-Dashboard zur Research-Intelligence-Plattform. Der Kern-Differentiator gegenüber Bloomberg/FactSet ist die Kombination aus Open-Source-Transparenz, Analyst-Dispersion-als-Signal, und automatisierter Narrativ-Generierung. Ein Analyst bei einer Bank nutzt Bloomberg für Rohdaten — und dieses Tool für Interpretation und Szenario-Analyse.
+Das Projekt hat drei Ebenen: (1) Forecast-Engine (Phase 1-2, done), (2) Research-Intelligence mit Dispersion, Scenarios, Narratives, Bottom-Up Validation (Phase 2, done), (3) **Risk-Intelligence mit AI Bubble Index** (Phase 3, done).
 
-### Drei Dimensionen die den Unterschied machen
+Der Kern-Differentiator: Niemand hat einen quantitativen AI Bubble Index der **beide Seiten** misst — die Input-Seite (Investitionsintensität, Credit-Exposure, Leverage) UND die Output-Seite (Produktivitätswachstum, Enterprise-ROI, TFP-Impact). Eine Blase ist die Diskrepanz zwischen Investment und Ertrag. Ohne Produktivitätsmessung ist ein Bubble-Index blind auf einem Auge.
 
-1. **Dispersion als Signal:** Nicht nur Konsensus-Mediane, sondern Inter-Quartile-Range der Analystenschätzungen über Zeit tracken. Sinkende Dispersion = konvergierende Marktmeinung = höhere Forecast-Konfidenz. Steigende Dispersion = fundamentale Unsicherheit.
+### Sechs Dimensionen die den Unterschied machen
 
-2. **Scenario Engine:** Bull/Base/Bear-Cases mit jeweils eigenem Parametersatz, pre-computed und vergleichbar. Nicht ein Widget mit Slider, sondern drei vollständige Forecast-Sets die den ganzen Stack durchlaufen.
+1. **AI Bubble Index (NEU, Centerpiece):** Composite Score 0-100 aus 8 Subindikatoren — 5 Input-Indikatoren (Capex Intensity, Market Concentration, DC Build Momentum, Credit Exposure, Shadow Leverage) + 2 Output-Indikatoren (Enterprise ROI Realization, Productivity Gap / Solow Index) + 1 historischer Vergleich (Dotcom Parallel Score). Die Input/Output-Struktur ist der konzeptionelle Kern: je höher die Inputs und je niedriger die Outputs, desto stärker das Bubble-Signal. Referenz: BIS QR March 2026 (r_qt2603u), BIS Bulletin 120, Goldman Sachs Productivity Study March 2026, PwC Global CEO Survey 2026.
 
-3. **Automatisierte Narrativ-Ebene:** Zahlen in argumentative Kontexte setzen. "ai_hardware wächst mit 15% CAGR — getrieben durch Hyperscaler-Capex (+40% YoY), sinkende Inference-Kosten, und Edge-Deployment TAM-Erweiterung." Regelbasiert, kein LLM nötig.
+2. **Productivity Gap (Solow Index):** Kernmetrik: AI-Capex-Wachstumsrate vs. Produktivitätswachstumsrate. 2025: Capex +36% YoY, US-Produktivität +2.7% (vs. Dekaden-Durchschnitt 1.4%). Goldman Sachs (März 2026): "no meaningful relationship between productivity and AI adoption at the economy-wide level." PwC CEO Survey: 56% der CEOs sagen sie hätten "nothing" aus AI-Investments bekommen. Die Lücke zwischen Investitionsrate und Produktivitätsrate IS the bubble signal. Kritisch: Was als "AI ROI" gemeldet wird, ist überwiegend Cost-Cutting durch Personalabbau (1.17M Jobs 2025, +54% YoY), nicht echte Produktivitätssteigerung. Nur 17% der Unternehmen berichten AI-getriebene Produktivitätsgewinne als Ursache für Headcount-Reduktion. 84% der Enterprises verlieren Bruttomarge durch AI-Infrastrukturkosten. Der Bubble Index unterscheidet daher: Margin-via-Headcount (Einmaleffekt, nicht nachhaltig) vs. Productivity-per-Worker (nachhaltiger Gain, noch kaum messbar).
 
-### Reference-Class: Was die Top-Player machen
+3. **Data Centre Risk Layer (NEU):** Build Rate (MW/Jahr), Hyperscaler Bond Issuance ($121B in 2025), Private Credit Exposure ($200B+), Off-Balance-Sheet SPVs, Asset-Life-Mismatch (20-Jahr DC-Annahme vs 18-Monat GPU-Zyklus). Refinanzierungskalender.
 
-- **Bloomberg ASKB:** Agentenbasierte mehrstufige Research-Workflows, Earnings-Call-Cross-Examination
-- **Visible Alpha:** 250+ Broker, 28M Analyst Line Items, Dispersion-Tracking, 24h Revisions-Freshness
-- **FactSet:** Makro-zu-Mikro Drill-Down, Bottom-Up vs. Top-Down Kreuzvalidierung
+4. **Dispersion als Signal:** IQR der Analystenschätzungen über Zeit. Sinkende Dispersion = konvergierende Marktmeinung. Steigende Dispersion = fundamentale Unsicherheit.
+
+5. **Scenario Engine:** Bull/Base/Bear-Cases, pre-computed und vergleichbar.
+
+6. **Automatisierte Narrativ-Ebene:** Zahlen in argumentative Kontexte setzen, regelbasiert.
+
+### Reference-Class
+
+- **BIS Quarterly Review (March 2026):** "Financing the AI infrastructure boom: on- and off-balance sheet borrowing" — Kernquelle für Shadow Leverage und Credit Exposure Methodik
+- **Goldman Sachs Productivity Study (March 2026):** "No meaningful relationship between AI and productivity at the economy-wide level" — aber 30% Gain in 2 spezifischen Use Cases. Kernquelle für Enterprise ROI Realization Subindikator.
+- **PwC Global CEO Survey 2026:** 4,454 CEOs, 95 Länder — 56% "nothing out of AI investments", nur 12% sowohl Revenue-Growth als auch Cost-Reduction. Quantitative Basis für den Solow-Gap.
+- **Robert Solow / Productivity Paradox:** "You can see the computer age everywhere but in the productivity statistics" (1987). Exakt das gleiche Muster bei AI — NBER-Studie (Feb 2026) mit 6,000 CEOs findet kaum Impact.
+- **Shiller CAPE / VIX / ICE HY Spread:** Composite-Indikatoren die als Einzel-Initiativen gestartet sind und zu Industrie-Standards wurden — genau das Modell für den AI Bubble Index
+- **CNN Fear & Greed Index:** UI-Referenz für Gauge-Visualisierung des Composite Score
+- **Bloomberg ASKB / Visible Alpha / FactSet:** Haben die Rohdaten aber nicht die Aggregation
 
 ## Arbeitsplan
 
@@ -164,311 +279,32 @@ Siehe `REFACTORING_PROMPT.md` für historischen Kontext:
 | ~~**v2-AP6a**~~ | Bottom-Up Validation Backend — Multi-Year, Coverage-Trends, Narrativ-Integration | ✓ Done |
 | ~~**v2-AP6b**~~ | Bottom-Up Validation Frontend — Stacked Bar Chart, API-Endpoint | ✓ Done |
 
-**Phase 2 abgeschlossen.** Nächster Schritt: Phase 3 (Frontend Bloomberg-Grade + Portfolio)
+**Phase 2 abgeschlossen.**
 
-### Phase 3 (aktiv): Frontend Bloomberg-Grade + Portfolio-Showcase
+### Phase 3 (abgeschlossen): AI Bubble Index + Risk Intelligence + Bloomberg-Grade Frontend
 
-Ziel: Projekt von "funktionierendes Tool" zu "vorstellbares Portfolio-Stück" transformieren. Optimiert für den 5-Minuten-Eindruck eines Hiring Managers bei einer Bank.
+Ziel: Vom Forecast-Tool zur Risk-Intelligence-Plattform. Das Centerpiece ist der AI Bubble Index — ein quantitativer Composite-Indikator der AI-Überhitzung misst und mit dem Dotcom-Zyklus vergleicht.
 
-| AP | Feature | Dateien | Abhängig von | Aufwand |
-|---|---|---|---|---|
-| **v3-AP1** | README Rewrite + Architecture Diagram | `README.md` | — | 2h |
-| **v3-AP2** | Live Deployment (Vercel + Fly.io) | `fly.toml`, `vercel.json` | — | 2h |
-| **v3-AP3** | Chart Professionalisierung (CI-Bänder, Tooltips, Legende) | `TimeseriesChart.tsx` | — | 2-3h |
-| **v3-AP4** | Diagnostics Page (MAPE-Heatmap, CI Coverage, Regime-Analyse) | `diagnostics/page.tsx`, `api/routers/diagnostics.py` | — | 3h |
-| **v3-AP5** | Methodology Paper als PDF (Goldman-Sachs-Research-Note-Stil) | `scripts/generate_methodology_paper.py` | v3-AP3 | 3-4h |
-| **v3-AP6** | Screenshots + README Finalisierung | `README.md`, `docs/screenshots/` | v3-AP3, v3-AP4 | 1h |
-| **v3-AP7** | Excel/CSV Export + Responsive Cleanup | `ExportButton.tsx`, `api/routers/export.py` | — | 2h |
+| AP | Feature | Status |
+|---|---|---|
+| ~~**v3-AP1**~~ | AI Bubble Index — Backend + Data Pipeline (98 sourced data points, 8 sub-indicators, composite 0-100) | ✓ Done |
+| ~~**v3-AP2**~~ | AI Bubble Index — Frontend Dashboard (BubbleGauge, SubindicatorBars, DotcomParallel) | ✓ Done |
+| ~~**v3-AP3**~~ | Data Centre Risk Deep-Dive (Build Rate, Credit Stack, Refinancing Wall, Asset-Life Mismatch) | ✓ Done |
+| ~~**v3-AP4**~~ | Chart-System Upgrade (CI-Bänder als Flächen, Tooltip, Legende, responsive) | ✓ Done |
+| ~~**v3-AP5**~~ | README + Methodology Paper PDF + Screenshots | ✓ Done |
+| ~~**v3-AP6**~~ | Live Deployment (Vercel, self-contained Next.js API routes) | ✓ Done |
 
-**Ausführungsreihenfolge:** v3-AP1 + v3-AP3 + v3-AP4 parallel → v3-AP5 + v3-AP7 parallel → v3-AP6 (Screenshots letzter Schritt) → v3-AP2 (Deployment)
+**Zusätzlich in Phase 3 erledigt:**
+- Diagnostics Page (4-Tab: MAPE Heatmap, CI Coverage, Regime Analysis, Data Sources)
+- Excel/CSV Export (3-Sheet, Scenario-Support)
+- Methodology Paper PDF (5 Seiten, Goldman-Style, datengetrieben aus Parquet)
+- EDGAR CapEx Bottom-Up Validation (real XBRL extraction + fallback, 9 Companies × 5 Jahre)
 
-Fertige Copy-Paste-Prompts: siehe Section "Phase 3 — Fertige Prompts" weiter unten.
+**Live:** https://frontend-blue-chi-18.vercel.app
+**Bubble Index:** https://frontend-blue-chi-18.vercel.app/bubble-index
+**GitHub:** https://github.com/amicusDei/industry-value-estimator
 
-## Prompt-Muster (für neue/eigene Prompts)
+**Phase 3 abgeschlossen.** Alle Features deployed und live.
 
-Jeder Prompt an Claude Code hat exakt 4 Sections. Keine davon ist optional. Max 3 Dateien pro Prompt. Größen-Regel: Small (1-2 Dateien, 5 min), Medium (2-3 Dateien, 15 min). Kein "Large" — splitten.
+Fertige Copy-Paste-Prompts und Quick-Verify-Skripte: siehe **`PROMPTS.md`**.
 
-```
-## KONTEXT
-- Projekt: AI Industry Value Estimator
-- Lies CLAUDE.md für Architektur-Überblick
-- Betroffene Dateien: [max 3]
-- Aktueller Zustand: [1-2 Sätze]
-
-## AUFGABE
-1. [Konkret, spezifisch, messbar]
-2. [...]
-(Max 5 Schritte. Mehr = splitten.)
-
-## CONSTRAINTS
-- Ändere NUR die oben genannten Dateien
-- Wenn du unsicher bist, FRAGE statt zu raten
-
-## VERIFIKATION
-python3 -c "
-print('VERIFY: [Metrik] = [Wert] (expect [Bereich])')
-"
-Wenn IRGENDEINE Verifikation fehlschlägt, STOPPE und erkläre warum.
-```
-
-## Quick-Verify nach Pipeline-Änderungen
-
-```python
-python3 -c "
-import pandas as pd
-df = pd.read_parquet('data/processed/forecasts_ensemble.parquet')
-print(f'VERIFY: Shape = {df.shape} (expect 224 rows)')
-print(f'VERIFY: NaN in point_estimate = {df.point_estimate_nominal.isna().sum()} (expect 0)')
-print(f'VERIFY: CI ordering violations = {len(df[df.ci95_lower_nominal > df.point_estimate_nominal])} (expect 0)')
-sw24 = df[(df.segment=='ai_software') & (df.year==2024) & (df.quarter==4)]
-print(f'VERIFY: ai_software 2024 Q4 = {sw24.point_estimate_nominal.iloc[0]:.1f}B (expect 60-85B)')
-for seg in sorted(df.segment.unique()):
-    s = df[(df.segment==seg) & (df.quarter==4)]
-    v26 = s[s.year==2026].point_estimate_nominal.iloc[0]
-    v30 = s[s.year==2030].point_estimate_nominal.iloc[0]
-    cagr = (v30/v26)**(1/4) - 1
-    print(f'VERIFY: {seg} CAGR 2026-2030 = {cagr:.1%}')
-"
-```
-
----
-
-## Phase 3 — Fertige Prompts (Copy-Paste für Claude Code)
-
-Reihenfolge: v3-AP1 + v3-AP3 + v3-AP4 parallel → v3-AP5 + v3-AP7 parallel → v3-AP6 → v3-AP2.
-
-### v3-AP1: README Rewrite + Architecture Diagram
-
-```
-## KONTEXT
-- Projekt: AI Industry Value Estimator
-- Lies CLAUDE.md für Architektur-Überblick
-- Betroffene Dateien: README.md
-- Aktueller Zustand: README ist veraltet. Referenziert run_dashboard.py (gelöscht), run_reports.py, "$200B 2023 consensus baseline" (nicht mehr korrekt). Keine Screenshots, kein Architecture-Diagram, keine Erwähnung von Dispersion Index, Scenario Engine, Insight Narratives, Bottom-Up Validation.
-
-## AUFGABE
-1. README komplett neu schreiben. Struktur:
-   - **Header:** Projekt-Name + 1-Satz-Pitch ("Institutional-grade AI market sizing platform combining econometric models with analyst consensus data")
-   - **Badge-Leiste:** Python 3.13, Next.js 15, FastAPI, License MIT (oder was aktuell gilt)
-   - **Screenshot-Platzhalter:** `![Dashboard](docs/screenshots/dashboard.png)` — 3 Platzhalter (Dashboard, Segment Detail, Diagnostics)
-   - **Key Features:** 5-6 Punkte (Ensemble Forecasting, Analyst Dispersion, Scenario Engine, Bottom-Up Validation, Automated Insights, Bloomberg-Style UI) — jeweils 1 Satz
-   - **Architecture:** Mermaid-Diagram inline (Ingestion → Processing → Models → API → Frontend)
-   - **Quick Start:** Docker Compose (3 Befehle), alternativ manual setup
-   - **Data Sources:** Tabelle mit 4-5 Quellen (EDGAR, LSEG, World Bank, OECD, 12 Analyst Firms)
-   - **Model Performance:** Tabelle mit MAPE/CI Coverage pro Segment (aus CLAUDE.md Gate 3)
-   - **Tech Stack:** Tabelle oder Liste
-   - **License + Disclaimer**
-2. Maximal 150 Zeilen. Kein Absatz länger als 3 Sätze.
-3. Alle Referenzen auf run_dashboard.py, run_reports.py, run_statistical_pipeline.py entfernen.
-
-## CONSTRAINTS
-- Ändere NUR README.md
-- Englisch (Portfolio-Publikum ist international)
-- Keine Emojis im Text (professionell)
-- Mermaid-Diagram muss auf GitHub renderbar sein
-- Screenshot-Platzhalter als relative Pfade (docs/screenshots/)
-
-## VERIFIKATION
-1. Zeige die vollständige README.md
-2. Zähle die Zeilen: wc -l README.md (expect <= 150)
-3. Prüfe auf veraltete Referenzen: grep -i "run_dashboard\|run_reports\|run_statistical\|200B\|PCA" README.md (expect 0 matches)
-4. Prüfe Mermaid-Syntax: der Mermaid-Block muss mit ```mermaid beginnen und enden
-
-Wenn IRGENDEINE Verifikation fehlschlägt, STOPPE und erkläre warum.
-```
-
-### v3-AP3: Chart Professionalisierung
-
-```
-## KONTEXT
-- Projekt: AI Industry Value Estimator, Frontend in frontend/
-- Stack: Next.js 15 + React 19 + TypeScript + TailwindCSS
-- API läuft auf localhost:8000 (FastAPI)
-- Betroffene Dateien: frontend/src/components/charts/TimeseriesChart.tsx
-- Chart-Library: lightweight-charts v5.1.0 (bereits installiert)
-- Aktueller Zustand: Forecast-Chart zeigt Linien, aber CI-Bänder sind kaum sichtbar oder fehlen, Achsenbeschriftung unvollständig, Tooltip zeigt keine Werte, keine Legende.
-
-## AUFGABE
-1. TimeseriesChart.tsx komplett überarbeiten:
-   - Historical-Daten (is_forecast=false): durchgehende Linie in slate-500 (#64748b)
-   - Forecast-Daten (is_forecast=true): durchgehende Linie in orange-500 (#f97316)
-   - CI80: halbtransparente Fläche (AreaSeries) in rgba(249,115,22,0.25)
-   - CI95: halbtransparente Fläche in rgba(249,115,22,0.08)
-   - Vertikale gestrichelte Linie am Übergang Historical→Forecast (mit Label "Forecast Start")
-2. Y-Achse: "$0B" Format, auto-scaled, rechts positioniert (Bloomberg-Konvention)
-3. X-Achse: "Q1'17", "Q2'17" Format für Quarterly-Daten
-4. Tooltip: Segment-Name, Datum (Q1 2024), Point Estimate ($XX.XB), CI80 Range, CI95 Range
-5. Legende oberhalb des Charts: Historical (grau) | Forecast (orange) | CI80 | CI95
-
-## CONSTRAINTS
-- Bloomberg-Style: bg-slate-900, border-border, orange Akzente
-- Nutze lightweight-charts v5 API (createChart, addLineSeries, addAreaSeries)
-- Wenn lightweight-charts AreaSeries nicht unterstützt für CI-Bänder: wechsle zu recharts (bereits in node_modules oder installierbar) — aber nur als Fallback
-- Keine neuen npm Dependencies außer recharts falls nötig
-- Chart muss responsive sein (resize on container change)
-
-## VERIFIKATION
-1. cd frontend && npm run build  (muss ohne Error durchlaufen)
-2. Beschreibe visuell was der User auf /segments/ai_hardware sieht:
-   - Welche Farben hat die Historical-Linie?
-   - Sind CI-Bänder als Flächen sichtbar?
-   - Was zeigt der Tooltip beim Hover?
-   - Gibt es eine Legende?
-3. curl http://localhost:8000/api/v1/forecasts?segment=ai_hardware | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-forecast = [d for d in data if d.get('is_forecast')]
-print(f'VERIFY: Total rows = {len(data)}')
-print(f'VERIFY: Forecast rows = {len(forecast)}')
-print(f'VERIFY: Has CI80 = {\"ci80_lower_nominal\" in data[0]}')
-print(f'VERIFY: Has CI95 = {\"ci95_lower_nominal\" in data[0]}')
-"
-
-Wenn der Build fehlschlägt, STOPPE und fixe den Error bevor du weitermachst.
-```
-
-### v3-AP4: Diagnostics Page
-
-```
-## KONTEXT
-- Projekt: AI Industry Value Estimator, Frontend in frontend/
-- Stack: Next.js 15 + React 19 + TypeScript + TailwindCSS + recharts
-- API: localhost:8000, Endpunkt GET /api/v1/diagnostics existiert bereits
-- Betroffene Dateien: frontend/src/app/diagnostics/page.tsx, api/routers/diagnostics.py
-- Aktueller Zustand: Diagnostics-Page existiert aber ist unvollständig. API-Endpunkt liefert Basis-Metriken.
-
-## AUFGABE
-1. API-Endpunkt /api/v1/diagnostics erweitern um:
-   - mape_matrix: Segment × Year MAPE-Werte (aus Backtesting-Ergebnissen)
-   - ci_coverage: {segment, ci80_target: 0.80, ci80_actual, ci95_target: 0.95, ci95_actual}
-   - regime_comparison: {segment, pre_genai_mape (2017-2021), post_genai_mape (2022+)}
-   - data_sources: [{source_name, segments_covered, years_covered, n_entries}]
-2. Frontend diagnostics/page.tsx mit Tab-Layout (4 Tabs):
-   - Tab 1 "Model Performance": MAPE-Heatmap (recharts oder custom Grid) — Farb-Encoding: grün <15%, gelb 15-30%, orange 30-50%, rot >50%
-   - Tab 2 "CI Coverage": Balkendiagramm CI80 Actual vs Target (80%) und CI95 Actual vs Target (95%) pro Segment
-   - Tab 3 "Regime Analysis": Grouped Bar Chart Pre-GenAI vs Post-GenAI MAPE pro Segment
-   - Tab 4 "Data Sources": Tabelle mit Quellen, Coverage, Eintrags-Anzahl
-3. Jeder Tab hat einen erklärenden 1-Satz-Subtitle.
-
-## CONSTRAINTS
-- Bloomberg-Style: bg-slate-900, Tabs als Pill-Buttons (wie ScenarioSelector)
-- Nutze recharts für alle Charts
-- MAPE-Werte aus CLAUDE.md Gate 3 als Referenz
-- Loading States pro Tab
-- Mobile: Tabs stacken vertikal auf <768px
-
-## VERIFIKATION
-1. curl http://localhost:8000/api/v1/diagnostics | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-print(f'VERIFY: Keys = {list(data.keys())}')
-print(f'VERIFY: Has mape_matrix = {\"mape_matrix\" in data}')
-print(f'VERIFY: Has ci_coverage = {\"ci_coverage\" in data}')
-print(f'VERIFY: Has regime_comparison = {\"regime_comparison\" in data}')
-print(f'VERIFY: Has data_sources = {\"data_sources\" in data}')
-if 'ci_coverage' in data:
-    for c in data['ci_coverage']:
-        print(f'  {c[\"segment\"]}: CI80={c[\"ci80_actual\"]:.0%} (target 80%), CI95={c[\"ci95_actual\"]:.0%} (target 95%)')
-"
-2. cd frontend && npm run build  (muss ohne Error durchlaufen)
-3. Beschreibe die 4 Tabs: was sieht der User jeweils?
-
-Wenn IRGENDEINE Verifikation fehlschlägt, STOPPE und erkläre warum.
-```
-
-### v3-AP5: Methodology Paper als PDF (nach v3-AP3)
-
-```
-## KONTEXT
-- Projekt: AI Industry Value Estimator
-- Lies CLAUDE.md für Architektur, Modell-Details, und Quality-Gates
-- Lies METHODOLOGY.md und ASSUMPTIONS.md für methodische Details
-- Betroffene Dateien: scripts/generate_methodology_paper.py (NEU), docs/methodology_paper.pdf (Output)
-- Aktueller Zustand: Methodology ist als Markdown und /methodology-Page dokumentiert. Kein standalone PDF im Research-Note-Format.
-
-## AUFGABE
-1. Python-Script scripts/generate_methodology_paper.py erstellen das ein PDF generiert:
-   - Nutze fpdf2 (pip install fpdf2 --break-system-packages)
-   - Format: A4, 3-4 Seiten
-2. PDF-Struktur (Goldman Sachs Research Note Stil):
-   - **Seite 1 Header:** "AI Industry Valuation: A Multi-Source Ensemble Approach" | Datum | "Dr. Matthias Wegner"
-   - **Key Findings Box** (grauer Kasten): 4 Punkte mit Daten aus Parquet-Files
-   - **Methodology (1 Seite):** Data Sources, Ensemble Model, CAGR Calibration, Scope Normalization
-   - **Results (1 Seite):** Segment-Forecasts Tabelle (Base/Conservative/Aggressive), MAPE-Tabelle, CI Coverage
-   - **Data Sources (0.5 Seite):** Source-Tabelle
-   - **Disclaimer Footer**
-3. Daten aus Parquet-Files ziehen — keine hardcoded Werte.
-
-## CONSTRAINTS
-- Englisch (institutionelles Publikum)
-- Professionelles Layout: Schwarz/Grau/Dunkelblau, keine Emojis
-- Tabellen mit Gridlines, rechts-ausgerichtete Zahlen
-- Output nach docs/methodology_paper.pdf
-
-## VERIFIKATION
-1. python3 scripts/generate_methodology_paper.py (muss ohne Error durchlaufen)
-2. ls -la docs/methodology_paper.pdf (expect >50KB)
-3. python3 -c "
-with open('scripts/generate_methodology_paper.py') as f:
-    code = f.read()
-    assert 'read_parquet' in code, 'ERROR: No parquet reads — values might be hardcoded!'
-    print('VERIFY: Script reads from Parquet files')
-    import re
-    suspicious = re.findall(r'(?:estimate|forecast|mape)\s*=\s*[\d.]+', code, re.I)
-    if suspicious:
-        print(f'WARNING: Possibly hardcoded values: {suspicious}')
-    else:
-        print('VERIFY: No suspicious hardcoded values')
-"
-
-Wenn IRGENDEINE Verifikation fehlschlägt, STOPPE und erkläre warum.
-```
-
-### v3-AP7: Excel/CSV Export
-
-```
-## KONTEXT
-- Projekt: AI Industry Value Estimator
-- API: localhost:8000, Endpunkt GET /api/v1/export existiert bereits (api/routers/export.py)
-- Frontend: ExportButton.tsx Komponente existiert bereits
-- Betroffene Dateien: api/routers/export.py, frontend/src/components/ExportButton.tsx
-- Aktueller Zustand: Export-Infrastruktur existiert aber unklar ob Multi-Sheet und Metadaten-Header funktionieren.
-
-## AUFGABE
-1. api/routers/export.py prüfen und erweitern:
-   - GET /api/v1/export?segment=ai_hardware&scenario=base&format=xlsx
-   - Excel mit 3 Sheets: "Forecasts" (Hauptdaten), "Methodology" (Kurztext + Quellen), "Metadata" (Erstellungsdatum, Segment, Scenario, Datenstand)
-   - Forecasts-Sheet: Header-Zeile, dann Year, Quarter, Point Estimate ($B), CI80 Low/High, CI95 Low/High, Historical/Forecast Flag
-   - Zahlen mit 1 Dezimalstelle
-   - format=csv als Alternative (ohne Multi-Sheet)
-2. ExportButton.tsx: Download-Trigger mit Dropdown "Excel (.xlsx)" / "CSV (.csv)"
-3. ExportButton in Segment-Detailseite integrieren falls noch nicht verlinkt.
-
-## CONSTRAINTS
-- Nutze openpyxl für Excel (bereits in Dependencies)
-- Dateiname: "ai_industry_{segment}_{scenario}_{date}.xlsx"
-- Keine neuen npm-Packages
-
-## VERIFIKATION
-1. curl -o /tmp/test_export.xlsx "http://localhost:8000/api/v1/export?segment=ai_hardware&scenario=base&format=xlsx"
-   ls -la /tmp/test_export.xlsx (expect >10KB)
-2. python3 -c "
-import openpyxl
-wb = openpyxl.load_workbook('/tmp/test_export.xlsx')
-print(f'VERIFY: Sheets = {wb.sheetnames} (expect [Forecasts, Methodology, Metadata])')
-ws = wb['Forecasts']
-print(f'VERIFY: Rows = {ws.max_row} (expect >50)')
-print(f'VERIFY: Cols = {ws.max_column} (expect >=7)')
-"
-3. cd frontend && npm run build
-
-Wenn IRGENDEINE Verifikation fehlschlägt, STOPPE und erkläre warum.
-```
-
-### v3-AP6: Screenshots + README Finalisierung (nach v3-AP3 + v3-AP4)
-
-Manueller Task: Docker-Container starten, Screenshots machen, in docs/screenshots/ speichern, README.md Platzhalter ersetzen.
-
-### v3-AP2: Live Deployment (nach allen anderen)
-
-Manueller Task: Vercel (Frontend) + Fly.io (API) konfigurieren, klickbaren Link in README einfügen.

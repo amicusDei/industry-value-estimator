@@ -1,18 +1,22 @@
 # AI Industry Value Estimator
 
-Institutional-grade AI market sizing platform combining econometric models with analyst consensus data.
+Institutional-grade AI market analysis platform with quantitative bubble risk assessment, ensemble forecasting, and BIS-referenced risk indicators.
 
 ![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)
 ![Next.js 15](https://img.shields.io/badge/Next.js-15-black.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688.svg)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)
 
+![Bubble Index](docs/screenshots/bubble-index.png)
 ![Dashboard](docs/screenshots/dashboard.png)
 ![Segment Detail](docs/screenshots/segment-detail.png)
 ![Diagnostics](docs/screenshots/diagnostics.png)
 
 ## Key Features
 
+- **AI Bubble Index** -- Composite score (0-100) tracking AI market overheating across 8 sub-indicators, measuring both investment intensity and productivity realization, benchmarked against the dotcom cycle. Current score: 63 (Bubble Warning).
+- **Dotcom Parallel Analysis** -- Side-by-side comparison of AI investment metrics against the 1996-2002 telecom/internet bubble, covering capex intensity, market concentration, and credit expansion.
+- **Data Centre Risk Layer** -- Tracks hyperscaler build rates (MW/year), bond issuance ($121B in 2025), private credit exposure ($200B+), off-balance-sheet SPVs, and asset-life mismatch (20-year DC assumption vs 18-month GPU cycle).
 - **Ensemble Forecasting** -- ARIMA + Prophet + LightGBM blend with inverse-RMSE weighting and quantile confidence intervals per AI segment.
 - **Analyst Dispersion Index** -- Tracks inter-quartile range across 12 analyst firms over time; converging dispersion signals rising forecast confidence.
 - **Scenario Engine** -- Pre-computed Bull/Base/Bear forecast sets that run the full pipeline with distinct parameter configurations.
@@ -30,12 +34,18 @@ graph LR
         A3[World Bank API]
         A4[OECD SDMX API]
         A5[12 Analyst Firms]
+        A6[BIS / MUFG / PwC]
     end
 
     subgraph Processing
         B1[Deflation to 2020 USD]
         B2[Scope Normalization]
         B3[Market Anchor Compilation]
+    end
+
+    subgraph Risk
+        R1[bubble_index.py]
+        R2[dc_risk.py]
     end
 
     subgraph Models
@@ -50,10 +60,15 @@ graph LR
 
     subgraph Frontend
         E1[Next.js 15]
+        E2[BubbleGauge]
+        E3[DotcomParallel]
+        E4[DC Risk Charts]
     end
 
     A1 & A2 & A3 & A4 & A5 --> B1 --> B2 --> B3
-    B3 --> C1 --> C2 --> C3 --> D1 --> E1
+    A6 --> R1 --> R2
+    B3 --> C1 --> C2 --> C3 --> D1
+    R1 & R2 --> D1 --> E1 & E2 & E3 & E4
 ```
 
 ## Quick Start
@@ -78,11 +93,16 @@ cd frontend && npm install && npm run dev         # Start frontend
 
 | Source | Data | Coverage |
 |--------|------|----------|
+| [BIS](https://www.bis.org/publ/qtrpdf/r_qt2603u.htm) | AI credit exposure, shadow leverage, bond issuance | Global, 2020--2026 |
+| [MUFG](https://www.mufg.jp) | Hyperscaler capex tracking, data centre investment | Global, 2020--2026 |
+| [Goldman Sachs](https://www.goldmansachs.com) | AI productivity impact studies, ROI analysis | US/Global, 2024--2026 |
+| [PwC](https://www.pwc.com) | Global CEO Survey, enterprise AI adoption rates | 95 countries, 2024--2026 |
+| [Dell'Oro Group](https://www.delloro.com) | Data centre capex and build rate forecasts | Global, 2020--2030 |
 | [World Bank](https://data.worldbank.org) | GDP, R&D expenditure, ICT exports, patents | 16 economies, 2010--2024 |
 | [OECD MSTI](https://www.oecd.org/en/data/datasets/main-science-and-technology-indicators.html) | Business R&D by sector, ICT BERD | OECD members, 2010--2024 |
 | [LSEG Workspace](https://www.lseg.com/en/data-analytics/financial-data/company-data) | Revenue, R&D expense, gross margins | TRBC-classified AI companies |
 | [SEC EDGAR](https://www.sec.gov/edgar) | 10-K/10-Q filings, AI revenue disclosures | 15 public companies |
-| 12 Analyst Firms | Scope-normalized market size estimates | IDC, Gartner, Goldman Sachs, McKinsey, and others |
+| 12 Analyst Firms | Scope-normalized market size estimates | IDC, Gartner, McKinsey, and others |
 
 ## Model Performance
 
