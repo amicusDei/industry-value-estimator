@@ -292,6 +292,15 @@ export interface BubbleIndexRow {
   revenue_and_cost_impact_pct: number;
   us_productivity_growth_pct: number;
   ai_capex_growth_yoy_pct: number;
+  hyperscaler_ai_capex_usd_b: number;
+  ai_revenue_usd_b: number;
+  new_capacity_mw: number;
+  hyperscaler_bonds_usd_b: number;
+  private_credit_ai_usd_b: number;
+  off_balance_sheet_est_usd_b: number;
+  roi_from_headcount_pct: number;
+  ai_cycle_year: number;
+  dotcom_equivalent_year: number;
 }
 
 export interface DotcomParallelPoint {

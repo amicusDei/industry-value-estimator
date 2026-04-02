@@ -19,7 +19,16 @@
     "bis_risk_rating": 1,
     "revenue_and_cost_impact_pct": 18.0,
     "us_productivity_growth_pct": 1.8,
-    "ai_capex_growth_yoy_pct": 5.0
+    "ai_capex_growth_yoy_pct": 5.0,
+    "hyperscaler_ai_capex_usd_b": 30.0,
+    "ai_revenue_usd_b": 28.0,
+    "new_capacity_mw": 1200,
+    "hyperscaler_bonds_usd_b": 15.0,
+    "private_credit_ai_usd_b": 2.0,
+    "off_balance_sheet_est_usd_b": 5.0,
+    "roi_from_headcount_pct": 5.0,
+    "ai_cycle_year": 1,
+    "dotcom_equivalent_year": 1996
   },
   {
     "year": 2020,
@@ -41,7 +50,16 @@
     "bis_risk_rating": 1,
     "revenue_and_cost_impact_pct": 18.0,
     "us_productivity_growth_pct": 2.5,
-    "ai_capex_growth_yoy_pct": 6.0
+    "ai_capex_growth_yoy_pct": 6.0,
+    "hyperscaler_ai_capex_usd_b": 35.0,
+    "ai_revenue_usd_b": 32.0,
+    "new_capacity_mw": 1350,
+    "hyperscaler_bonds_usd_b": 18.0,
+    "private_credit_ai_usd_b": 3.0,
+    "off_balance_sheet_est_usd_b": 6.0,
+    "roi_from_headcount_pct": 5.0,
+    "ai_cycle_year": 1,
+    "dotcom_equivalent_year": 1996
   },
   {
     "year": 2021,
@@ -63,7 +81,16 @@
     "bis_risk_rating": 1,
     "revenue_and_cost_impact_pct": 17.0,
     "us_productivity_growth_pct": 3.8,
-    "ai_capex_growth_yoy_pct": 15.0
+    "ai_capex_growth_yoy_pct": 15.0,
+    "hyperscaler_ai_capex_usd_b": 45.0,
+    "ai_revenue_usd_b": 38.0,
+    "new_capacity_mw": 1500,
+    "hyperscaler_bonds_usd_b": 22.0,
+    "private_credit_ai_usd_b": 5.0,
+    "off_balance_sheet_est_usd_b": 8.0,
+    "roi_from_headcount_pct": 8.0,
+    "ai_cycle_year": 2,
+    "dotcom_equivalent_year": 1997
   },
   {
     "year": 2021,
@@ -85,7 +112,16 @@
     "bis_risk_rating": 2,
     "revenue_and_cost_impact_pct": 16.0,
     "us_productivity_growth_pct": 1.2,
-    "ai_capex_growth_yoy_pct": 18.0
+    "ai_capex_growth_yoy_pct": 18.0,
+    "hyperscaler_ai_capex_usd_b": 52.0,
+    "ai_revenue_usd_b": 42.0,
+    "new_capacity_mw": 1700,
+    "hyperscaler_bonds_usd_b": 28.0,
+    "private_credit_ai_usd_b": 8.0,
+    "off_balance_sheet_est_usd_b": 12.0,
+    "roi_from_headcount_pct": 10.0,
+    "ai_cycle_year": 2,
+    "dotcom_equivalent_year": 1997
   },
   {
     "year": 2022,
@@ -107,7 +143,16 @@
     "bis_risk_rating": 2,
     "revenue_and_cost_impact_pct": 15.0,
     "us_productivity_growth_pct": -1.5,
-    "ai_capex_growth_yoy_pct": 15.0
+    "ai_capex_growth_yoy_pct": 15.0,
+    "hyperscaler_ai_capex_usd_b": 60.0,
+    "ai_revenue_usd_b": 46.0,
+    "new_capacity_mw": 1900,
+    "hyperscaler_bonds_usd_b": 32.0,
+    "private_credit_ai_usd_b": 12.0,
+    "off_balance_sheet_est_usd_b": 18.0,
+    "roi_from_headcount_pct": 12.0,
+    "ai_cycle_year": 3,
+    "dotcom_equivalent_year": 1998
   },
   {
     "year": 2022,
@@ -129,7 +174,16 @@
     "bis_risk_rating": 2,
     "revenue_and_cost_impact_pct": 14.0,
     "us_productivity_growth_pct": 1.8,
-    "ai_capex_growth_yoy_pct": 20.0
+    "ai_capex_growth_yoy_pct": 20.0,
+    "hyperscaler_ai_capex_usd_b": 72.0,
+    "ai_revenue_usd_b": 50.0,
+    "new_capacity_mw": 2100,
+    "hyperscaler_bonds_usd_b": 38.0,
+    "private_credit_ai_usd_b": 18.0,
+    "off_balance_sheet_est_usd_b": 25.0,
+    "roi_from_headcount_pct": 15.0,
+    "ai_cycle_year": 3,
+    "dotcom_equivalent_year": 1998
   },
   {
     "year": 2023,
@@ -151,7 +205,16 @@
     "bis_risk_rating": 3,
     "revenue_and_cost_impact_pct": 10.0,
     "us_productivity_growth_pct": 3.5,
-    "ai_capex_growth_yoy_pct": 28.0
+    "ai_capex_growth_yoy_pct": 28.0,
+    "hyperscaler_ai_capex_usd_b": 95.0,
+    "ai_revenue_usd_b": 55.0,
+    "new_capacity_mw": 2600,
+    "hyperscaler_bonds_usd_b": 48.0,
+    "private_credit_ai_usd_b": 35.0,
+    "off_balance_sheet_est_usd_b": 40.0,
+    "roi_from_headcount_pct": 30.0,
+    "ai_cycle_year": 4,
+    "dotcom_equivalent_year": 1999
   },
   {
     "year": 2023,
@@ -173,7 +236,16 @@
     "bis_risk_rating": 3,
     "revenue_and_cost_impact_pct": 10.0,
     "us_productivity_growth_pct": 2.6,
-    "ai_capex_growth_yoy_pct": 35.0
+    "ai_capex_growth_yoy_pct": 35.0,
+    "hyperscaler_ai_capex_usd_b": 120.0,
+    "ai_revenue_usd_b": 62.0,
+    "new_capacity_mw": 3200,
+    "hyperscaler_bonds_usd_b": 62.0,
+    "private_credit_ai_usd_b": 55.0,
+    "off_balance_sheet_est_usd_b": 60.0,
+    "roi_from_headcount_pct": 40.0,
+    "ai_cycle_year": 4,
+    "dotcom_equivalent_year": 1999
   },
   {
     "year": 2024,
@@ -195,7 +267,16 @@
     "bis_risk_rating": 3,
     "revenue_and_cost_impact_pct": 11.0,
     "us_productivity_growth_pct": 2.9,
-    "ai_capex_growth_yoy_pct": 38.0
+    "ai_capex_growth_yoy_pct": 38.0,
+    "hyperscaler_ai_capex_usd_b": 140.0,
+    "ai_revenue_usd_b": 72.0,
+    "new_capacity_mw": 4000,
+    "hyperscaler_bonds_usd_b": 78.0,
+    "private_credit_ai_usd_b": 90.0,
+    "off_balance_sheet_est_usd_b": 80.0,
+    "roi_from_headcount_pct": 55.0,
+    "ai_cycle_year": 5,
+    "dotcom_equivalent_year": 2000
   },
   {
     "year": 2024,
@@ -217,7 +298,16 @@
     "bis_risk_rating": 4,
     "revenue_and_cost_impact_pct": 11.5,
     "us_productivity_growth_pct": 2.5,
-    "ai_capex_growth_yoy_pct": 40.0
+    "ai_capex_growth_yoy_pct": 40.0,
+    "hyperscaler_ai_capex_usd_b": 176.0,
+    "ai_revenue_usd_b": 82.0,
+    "new_capacity_mw": 5100,
+    "hyperscaler_bonds_usd_b": 98.0,
+    "private_credit_ai_usd_b": 130.0,
+    "off_balance_sheet_est_usd_b": 120.0,
+    "roi_from_headcount_pct": 65.0,
+    "ai_cycle_year": 5,
+    "dotcom_equivalent_year": 2000
   },
   {
     "year": 2025,
@@ -239,7 +329,16 @@
     "bis_risk_rating": 4,
     "revenue_and_cost_impact_pct": 12.0,
     "us_productivity_growth_pct": 2.8,
-    "ai_capex_growth_yoy_pct": 38.0
+    "ai_capex_growth_yoy_pct": 38.0,
+    "hyperscaler_ai_capex_usd_b": 210.0,
+    "ai_revenue_usd_b": 92.0,
+    "new_capacity_mw": 6500,
+    "hyperscaler_bonds_usd_b": 110.0,
+    "private_credit_ai_usd_b": 170.0,
+    "off_balance_sheet_est_usd_b": 160.0,
+    "roi_from_headcount_pct": 75.0,
+    "ai_cycle_year": 6,
+    "dotcom_equivalent_year": 2001
   },
   {
     "year": 2025,
@@ -261,7 +360,16 @@
     "bis_risk_rating": 4,
     "revenue_and_cost_impact_pct": 12.0,
     "us_productivity_growth_pct": 2.7,
-    "ai_capex_growth_yoy_pct": 36.0
+    "ai_capex_growth_yoy_pct": 36.0,
+    "hyperscaler_ai_capex_usd_b": 233.0,
+    "ai_revenue_usd_b": 100.0,
+    "new_capacity_mw": 7800,
+    "hyperscaler_bonds_usd_b": 121.0,
+    "private_credit_ai_usd_b": 200.0,
+    "off_balance_sheet_est_usd_b": 200.0,
+    "roi_from_headcount_pct": 80.0,
+    "ai_cycle_year": 6,
+    "dotcom_equivalent_year": 2001
   },
   {
     "year": 2026,
@@ -283,6 +391,15 @@
     "bis_risk_rating": 5,
     "revenue_and_cost_impact_pct": 13.0,
     "us_productivity_growth_pct": 2.5,
-    "ai_capex_growth_yoy_pct": 36.0
+    "ai_capex_growth_yoy_pct": 36.0,
+    "hyperscaler_ai_capex_usd_b": 290.0,
+    "ai_revenue_usd_b": 110.0,
+    "new_capacity_mw": 9200,
+    "hyperscaler_bonds_usd_b": 140.0,
+    "private_credit_ai_usd_b": 250.0,
+    "off_balance_sheet_est_usd_b": 250.0,
+    "roi_from_headcount_pct": 82.0,
+    "ai_cycle_year": 7,
+    "dotcom_equivalent_year": 2002
   }
 ]

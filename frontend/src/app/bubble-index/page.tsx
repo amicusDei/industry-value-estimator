@@ -78,8 +78,9 @@ export default async function BubbleIndexPage() {
     return <div className="text-muted">No bubble index data available.</div>;
   }
 
-  // Latest row
+  // Latest row + previous half-year for YoY trend
   const latest = rows[rows.length - 1];
+  const previousHalf = rows.length >= 2 ? rows[rows.length - 2] : undefined;
   const findings = generateFindings(latest);
 
   return (
@@ -149,7 +150,7 @@ export default async function BubbleIndexPage() {
       {/* Subindicator bars */}
       <div className="bg-surface border border-border rounded-lg p-5 mb-8">
         <h2 className="text-lg font-semibold mb-4">Sub-Indicators</h2>
-        <SubindicatorBars data={latest} />
+        <SubindicatorBars data={latest} previousData={previousHalf} />
       </div>
 
       {/* Dotcom Parallel Chart */}
