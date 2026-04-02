@@ -75,9 +75,10 @@ def _compute_capex_intensity_score(entry: dict) -> float:
 
 
 def _compute_concentration_score(entry: dict) -> float:
-    """AI-specific concentration via HHI. HHI 0.10 -> 0, HHI 0.40 -> 100."""
-    hhi = entry.get("ai_revenue_hhi", 0.10)
-    return _normalize_linear(hhi, 0.10, 0.40)
+    """AI total-market concentration via HHI (all 4 segments + private cos).
+    HHI 0.05 -> 0, HHI 0.25 -> 100. Range reflects full AI market, not chip-only."""
+    hhi = entry.get("ai_revenue_hhi", 0.08)
+    return _normalize_linear(hhi, 0.05, 0.25)
 
 
 def _compute_dc_build_score(entry: dict) -> float:

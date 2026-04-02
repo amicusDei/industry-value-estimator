@@ -20,7 +20,7 @@ function contextLine(key: string, d: BubbleIndexRow): string {
     case "capex_intensity_score":
       return `Ratio: ${d.capex_intensity_ratio.toFixed(1)}\u00d7 | $${Math.round(d.hyperscaler_ai_capex_usd_b)}B capex / $${Math.round(d.ai_revenue_usd_b)}B revenue`;
     case "concentration_score":
-      return `AI Revenue HHI: ${d.ai_revenue_hhi.toFixed(2)} | NVIDIA ${d.top_player_ai_share_pct.toFixed(0)}% AI chip market share`;
+      return `Total-market HHI: ${d.ai_revenue_hhi.toFixed(2)} | Top player (NVIDIA): ${d.top_player_ai_share_pct.toFixed(0)}% of total AI revenue`;
     case "dc_build_score":
       return `${d.new_capacity_mw.toLocaleString()} MW new capacity | ${d.dc_yoy_growth_pct.toFixed(0)}% YoY growth`;
     case "credit_score": {

@@ -720,72 +720,77 @@ bubble_index:
   # INPUT INDICATOR 2: Market Concentration
   # Top-5 S&P500 weight — higher concentration = more fragile
   # ---------------------------------------------------------------------------
+  # HHI computed across TOTAL AI market (Hardware + Infrastructure + Software + Adoption)
+  # including private companies (OpenAI ~$13B ARR, Anthropic ~$2B, Databricks ~$2.4B, CoreWeave ~$3B)
+  # A chip-only HHI would be 0.50+ (NVIDIA dominance) — that's as distorted as the old S&P500 metric.
+  # Total-market HHI is lower because revenue is spread across MSFT Azure AI, AWS AI, Google Cloud AI,
+  # enterprise software (Salesforce, ServiceNow), and growing private players.
   market_concentration:
     - year: 2020
       half: 1
-      ai_revenue_hhi: 0.12
-      top_player_ai_share_pct: 35.0
-      source: "TrendForce GPU Tracker 2020, Mercury Research Q2 2020, EDGAR 10-K AI revenue attribution"
+      ai_revenue_hhi: 0.08
+      top_player_ai_share_pct: 22.0
+      source: "IDC AI Spending Guide 2020, EDGAR 10-K — total AI market ~$50B, NVIDIA ~$11B (Data Center)"
     - year: 2020
       half: 2
-      ai_revenue_hhi: 0.12
+      ai_revenue_hhi: 0.08
+      top_player_ai_share_pct: 22.0
+      source: "IDC AI Spending Guide 2020, EDGAR 10-K — fragmented market, cloud providers ~8% each"
+    - year: 2021
+      half: 1
+      ai_revenue_hhi: 0.09
+      top_player_ai_share_pct: 24.0
+      source: "IDC AI Spending Guide 2021, EDGAR 10-K — NVIDIA growing but market diversifying"
+    - year: 2021
+      half: 2
+      ai_revenue_hhi: 0.09
+      top_player_ai_share_pct: 24.0
+      source: "IDC AI Spending Guide 2021, EDGAR 10-K — cloud AI services growing across 3 hyperscalers"
+    - year: 2022
+      half: 1
+      ai_revenue_hhi: 0.10
+      top_player_ai_share_pct: 25.0
+      source: "IDC AI Spending Guide 2022, EDGAR 10-K — total market ~$90B, NVIDIA ~$22B"
+    - year: 2022
+      half: 2
+      ai_revenue_hhi: 0.11
+      top_player_ai_share_pct: 26.0
+      source: "IDC AI Spending Guide 2022, EDGAR 10-K — GenAI not yet impacting revenue distribution"
+    - year: 2023
+      half: 1
+      ai_revenue_hhi: 0.14
+      top_player_ai_share_pct: 30.0
+      source: "IDC AI Spending Guide 2023, EDGAR 10-K — NVIDIA Data Center surge post-ChatGPT, total market ~$130B"
+    - year: 2023
+      half: 2
+      ai_revenue_hhi: 0.16
+      top_player_ai_share_pct: 33.0
+      source: "IDC AI Spending Guide 2023, EDGAR 10-K — NVIDIA H100 demand spike, OpenAI ~$1.6B ARR"
+    - year: 2024
+      half: 1
+      ai_revenue_hhi: 0.18
       top_player_ai_share_pct: 35.0
-      source: "TrendForce GPU Tracker 2020, Mercury Research Q4 2020, EDGAR 10-K AI revenue attribution"
-    - year: 2021
-      half: 1
-      ai_revenue_hhi: 0.18
-      top_player_ai_share_pct: 42.0
-      source: "TrendForce GPU Tracker 2021, Mercury Research Q2 2021, EDGAR 10-K AI revenue attribution"
-    - year: 2021
-      half: 2
-      ai_revenue_hhi: 0.18
-      top_player_ai_share_pct: 42.0
-      source: "TrendForce GPU Tracker 2021, Mercury Research Q4 2021, EDGAR 10-K AI revenue attribution"
-    - year: 2022
-      half: 1
-      ai_revenue_hhi: 0.32
-      top_player_ai_share_pct: 55.0
-      source: "TrendForce GPU Tracker 2022, Mercury Research Q2 2022, EDGAR 10-K AI revenue attribution"
-    - year: 2022
-      half: 2
-      ai_revenue_hhi: 0.32
-      top_player_ai_share_pct: 55.0
-      source: "TrendForce GPU Tracker 2022, Mercury Research Q4 2022, EDGAR 10-K AI revenue attribution"
-    - year: 2023
-      half: 1
-      ai_revenue_hhi: 0.38
-      top_player_ai_share_pct: 60.0
-      source: "TrendForce GPU Tracker 2023, Mercury Research Q2 2023 (AI training demand surge)"
-    - year: 2023
-      half: 2
-      ai_revenue_hhi: 0.42
-      top_player_ai_share_pct: 65.0
-      source: "TrendForce GPU Tracker 2023, Mercury Research Q4 2023 (H100 dominance)"
-    - year: 2024
-      half: 1
-      ai_revenue_hhi: 0.52
-      top_player_ai_share_pct: 72.0
-      source: "TrendForce GPU Tracker 2024, Mercury Research Q2 2024 (B100 ramp)"
+      source: "IDC AI Spending Guide 2024, EDGAR 10-K — total market ~$180B, NVIDIA ~$63B (DC), OpenAI ~$5B ARR"
     - year: 2024
       half: 2
-      ai_revenue_hhi: 0.58
-      top_player_ai_share_pct: 75.0
-      source: "TrendForce GPU Tracker 2024, Mercury Research Q4 2024 (NVIDIA peak share)"
+      ai_revenue_hhi: 0.19
+      top_player_ai_share_pct: 36.0
+      source: "IDC AI Spending Guide 2024, EDGAR 10-K, The Information — OpenAI ~$8B ARR, Anthropic ~$1B"
     - year: 2025
       half: 1
-      ai_revenue_hhi: 0.55
-      top_player_ai_share_pct: 73.0
-      source: "TrendForce GPU Tracker 2025, Mercury Research Q2 2025 (AMD MI300X gains share)"
+      ai_revenue_hhi: 0.18
+      top_player_ai_share_pct: 34.0
+      source: "IDC AI Spending Guide 2025, EDGAR 10-K — market diversifying: OpenAI $13B, Anthropic $2B, Databricks $2.4B, CoreWeave $3B"
     - year: 2025
       half: 2
-      ai_revenue_hhi: 0.53
-      top_player_ai_share_pct: 72.0
-      source: "TrendForce GPU Tracker 2025, Mercury Research Q4 2025 (AMD + custom silicon erode share)"
+      ai_revenue_hhi: 0.17
+      top_player_ai_share_pct: 33.0
+      source: "IDC AI Spending Guide 2025, EDGAR 10-K — AMD MI300X + custom silicon (Google TPU, Amazon Trainium) erode NVIDIA share across total market"
     - year: 2026
       half: 1
-      ai_revenue_hhi: 0.52
-      top_player_ai_share_pct: 71.0
-      source: "TrendForce GPU Tracker 2026 (projection), Mercury Research Q1 2026 (NVIDIA still dominant but diversifying)"
+      ai_revenue_hhi: 0.17
+      top_player_ai_share_pct: 32.0
+      source: "IDC AI Spending Guide 2026 (projection) — continued diversification, private AI companies scaling rapidly"
 
   # ---------------------------------------------------------------------------
   # INPUT INDICATOR 3: Data Centre Build Momentum
