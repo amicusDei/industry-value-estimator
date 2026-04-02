@@ -106,7 +106,7 @@ export default function BubbleGauge({ score, classification, previousData }: Pro
 
   return (
     <div className="flex flex-col items-center">
-      <svg viewBox="0 0 400 240" className="w-full max-w-md">
+      <svg viewBox="0 0 400 270" className="w-full max-w-md">
         {/* Background track */}
         <path
           d={arcPath(0, 100, r)}
@@ -173,10 +173,10 @@ export default function BubbleGauge({ score, classification, previousData }: Pro
         <circle cx={cx} cy={cy} r={7} fill="#334155" />
         <circle cx={cx} cy={cy} r={3} fill="#0a0a0f" />
 
-        {/* Score number — shifted down to avoid needle overlap */}
+        {/* Score number — below the needle hub */}
         <text
           x={cx}
-          y={cy - 18}
+          y={cy + 30}
           textAnchor="middle"
           fill={scoreColor(score)}
           fontSize="48"
@@ -190,7 +190,7 @@ export default function BubbleGauge({ score, classification, previousData }: Pro
         {trendText && (
           <text
             x={cx}
-            y={cy + 18}
+            y={cy + 52}
             textAnchor="middle"
             fill={trendColor}
             fontSize="12"
@@ -204,7 +204,7 @@ export default function BubbleGauge({ score, classification, previousData }: Pro
         {/* Label */}
         <text
           x={cx}
-          y={cy + 38}
+          y={cy + 72}
           textAnchor="middle"
           fill="#e2e8f0"
           fontSize="13"
