@@ -33,7 +33,7 @@ function generateFindings(latest: BubbleIndexRow): string[] {
 
   // Market concentration
   findings.push(
-    `Top-5 tech companies now represent ${latest.top5_pct_sp500.toFixed(0)}% of S&P 500 market cap \u2014 exceeding the dotcom-era peak concentration of ~18%.`
+    `AI revenue HHI at ${latest.ai_revenue_hhi.toFixed(2)} \u2014 NVIDIA holds ${latest.top_player_ai_share_pct.toFixed(0)}% of AI chip market, exceeding dotcom-era concentration levels.`
   );
 
   return findings;

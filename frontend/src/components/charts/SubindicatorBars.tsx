@@ -20,7 +20,7 @@ function contextLine(key: string, d: BubbleIndexRow): string {
     case "capex_intensity_score":
       return `Ratio: ${d.capex_intensity_ratio.toFixed(1)}\u00d7 | $${Math.round(d.hyperscaler_ai_capex_usd_b)}B capex / $${Math.round(d.ai_revenue_usd_b)}B revenue`;
     case "concentration_score":
-      return `Top-5 S&P500: ${d.top5_pct_sp500.toFixed(1)}% | NVIDIA, MSFT, AAPL, GOOG, META`;
+      return `AI Revenue HHI: ${d.ai_revenue_hhi.toFixed(2)} | NVIDIA ${d.top_player_ai_share_pct.toFixed(0)}% AI chip market share`;
     case "dc_build_score":
       return `${d.new_capacity_mw.toLocaleString()} MW new capacity | ${d.dc_yoy_growth_pct.toFixed(0)}% YoY growth`;
     case "credit_score": {
@@ -30,9 +30,11 @@ function contextLine(key: string, d: BubbleIndexRow): string {
       return `$${Math.round(d.credit_total_usd_b)}B total | $${bonds}B bonds + $${priv}B private + $${obs}B off-BS`;
     }
     case "shadow_score":
-      return `BIS Rating: ${d.bis_risk_rating}/5 | Off-balance-sheet SPVs, private credit opacity`;
-    case "enterprise_roi_score":
-      return `${d.revenue_and_cost_impact_pct.toFixed(0)}% report revenue+cost benefit | ${d.roi_from_headcount_pct.toFixed(0)}% ROI from headcount cuts`;
+      return `Off-BS ratio: ${d.off_bs_ratio.toFixed(1)}\u00d7 | ${d.spv_jv_count} SPV/JVs | ${d.asset_life_mismatch_ratio.toFixed(0)}\u00d7 asset-life mismatch`;
+    case "enterprise_roi_score": {
+      const gap = Math.max(0, d.enterprise_ai_spend_growth_pct - d.revenue_and_cost_impact_pct);
+      return `Spend +${d.enterprise_ai_spend_growth_pct.toFixed(0)}% vs ${d.revenue_and_cost_impact_pct.toFixed(0)}% impact (gap: ${gap.toFixed(0)}pp) | ${d.roi_from_headcount_pct.toFixed(0)}% ROI from headcount | ${d.margin_erosion_from_ai_infra_pct.toFixed(0)}% margin erosion`;
+    }
     case "productivity_gap_score": {
       const gap = d.us_productivity_growth_pct > 0
         ? (d.ai_capex_growth_yoy_pct / d.us_productivity_growth_pct).toFixed(0)

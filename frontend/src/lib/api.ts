@@ -285,11 +285,17 @@ export interface BubbleIndexRow {
   composite_score: number;
   classification: string;
   capex_intensity_ratio: number;
-  top5_pct_sp500: number;
+  ai_revenue_hhi: number;
+  top_player_ai_share_pct: number;
   dc_yoy_growth_pct: number;
   credit_total_usd_b: number;
-  bis_risk_rating: number;
+  off_bs_ratio: number;
+  spv_jv_count: number;
+  asset_life_mismatch_ratio: number;
   revenue_and_cost_impact_pct: number;
+  enterprise_ai_spend_growth_pct: number;
+  roi_from_headcount_pct: number;
+  margin_erosion_from_ai_infra_pct: number;
   us_productivity_growth_pct: number;
   ai_capex_growth_yoy_pct: number;
   hyperscaler_ai_capex_usd_b: number;
@@ -298,7 +304,6 @@ export interface BubbleIndexRow {
   hyperscaler_bonds_usd_b: number;
   private_credit_ai_usd_b: number;
   off_balance_sheet_est_usd_b: number;
-  roi_from_headcount_pct: number;
   ai_cycle_year: number;
   dotcom_equivalent_year: number;
 }

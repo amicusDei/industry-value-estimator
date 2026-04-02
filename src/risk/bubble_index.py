@@ -75,9 +75,9 @@ def _compute_capex_intensity_score(entry: dict) -> float:
 
 
 def _compute_concentration_score(entry: dict) -> float:
-    """Market concentration: 10% -> 0, 40% -> 100."""
-    pct = entry.get("top5_pct_sp500", 0)
-    return _normalize_linear(pct, 10.0, 40.0)
+    """AI-specific concentration via HHI. HHI 0.10 -> 0, HHI 0.40 -> 100."""
+    hhi = entry.get("ai_revenue_hhi", 0.10)
+    return _normalize_linear(hhi, 0.10, 0.40)
 
 
 def _compute_dc_build_score(entry: dict) -> float:
@@ -101,27 +101,35 @@ def _compute_credit_score(entry: dict, total_ai_market_usd_b: float = 200.0) -> 
 
 
 def _compute_shadow_score(entry: dict) -> float:
-    """Shadow leverage: BIS rating * 20 (1->20, 5->100)."""
-    rating = entry.get("bis_risk_rating", 1)
-    return _clip(rating * 20.0)
+    """Shadow leverage composite: off-BS opacity + SPV proliferation + asset-life mismatch."""
+    off_bs = entry.get("off_bs_ratio", 0.5)
+    spv_count = entry.get("spv_jv_count", 0)
+    mismatch = entry.get("asset_life_mismatch_ratio", 3.0)
+    s1 = _normalize_linear(off_bs, 0.5, 3.0)
+    s2 = _normalize_linear(spv_count, 5.0, 40.0)
+    s3 = _normalize_linear(mismatch, 3.0, 15.0)
+    return _clip(s1 * 0.40 + s2 * 0.30 + s3 * 0.30)
 
 
 def _compute_enterprise_roi_score(entry: dict) -> float:
-    """Enterprise ROI score (inverted — low ROI = high bubble signal).
+    """Enterprise ROI gap model — expectation vs realization.
 
-    base = (100 - revenue_and_cost_impact_pct * 5)
-    headcount_penalty = roi_from_headcount_pct * 0.3
-    margin_erosion_penalty = margin_erosion_from_ai_infra_pct * 2
+    Three components:
+    1. Expectation gap: spend_growth - impact (higher gap = more bubble)
+    2. ROI hollowness: headcount-driven ROI relative to actual impact
+    3. Margin burden: direct infrastructure cost erosion
     """
+    spend_growth = entry.get("enterprise_ai_spend_growth_pct", 0)
     impact = entry.get("revenue_and_cost_impact_pct", 0)
     headcount = entry.get("roi_from_headcount_pct", 0)
     margin = entry.get("margin_erosion_from_ai_infra_pct", 0)
 
-    base = 100.0 - impact * 5.0
-    headcount_penalty = headcount * 0.3
-    margin_penalty = margin * 2.0
+    expectation_gap = max(0, spend_growth - impact)
+    roi_hollowness = min(100.0, (headcount / max(impact, 1.0)) * 10.0)
+    margin_burden = margin
 
-    return _clip(base + headcount_penalty + margin_penalty)
+    raw = expectation_gap * 0.40 + roi_hollowness * 0.35 + margin_burden * 0.25
+    return _normalize_linear(raw, 10.0, 80.0)
 
 
 def _compute_productivity_gap_score(entry: dict) -> float:
@@ -266,7 +274,7 @@ def compute_bubble_index(config: dict) -> pd.DataFrame:
         rev_usd = capex_entry.get("ai_revenue_usd_b", 1)
         capex_ratio = capex_usd / max(rev_usd, 0.1)
 
-        conc_pct = conc_entry.get("top5_pct_sp500", 0)
+        conc_pct = conc_entry.get("top_player_ai_share_pct", 0)
         dc_growth = dc_entry.get("yoy_growth_pct", 0)
         credit_total = (
             credit_entry.get("hyperscaler_bonds_usd_b", 0)
@@ -302,11 +310,17 @@ def compute_bubble_index(config: dict) -> pd.DataFrame:
             "classification": classification,
             # Raw metrics for transparency
             "capex_intensity_ratio": round(capex_ratio, 2),
-            "top5_pct_sp500": conc_pct,
+            "ai_revenue_hhi": conc_entry.get("ai_revenue_hhi", 0),
+            "top_player_ai_share_pct": conc_entry.get("top_player_ai_share_pct", 0),
             "dc_yoy_growth_pct": dc_growth,
             "credit_total_usd_b": round(credit_total, 1),
-            "bis_risk_rating": shadow_entry.get("bis_risk_rating", 0),
+            "off_bs_ratio": shadow_entry.get("off_bs_ratio", 0),
+            "spv_jv_count": shadow_entry.get("spv_jv_count", 0),
+            "asset_life_mismatch_ratio": shadow_entry.get("asset_life_mismatch_ratio", 0),
             "revenue_and_cost_impact_pct": roi_entry.get("revenue_and_cost_impact_pct", 0),
+            "enterprise_ai_spend_growth_pct": roi_entry.get("enterprise_ai_spend_growth_pct", 0),
+            "roi_from_headcount_pct": roi_entry.get("roi_from_headcount_pct", 0),
+            "margin_erosion_from_ai_infra_pct": roi_entry.get("margin_erosion_from_ai_infra_pct", 0),
             "us_productivity_growth_pct": prod_entry.get("us_productivity_growth_pct", 0),
             "ai_capex_growth_yoy_pct": prod_entry.get("ai_capex_growth_yoy_pct", 0),
         }

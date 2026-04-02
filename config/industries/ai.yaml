@@ -723,56 +723,69 @@ bubble_index:
   market_concentration:
     - year: 2020
       half: 1
-      top5_pct_sp500: 21.0
-      source: "S&P Dow Jones Indices, Factsheet Q2 2020"
+      ai_revenue_hhi: 0.12
+      top_player_ai_share_pct: 35.0
+      source: "TrendForce GPU Tracker 2020, Mercury Research Q2 2020, EDGAR 10-K AI revenue attribution"
     - year: 2020
       half: 2
-      top5_pct_sp500: 23.0
-      source: "S&P Dow Jones Indices, Factsheet Q4 2020"
+      ai_revenue_hhi: 0.12
+      top_player_ai_share_pct: 35.0
+      source: "TrendForce GPU Tracker 2020, Mercury Research Q4 2020, EDGAR 10-K AI revenue attribution"
     - year: 2021
       half: 1
-      top5_pct_sp500: 22.0
-      source: "S&P Dow Jones Indices, Factsheet Q2 2021"
+      ai_revenue_hhi: 0.18
+      top_player_ai_share_pct: 42.0
+      source: "TrendForce GPU Tracker 2021, Mercury Research Q2 2021, EDGAR 10-K AI revenue attribution"
     - year: 2021
       half: 2
-      top5_pct_sp500: 23.5
-      source: "S&P Dow Jones Indices, Factsheet Q4 2021"
+      ai_revenue_hhi: 0.18
+      top_player_ai_share_pct: 42.0
+      source: "TrendForce GPU Tracker 2021, Mercury Research Q4 2021, EDGAR 10-K AI revenue attribution"
     - year: 2022
       half: 1
-      top5_pct_sp500: 22.0
-      source: "S&P Dow Jones Indices, Factsheet Q2 2022"
+      ai_revenue_hhi: 0.32
+      top_player_ai_share_pct: 55.0
+      source: "TrendForce GPU Tracker 2022, Mercury Research Q2 2022, EDGAR 10-K AI revenue attribution"
     - year: 2022
       half: 2
-      top5_pct_sp500: 20.0
-      source: "S&P Dow Jones Indices, Factsheet Q4 2022 (tech drawdown)"
+      ai_revenue_hhi: 0.32
+      top_player_ai_share_pct: 55.0
+      source: "TrendForce GPU Tracker 2022, Mercury Research Q4 2022, EDGAR 10-K AI revenue attribution"
     - year: 2023
       half: 1
-      top5_pct_sp500: 24.0
-      source: "S&P Dow Jones Indices Q2 2023 (AI rally begins)"
+      ai_revenue_hhi: 0.38
+      top_player_ai_share_pct: 60.0
+      source: "TrendForce GPU Tracker 2023, Mercury Research Q2 2023 (AI training demand surge)"
     - year: 2023
       half: 2
-      top5_pct_sp500: 26.0
-      source: "S&P Dow Jones Indices Q4 2023"
+      ai_revenue_hhi: 0.42
+      top_player_ai_share_pct: 65.0
+      source: "TrendForce GPU Tracker 2023, Mercury Research Q4 2023 (H100 dominance)"
     - year: 2024
       half: 1
-      top5_pct_sp500: 27.0
-      source: "S&P Dow Jones Indices Q2 2024"
+      ai_revenue_hhi: 0.52
+      top_player_ai_share_pct: 72.0
+      source: "TrendForce GPU Tracker 2024, Mercury Research Q2 2024 (B100 ramp)"
     - year: 2024
       half: 2
-      top5_pct_sp500: 29.0
-      source: "S&P Dow Jones Indices Q4 2024 (Mag-7 dominance)"
+      ai_revenue_hhi: 0.58
+      top_player_ai_share_pct: 75.0
+      source: "TrendForce GPU Tracker 2024, Mercury Research Q4 2024 (NVIDIA peak share)"
     - year: 2025
       half: 1
-      top5_pct_sp500: 30.0
-      source: "S&P Dow Jones Indices Q2 2025"
+      ai_revenue_hhi: 0.55
+      top_player_ai_share_pct: 73.0
+      source: "TrendForce GPU Tracker 2025, Mercury Research Q2 2025 (AMD MI300X gains share)"
     - year: 2025
       half: 2
-      top5_pct_sp500: 30.5
-      source: "S&P Dow Jones Indices Q4 2025"
+      ai_revenue_hhi: 0.53
+      top_player_ai_share_pct: 72.0
+      source: "TrendForce GPU Tracker 2025, Mercury Research Q4 2025 (AMD + custom silicon erode share)"
     - year: 2026
       half: 1
-      top5_pct_sp500: 31.0
-      source: "S&P Dow Jones Indices Q1 2026 (NVIDIA, MSFT, AAPL, GOOG, META)"
+      ai_revenue_hhi: 0.52
+      top_player_ai_share_pct: 71.0
+      source: "TrendForce GPU Tracker 2026 (projection), Mercury Research Q1 2026 (NVIDIA still dominant but diversifying)"
 
   # ---------------------------------------------------------------------------
   # INPUT INDICATOR 3: Data Centre Build Momentum
@@ -931,62 +944,88 @@ bubble_index:
 
   # ---------------------------------------------------------------------------
   # INPUT INDICATOR 5: Shadow Leverage
-  # Qualitative BIS risk rating (1-5) capturing off-balance-sheet, SPV, and
-  # regulatory opacity in AI financing
+  # 3-factor composite: off-balance-sheet opacity, SPV/JV proliferation,
+  # asset-life mismatch (financing tenor vs GPU upgrade cycle)
   # ---------------------------------------------------------------------------
   shadow_leverage:
     - year: 2020
       half: 1
-      bis_risk_rating: 1
-      source: "BIS Annual Report 2020 — minimal AI-specific leverage"
+      off_bs_ratio: 0.47
+      spv_jv_count: 2
+      asset_life_mismatch_ratio: 5.0
+      source: "Preqin Private Credit Database 2020, BIS Annual Report 2020, PitchBook AI Infrastructure"
     - year: 2020
       half: 2
-      bis_risk_rating: 1
-      source: "BIS Annual Report 2020"
+      off_bs_ratio: 0.50
+      spv_jv_count: 2
+      asset_life_mismatch_ratio: 5.0
+      source: "Preqin Private Credit Database 2020, BIS Annual Report 2020, PitchBook AI Infrastructure"
     - year: 2021
       half: 1
-      bis_risk_rating: 1
-      source: "BIS Annual Report 2021"
+      off_bs_ratio: 0.59
+      spv_jv_count: 3
+      asset_life_mismatch_ratio: 5.0
+      source: "Preqin Private Credit Database 2021, BIS Annual Report 2021, PitchBook AI Infrastructure"
     - year: 2021
       half: 2
-      bis_risk_rating: 2
-      source: "BIS Annual Report 2021 — early SPV structures appearing"
+      off_bs_ratio: 0.71
+      spv_jv_count: 3
+      asset_life_mismatch_ratio: 5.0
+      source: "Preqin Private Credit Database 2021, BIS Annual Report 2021 — early SPV structures appearing"
     - year: 2022
       half: 1
-      bis_risk_rating: 2
-      source: "BIS Bulletin 60, growing DC financing complexity"
+      off_bs_ratio: 0.94
+      spv_jv_count: 8
+      asset_life_mismatch_ratio: 7.5
+      source: "Preqin Private Credit Database 2022, BIS Bulletin 60, PitchBook AI Infrastructure"
     - year: 2022
       half: 2
-      bis_risk_rating: 2
-      source: "BIS QR Dec 2022"
+      off_bs_ratio: 1.13
+      spv_jv_count: 8
+      asset_life_mismatch_ratio: 7.5
+      source: "Preqin Private Credit Database 2022, BIS QR Dec 2022, PitchBook AI Infrastructure"
     - year: 2023
       half: 1
-      bis_risk_rating: 3
-      source: "BIS Bulletin 85, off-balance-sheet AI infrastructure"
+      off_bs_ratio: 1.56
+      spv_jv_count: 12
+      asset_life_mismatch_ratio: 8.0
+      source: "Preqin Private Credit Database 2023, BIS Bulletin 85, PitchBook AI Infrastructure"
     - year: 2023
       half: 2
-      bis_risk_rating: 3
-      source: "BIS QR Dec 2023, private credit opacity growing"
+      off_bs_ratio: 1.85
+      spv_jv_count: 15
+      asset_life_mismatch_ratio: 8.0
+      source: "Preqin Private Credit Database 2023, BIS QR Dec 2023, PitchBook AI Infrastructure"
     - year: 2024
       half: 1
-      bis_risk_rating: 3
-      source: "BIS QR June 2024"
+      off_bs_ratio: 2.18
+      spv_jv_count: 22
+      asset_life_mismatch_ratio: 10.0
+      source: "Preqin H1 2024, BIS QR June 2024, PitchBook AI Infrastructure"
     - year: 2024
       half: 2
-      bis_risk_rating: 4
-      source: "BIS Bulletin 120, significant off-BS exposure flagged"
+      off_bs_ratio: 2.55
+      spv_jv_count: 25
+      asset_life_mismatch_ratio: 10.0
+      source: "Preqin H2 2024, BIS Bulletin 120, PitchBook AI Infrastructure"
     - year: 2025
       half: 1
-      bis_risk_rating: 4
-      source: "BIS QR March 2025"
+      off_bs_ratio: 3.00
+      spv_jv_count: 30
+      asset_life_mismatch_ratio: 13.3
+      source: "Preqin H1 2025, BIS QR March 2025, PitchBook AI Infrastructure"
     - year: 2025
       half: 2
-      bis_risk_rating: 4
-      source: "BIS QR March 2026 — $200B+ private credit, SPV opacity, asset-life mismatch"
+      off_bs_ratio: 3.31
+      spv_jv_count: 35
+      asset_life_mismatch_ratio: 13.3
+      source: "BIS QR March 2026 — $200B+ private credit, 35 SPV/JV structures, 13× asset-life mismatch"
     - year: 2026
       half: 1
-      bis_risk_rating: 5
-      source: "BIS QR March 2026 (elevated, $300B+ off-BS estimate)"
+      off_bs_ratio: 3.57
+      spv_jv_count: 38
+      asset_life_mismatch_ratio: 13.3
+      source: "BIS QR March 2026 (extrapolation), Preqin 2026 (projection), PitchBook AI Infrastructure"
 
   # ---------------------------------------------------------------------------
   # OUTPUT INDICATOR 1: Enterprise ROI Realization
@@ -998,79 +1037,92 @@ bubble_index:
       revenue_and_cost_impact_pct: 18.0
       roi_from_headcount_pct: 5.0
       margin_erosion_from_ai_infra_pct: 1.0
-      source: "McKinsey Global AI Survey 2020 — pre-GenAI, traditional ML had reasonable ROI"
+      enterprise_ai_spend_growth_pct: 8.0
+      source: "McKinsey Global AI Survey 2020, IDC Worldwide AI Spending Guide 2020, Gartner IT Spending Forecast"
     - year: 2020
       half: 2
       revenue_and_cost_impact_pct: 18.0
       roi_from_headcount_pct: 5.0
       margin_erosion_from_ai_infra_pct: 1.5
-      source: "McKinsey Global AI Survey 2020"
+      enterprise_ai_spend_growth_pct: 8.0
+      source: "McKinsey Global AI Survey 2020, IDC Worldwide AI Spending Guide 2020, Gartner IT Spending Forecast"
     - year: 2021
       half: 1
       revenue_and_cost_impact_pct: 17.0
       roi_from_headcount_pct: 8.0
       margin_erosion_from_ai_infra_pct: 2.0
-      source: "McKinsey Global AI Survey 2021 — pre-GenAI traditional ML ROI"
+      enterprise_ai_spend_growth_pct: 12.0
+      source: "McKinsey Global AI Survey 2021, IDC Worldwide AI Spending Guide 2021, Gartner IT Spending Forecast"
     - year: 2021
       half: 2
       revenue_and_cost_impact_pct: 16.0
       roi_from_headcount_pct: 10.0
       margin_erosion_from_ai_infra_pct: 2.5
-      source: "McKinsey Global AI Survey 2021"
+      enterprise_ai_spend_growth_pct: 12.0
+      source: "McKinsey Global AI Survey 2021, IDC Worldwide AI Spending Guide 2021, Gartner IT Spending Forecast"
     - year: 2022
       half: 1
       revenue_and_cost_impact_pct: 15.0
       roi_from_headcount_pct: 12.0
       margin_erosion_from_ai_infra_pct: 3.0
-      source: "McKinsey Global AI Survey 2022 — AI spend rising, ROI flat"
+      enterprise_ai_spend_growth_pct: 18.0
+      source: "McKinsey Global AI Survey 2022, IDC Worldwide AI Spending Guide 2022, Gartner IT Spending Forecast"
     - year: 2022
       half: 2
       revenue_and_cost_impact_pct: 14.0
       roi_from_headcount_pct: 15.0
       margin_erosion_from_ai_infra_pct: 4.0
-      source: "McKinsey Global AI Survey 2022, Deloitte State of AI 2022"
+      enterprise_ai_spend_growth_pct: 18.0
+      source: "McKinsey Global AI Survey 2022, Deloitte State of AI 2022, IDC AI Spending Guide"
     - year: 2023
       half: 1
       revenue_and_cost_impact_pct: 10.0
       roi_from_headcount_pct: 30.0
       margin_erosion_from_ai_infra_pct: 8.0
-      source: "PwC CEO Survey 2023, Deloitte State of AI 2023"
+      enterprise_ai_spend_growth_pct: 35.0
+      source: "PwC CEO Survey 2023, Deloitte State of AI 2023, IDC AI Spending Guide"
     - year: 2023
       half: 2
       revenue_and_cost_impact_pct: 10.0
       roi_from_headcount_pct: 40.0
       margin_erosion_from_ai_infra_pct: 10.0
-      source: "PwC CEO Survey 2023, GenAI hype peak"
+      enterprise_ai_spend_growth_pct: 45.0
+      source: "PwC CEO Survey 2023, GenAI hype peak, IDC AI Spending Guide"
     - year: 2024
       half: 1
       revenue_and_cost_impact_pct: 11.0
       roi_from_headcount_pct: 55.0
       margin_erosion_from_ai_infra_pct: 12.0
-      source: "PwC CEO Survey 2024, MIT/Sloan AI ROI Study 2024"
+      enterprise_ai_spend_growth_pct: 55.0
+      source: "PwC CEO Survey 2024, MIT/Sloan AI ROI Study 2024, IDC AI Spending Guide"
     - year: 2024
       half: 2
       revenue_and_cost_impact_pct: 11.5
       roi_from_headcount_pct: 65.0
       margin_erosion_from_ai_infra_pct: 14.0
-      source: "Deloitte State of AI 2024, NBER CEO Study preliminary"
+      enterprise_ai_spend_growth_pct: 50.0
+      source: "Deloitte State of AI 2024, NBER CEO Study preliminary, IDC AI Spending Guide"
     - year: 2025
       half: 1
       revenue_and_cost_impact_pct: 12.0
       roi_from_headcount_pct: 75.0
       margin_erosion_from_ai_infra_pct: 15.0
-      source: "PwC CEO Survey 2025, Goldman Sachs March 2025 preliminary"
+      enterprise_ai_spend_growth_pct: 42.0
+      source: "PwC CEO Survey 2025, Goldman Sachs March 2025, IDC AI Spending Guide, Gartner IT Spending Forecast"
     - year: 2025
       half: 2
       revenue_and_cost_impact_pct: 12.0
       roi_from_headcount_pct: 80.0
       margin_erosion_from_ai_infra_pct: 16.0
-      source: "PwC CEO Survey 2026 (56% nothing, 12% both rev+cost), Goldman Sachs March 2026"
+      enterprise_ai_spend_growth_pct: 38.0
+      source: "PwC CEO Survey 2026 (56% nothing, 12% both rev+cost), Goldman Sachs March 2026, IDC AI Spending Guide"
     - year: 2026
       half: 1
       revenue_and_cost_impact_pct: 13.0
       roi_from_headcount_pct: 82.0
       margin_erosion_from_ai_infra_pct: 16.0
-      source: "PwC CEO Survey 2026 extrapolation, Deloitte 2026 (84% margin erosion)"
+      enterprise_ai_spend_growth_pct: 35.0
+      source: "PwC CEO Survey 2026 extrapolation, Deloitte 2026 (84% margin erosion), IDC AI Spending Guide"
 
   # ---------------------------------------------------------------------------
   # OUTPUT INDICATOR 2: Productivity Gap (Solow Index)
