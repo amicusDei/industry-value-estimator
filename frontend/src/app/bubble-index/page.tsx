@@ -39,6 +39,150 @@ function generateFindings(latest: BubbleIndexRow): string[] {
   return findings;
 }
 
+function classifyScore(score: number): string {
+  if (score < 30) return "Healthy Expansion";
+  if (score < 50) return "Elevated Valuations";
+  if (score < 70) return "Bubble Warning";
+  return "Critical Overheating";
+}
+
+function ScoreTimeline({ rows }: { rows: BubbleIndexRow[] }) {
+  // Chart dimensions
+  const marginLeft = 32;
+  const marginRight = 8;
+  const marginTop = 4;
+  const marginBottom = 24;
+  const width = 600;
+  const height = 140;
+  const chartW = width - marginLeft - marginRight;
+  const chartH = height - marginTop - marginBottom;
+
+  const n = rows.length;
+  if (n === 0) return null;
+
+  // Scale helpers
+  const xStep = chartW / Math.max(n - 1, 1);
+  const x = (i: number) => marginLeft + i * xStep;
+  const y = (score: number) => marginTop + chartH - (score / 100) * chartH;
+
+  // Zone backgrounds (green 0-30, yellow 30-50, orange 50-70, red 70-100)
+  const zones = [
+    { min: 0, max: 30, color: "rgba(34,197,94,0.07)" },
+    { min: 30, max: 50, color: "rgba(234,179,8,0.07)" },
+    { min: 50, max: 70, color: "rgba(249,115,22,0.07)" },
+    { min: 70, max: 100, color: "rgba(239,68,68,0.07)" },
+  ];
+
+  // Threshold lines
+  const thresholds = [30, 50, 70];
+
+  // Build line path
+  const linePath = rows
+    .map((row, i) => `${i === 0 ? "M" : "L"} ${x(i).toFixed(1)} ${y(row.composite_score).toFixed(1)}`)
+    .join(" ");
+
+  // Build area path (line + close along bottom)
+  const areaPath =
+    linePath +
+    ` L ${x(n - 1).toFixed(1)} ${y(0).toFixed(1)} L ${x(0).toFixed(1)} ${y(0).toFixed(1)} Z`;
+
+  // Y-axis labels
+  const yLabels = [0, 30, 50, 70, 100];
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} className="w-full" style={{ height: "140px" }}>
+      <defs>
+        <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#f97316" stopOpacity={0.25} />
+          <stop offset="100%" stopColor="#f97316" stopOpacity={0.02} />
+        </linearGradient>
+      </defs>
+
+      {/* Zone backgrounds */}
+      {zones.map((z) => (
+        <rect
+          key={z.min}
+          x={marginLeft}
+          y={y(z.max)}
+          width={chartW}
+          height={y(z.min) - y(z.max)}
+          fill={z.color}
+        />
+      ))}
+
+      {/* Threshold dashed lines */}
+      {thresholds.map((t) => (
+        <line
+          key={t}
+          x1={marginLeft}
+          y1={y(t)}
+          x2={marginLeft + chartW}
+          y2={y(t)}
+          stroke="#475569"
+          strokeWidth={1}
+          strokeDasharray="4 3"
+        />
+      ))}
+
+      {/* Y-axis labels */}
+      {yLabels.map((v) => (
+        <text
+          key={v}
+          x={marginLeft - 4}
+          y={y(v)}
+          textAnchor="end"
+          dominantBaseline="middle"
+          fill="#64748b"
+          fontSize="9"
+          fontFamily="JetBrains Mono, monospace"
+        >
+          {v}
+        </text>
+      ))}
+
+      {/* Area fill */}
+      <path d={areaPath} fill="url(#areaGrad)" />
+
+      {/* Score line */}
+      <path d={linePath} fill="none" stroke="#f97316" strokeWidth={2} strokeLinejoin="round" />
+
+      {/* Data points + tooltips */}
+      {rows.map((row, i) => (
+        <g key={`${row.year}-${row.half}`}>
+          {/* Invisible larger hit area for tooltip */}
+          <circle cx={x(i)} cy={y(row.composite_score)} r={8} fill="transparent">
+            <title>{`${row.year} H${row.half}: Score ${row.composite_score.toFixed(1)} \u2014 ${classifyScore(row.composite_score)}`}</title>
+          </circle>
+          {/* Visible dot */}
+          <circle
+            cx={x(i)}
+            cy={y(row.composite_score)}
+            r={3}
+            fill="#f97316"
+            stroke="#0f172a"
+            strokeWidth={1.5}
+          />
+        </g>
+      ))}
+
+      {/* X-axis labels */}
+      {rows.map((row, i) => (
+        <text
+          key={`label-${row.year}-${row.half}`}
+          x={x(i)}
+          y={height - 4}
+          textAnchor="middle"
+          fill="#64748b"
+          fontSize="8"
+          fontFamily="JetBrains Mono, monospace"
+        >
+          {String(row.year).slice(-2)}H{row.half}
+        </text>
+      ))}
+    </svg>
+  );
+}
+
 const SOURCES = [
   "BIS Quarterly Review (March 2026)",
   "BIS Bulletin 120",
@@ -103,48 +247,17 @@ export default async function BubbleIndexPage() {
           <BubbleGauge
             score={latest.composite_score}
             classification={latest.classification}
+            previousData={previousHalf ? { composite_score: previousHalf.composite_score, year: previousHalf.year, half: previousHalf.half } : undefined}
           />
         </div>
       </div>
 
       {/* Timeline mini */}
       <div className="bg-surface border border-border rounded-lg p-4 mb-8">
-        <h2 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">
+        <h2 className="text-sm text-slate-400 mb-3">
           Score Timeline
         </h2>
-        <div className="flex gap-1 items-end h-16">
-          {rows.map((r, i) => {
-            const heightPct = Math.max(4, r.composite_score);
-            const color =
-              r.composite_score < 30
-                ? "#22c55e"
-                : r.composite_score < 50
-                  ? "#eab308"
-                  : r.composite_score < 70
-                    ? "#f97316"
-                    : "#ef4444";
-            const isLast = i === rows.length - 1;
-            return (
-              <div
-                key={`${r.year}-${r.half}`}
-                className="flex-1 flex flex-col items-center gap-1"
-              >
-                <div
-                  className="w-full rounded-t-sm transition-all"
-                  style={{
-                    height: `${heightPct}%`,
-                    backgroundColor: color,
-                    opacity: isLast ? 1 : 0.6,
-                  }}
-                />
-                <span className="text-[8px] text-muted font-mono leading-none">
-                  {String(r.year).slice(-2)}
-                  H{r.half}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+        <ScoreTimeline rows={rows} />
       </div>
 
       {/* Subindicator bars */}

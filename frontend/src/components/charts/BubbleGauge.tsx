@@ -2,9 +2,16 @@
 
 import { useEffect, useState } from "react";
 
+interface PreviousData {
+  composite_score: number;
+  year: number;
+  half: number;
+}
+
 interface Props {
   score: number;
   classification: string;
+  previousData?: PreviousData;
 }
 
 function scoreColor(score: number): string {
@@ -14,11 +21,10 @@ function scoreColor(score: number): string {
   return "#ef4444";
 }
 
-export default function BubbleGauge({ score, classification }: Props) {
+export default function BubbleGauge({ score, classification, previousData }: Props) {
   const [animatedScore, setAnimatedScore] = useState(0);
 
   useEffect(() => {
-    let start = 0;
     const duration = 1200;
     const startTime = performance.now();
 
@@ -72,18 +78,35 @@ export default function BubbleGauge({ score, classification }: Props) {
     return `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x} ${end.y}`;
   }
 
-  // Needle
+  // Needle — tip ends at r - 4 = 136, center of the 28px arc
   const needleAngle = scoreToAngle(animatedScore);
-  const needleTip = polarToCart(needleAngle, r - strokeWidth / 2 - 8);
-  const needleBase1 = polarToCart(needleAngle + 90, 6);
-  const needleBase2 = polarToCart(needleAngle - 90, 6);
+  const needleTip = polarToCart(needleAngle, r - 4);
+
+  // Needle as a line from center to tip, 3px wide, rounded
+  const needleBaseOffset = 5;
+  const baseX1 = cx + needleBaseOffset * Math.cos(((needleAngle + 90) * Math.PI) / 180);
+  const baseY1 = cy - needleBaseOffset * Math.sin(((needleAngle + 90) * Math.PI) / 180);
+  const baseX2 = cx + needleBaseOffset * Math.cos(((needleAngle - 90) * Math.PI) / 180);
+  const baseY2 = cy - needleBaseOffset * Math.sin(((needleAngle - 90) * Math.PI) / 180);
 
   // Tick marks
   const ticks = [0, 25, 50, 75, 100];
 
+  // YoY trend
+  let trendText = "";
+  let trendColor = "#64748b";
+  if (previousData) {
+    const diff = score - previousData.composite_score;
+    const sign = diff >= 0 ? "+" : "";
+    const arrow = diff >= 0 ? "\u25B2" : "\u25BC";
+    trendText = `${arrow} ${sign}${diff.toFixed(1)} vs H${previousData.half} ${previousData.year}`;
+    // Rising = more risk = red, falling = green
+    trendColor = diff >= 0 ? "#ef4444" : "#22c55e";
+  }
+
   return (
     <div className="flex flex-col items-center">
-      <svg viewBox="0 0 400 220" className="w-full max-w-md">
+      <svg viewBox="0 0 400 240" className="w-full max-w-md">
         {/* Background track */}
         <path
           d={arcPath(0, 100, r)}
@@ -137,18 +160,23 @@ export default function BubbleGauge({ score, classification }: Props) {
           );
         })}
 
-        {/* Needle */}
-        <polygon
-          points={`${needleTip.x},${needleTip.y} ${cx + 5 * Math.cos(((needleAngle + 90) * Math.PI) / 180)},${cy - 5 * Math.sin(((needleAngle + 90) * Math.PI) / 180)} ${cx + 5 * Math.cos(((needleAngle - 90) * Math.PI) / 180)},${cy - 5 * Math.sin(((needleAngle - 90) * Math.PI) / 180)}`}
-          fill={scoreColor(animatedScore)}
+        {/* Needle — 3px, rounded tip, slate-700 */}
+        <line
+          x1={cx}
+          y1={cy}
+          x2={needleTip.x}
+          y2={needleTip.y}
+          stroke="#334155"
+          strokeWidth={3}
+          strokeLinecap="round"
         />
-        <circle cx={cx} cy={cy} r={8} fill={scoreColor(animatedScore)} />
-        <circle cx={cx} cy={cy} r={4} fill="#0a0a0f" />
+        <circle cx={cx} cy={cy} r={7} fill="#334155" />
+        <circle cx={cx} cy={cy} r={3} fill="#0a0a0f" />
 
-        {/* Score number */}
+        {/* Score number — shifted down to avoid needle overlap */}
         <text
           x={cx}
-          y={cy - 30}
+          y={cy - 18}
           textAnchor="middle"
           fill={scoreColor(score)}
           fontSize="48"
@@ -158,10 +186,25 @@ export default function BubbleGauge({ score, classification }: Props) {
           {Math.round(animatedScore)}
         </text>
 
+        {/* YoY trend text */}
+        {trendText && (
+          <text
+            x={cx}
+            y={cy + 18}
+            textAnchor="middle"
+            fill={trendColor}
+            fontSize="12"
+            fontWeight="500"
+            fontFamily="JetBrains Mono, monospace"
+          >
+            {trendText}
+          </text>
+        )}
+
         {/* Label */}
         <text
           x={cx}
-          y={cy + 30}
+          y={cy + 38}
           textAnchor="middle"
           fill="#e2e8f0"
           fontSize="13"
