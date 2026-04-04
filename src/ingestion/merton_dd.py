@@ -52,7 +52,7 @@ def fetch_equity_timeseries(
     """
     Pull historical equity closing prices for all issuers.
 
-    Uses rd.get_history(ric, fields=["CLOSE"], interval="daily", ...).
+    Uses rd.get_history(ric, interval="daily", ...) — returns TRDPRC_1 as close.
     Returns wide DataFrame (Date x Issuer) of daily closing prices.
     """
     if end_date is None:
@@ -68,13 +68,14 @@ def fetch_equity_timeseries(
         try:
             df = rd.get_history(
                 universe=ric,
-                fields=["CLOSE"],
                 interval=interval,
                 start=start_date,
                 end=end_date,
             )
             if df is not None and not df.empty:
-                series = df["CLOSE"].rename(name)
+                # LSEG returns TRDPRC_1 as close price (not "CLOSE")
+                close_col = "TRDPRC_1" if "TRDPRC_1" in df.columns else df.columns[0]
+                series = df[close_col].rename(name)
                 all_series[name] = series
                 logger.info(f"  OK: {name} -- {len(series)} observations")
             else:
@@ -389,13 +390,13 @@ def fetch_market_controls(
         try:
             df = rd.get_history(
                 universe=ric,
-                fields=["CLOSE"],
                 interval=interval,
                 start=start_date,
                 end=end_date,
             )
             if df is not None and not df.empty:
-                results[name] = df["CLOSE"]
+                close_col = "TRDPRC_1" if "TRDPRC_1" in df.columns else df.columns[0]
+                results[name] = df[close_col]
                 logger.info(f"  OK: {name}")
             else:
                 logger.warning(f"  EMPTY: {name} ({ric})")
