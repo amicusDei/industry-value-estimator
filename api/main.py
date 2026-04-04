@@ -11,7 +11,7 @@ Run with:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routers import forecasts, segments, companies, diagnostics, export, sensitivity, total, consensus, data_quality, dispersion, scenarios, insights, validation, bubble
+from api.routers import forecasts, segments, companies, diagnostics, export, sensitivity, total, consensus, data_quality, dispersion, scenarios, insights, validation, bubble, credit_spreads
 
 app = FastAPI(
     title="AI Industry Value Estimator API",
@@ -23,7 +23,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
@@ -41,6 +41,7 @@ app.include_router(scenarios.router)
 app.include_router(insights.router)
 app.include_router(validation.router)
 app.include_router(bubble.router)
+app.include_router(credit_spreads.router)
 
 
 @app.get("/")
