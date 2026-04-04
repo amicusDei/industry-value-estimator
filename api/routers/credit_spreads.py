@@ -2,6 +2,9 @@
 api/routers/credit_spreads.py
 =================================
 FastAPI endpoints for the Dynamic Mismatch empirical module.
+
+Uses Merton Distance-to-Default (DD) as the credit risk proxy,
+replacing the CDS-based approach (LSEG subscription doesn't include CDS/OAS data).
 """
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Query
@@ -17,11 +20,11 @@ from datetime import datetime
 import lseg.data as rd
 
 from src.ingestion.credit_spreads import (
-    run_full_pull,
     ALL_ISSUERS,
     GENERATION_TRANSITIONS,
     GROUP_LABELS,
 )
+from src.ingestion.merton_dd import run_full_pull
 from src.empirics.event_study import run_event_study
 
 logger = logging.getLogger(__name__)
@@ -73,13 +76,13 @@ async def trigger_data_pull(
     def pull_task():
         try:
             rd.open_session()
-            logger.info("LSEG session opened for credit spread pull.")
+            logger.info("LSEG session opened for Merton DD data pull.")
             run_full_pull(
                 output_dir=str(DATA_DIR),
                 start_date=start_date,
             )
         except Exception as e:
-            logger.error(f"Credit spread pull failed: {e}")
+            logger.error(f"Merton DD data pull failed: {e}")
         finally:
             try:
                 rd.close_session()
@@ -90,7 +93,7 @@ async def trigger_data_pull(
     background_tasks.add_task(pull_task)
     return {
         "status": "pull_started",
-        "message": f"Pulling CDS/OAS data from {start_date} in background.",
+        "message": f"Pulling equity/debt data for Merton DD from {start_date} in background.",
         "output_dir": str(DATA_DIR),
     }
 
@@ -101,45 +104,48 @@ async def get_spread_data(
     group:  Optional[str] = Query(default=None, description="Filter by group: hyperscaler, dc_reit, control"),
     format: str = Query(default="json", description="Response format: json or csv"),
 ):
-    """Returns historical CDS 5Y spread time series."""
-    cds_df = load_latest_parquet("cds_spreads_*.parquet")
-    if cds_df is None:
+    """Returns historical Distance-to-Default time series (or CDS if available)."""
+    # Try DD first (new), fall back to CDS (legacy)
+    dd_df = load_latest_parquet("dd_timeseries_*.parquet")
+    if dd_df is None:
+        dd_df = load_latest_parquet("cds_spreads_*.parquet")
+    if dd_df is None:
         raise HTTPException(
             status_code=404,
-            detail="No CDS data found. Run POST /credit-spreads/pull first."
+            detail="No DD or CDS data found. Run POST /credit-spreads/pull first."
         )
 
     # Filter columns
     if issuer:
-        if issuer not in cds_df.columns:
+        if issuer not in dd_df.columns:
             raise HTTPException(status_code=404, detail=f"Issuer '{issuer}' not found.")
-        cds_df = cds_df[[issuer]]
+        dd_df = dd_df[[issuer]]
     elif group:
-        cols = [k for k, v in GROUP_LABELS.items() if v == group and k in cds_df.columns]
+        cols = [k for k, v in GROUP_LABELS.items() if v == group and k in dd_df.columns]
         if not cols:
             raise HTTPException(status_code=404, detail=f"No data for group '{group}'.")
-        cds_df = cds_df[cols]
+        dd_df = dd_df[cols]
 
     if format == "csv":
         stream = io.StringIO()
-        cds_df.to_csv(stream)
+        dd_df.to_csv(stream)
         stream.seek(0)
         return StreamingResponse(
             iter([stream.getvalue()]),
             media_type="text/csv",
-            headers={"Content-Disposition": "attachment; filename=cds_spreads.csv"}
+            headers={"Content-Disposition": "attachment; filename=dd_timeseries.csv"}
         )
 
     # JSON response
-    result = cds_df.reset_index()
+    result = dd_df.reset_index()
     result["Date"] = result["Date"].astype(str)
     return {
         "data":    result.to_dict(orient="records"),
-        "columns": list(cds_df.columns),
-        "n_obs":   len(cds_df),
+        "columns": list(dd_df.columns),
+        "n_obs":   len(dd_df),
         "date_range": {
-            "start": str(cds_df.index.min()),
-            "end":   str(cds_df.index.max()),
+            "start": str(dd_df.index.min()),
+            "end":   str(dd_df.index.max()),
         }
     }
 
@@ -158,15 +164,24 @@ async def run_event_study_endpoint(
     """
     Runs the full event study regression on the latest pulled data.
 
-    Tests: do CDS spreads on Hyperscaler/DC-REIT assets widen
-    systematically after generational AI transitions, controlling
-    for market-wide credit conditions?
+    Uses Merton Distance-to-Default (DD) as credit risk proxy.
+    Tests: does DD for Hyperscaler/DC-REIT assets fall systematically
+    after generational AI transitions (= credit risk increases),
+    controlling for market-wide conditions?
+
+    Falls back to CDS spreads if DD data is not available.
     """
-    cds_df = load_latest_parquet("cds_spreads_*.parquet")
-    if cds_df is None:
+    # Try DD first, fall back to CDS
+    dd_df = load_latest_parquet("dd_timeseries_*.parquet")
+    cds_df = load_latest_parquet("cds_spreads_*.parquet") if dd_df is None else None
+
+    spread_df = dd_df if dd_df is not None else cds_df
+    variable_name = "DD" if dd_df is not None else "CDS_5Y"
+
+    if spread_df is None:
         raise HTTPException(
             status_code=404,
-            detail="No CDS data found. Run POST /credit-spreads/pull first."
+            detail="No DD or CDS data found. Run POST /credit-spreads/pull first."
         )
 
     ctrl_df = load_latest_parquet("market_controls_*.parquet")
@@ -186,10 +201,11 @@ async def run_event_study_endpoint(
 
     try:
         results = run_event_study(
-            cds_df=cds_df,
+            spread_df=spread_df,
             controls_df=ctrl_df,
             event_window_days=event_window_days,
             output_path=output_path,
+            variable_name=variable_name,
         )
     except Exception as e:
         logger.error(f"Event study failed: {e}")

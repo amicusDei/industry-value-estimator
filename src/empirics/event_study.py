@@ -8,19 +8,21 @@ Tests the falsifiable prediction from Section 6.3:
     should be cross-sectionally correlated and should widen systematically
     in the quarters following a major generational transition."
 
-Regression specification:
-    Δs_it = α_i + β·Post_t + γ·Post_t×Treated_i + δ·Market_t + ε_it
+Regression specification (generic — works for both CDS spreads and Merton DD):
+    ΔY_it = alpha_i + gamma*Post_t x Treated_i + delta*Market_t + epsilon_it
 
 Where:
-    Δs_it     = weekly change in CDS 5Y spread for issuer i at time t
-    α_i       = issuer fixed effect
+    ΔY_it     = change in dependent variable for issuer i at time t
+                (CDS 5Y spread in bps, or Distance-to-Default)
+    alpha_i   = issuer fixed effect
     Post_t    = 1 if t is within [0, event_window] days after a transition
     Treated_i = 1 if issuer is in Hyperscaler or DC-REIT group
-    Market_t  = CDX.IG 5Y spread (market-wide credit conditions control)
+    Market_t  = market control (CDX.IG 5Y for CDS, SPX return for DD)
 
-Key coefficient: γ — systematic spread widening in treatment group
-    post-transition, above and beyond market-wide movement.
-    This is the empirical test of Proposition 1 (systematic risk).
+Key coefficient: gamma
+    CDS mode: gamma > 0 means treatment group spreads widen post-transition
+    DD mode:  gamma < 0 means treatment group DD falls post-transition
+              (= credit risk increases)
 """
 
 import pandas as pd
@@ -37,28 +39,59 @@ from src.ingestion.credit_spreads import GROUP_LABELS, GENERATION_TRANSITIONS
 # ── BUILD PANEL ───────────────────────────────────────────────────────────────
 
 def build_panel(
-    cds_df: pd.DataFrame,
-    controls_df: pd.DataFrame,
+    spread_df: pd.DataFrame = None,
+    controls_df: pd.DataFrame = None,
     event_window_days: int = 90,
+    variable_name: str = "DD",
+    *,
+    cds_df: pd.DataFrame = None,
+    dd_df: pd.DataFrame = None,
 ) -> pd.DataFrame:
     """
-    Transforms wide CDS data + controls into a long panel DataFrame
+    Transforms wide spread/DD data + controls into a long panel DataFrame
     with event study variables constructed.
 
+    Supports both CDS spreads (legacy) and Distance-to-Default (new).
+
     Args:
-        cds_df:           Wide DataFrame (Date × Issuer) of CDS 5Y spreads
-        controls_df:      DataFrame with CDX_IG_5Y, VIX, UST_5Y columns
-        event_window_days: Length of Post_t window after each transition
+        spread_df:        Wide DataFrame (Date x Issuer) — generic interface.
+        controls_df:      DataFrame with market control columns.
+                          CDS mode: expects CDX_IG_5Y column.
+                          DD mode:  expects SPX_Return column (or SPX).
+        event_window_days: Length of Post_t window after each transition.
+        variable_name:    Name for the dependent variable. Default "DD".
+                          Use "CDS_5Y" for backward compatibility.
+        cds_df:           DEPRECATED — backward compat. Same as spread_df with variable_name="CDS_5Y".
+        dd_df:            DEPRECATED — backward compat. Same as spread_df with variable_name="DD".
 
     Returns:
-        Long panel DataFrame ready for regression
+        Long panel DataFrame ready for regression.
+        Key columns: Delta_{variable_name}, Delta_Market, Post, Post_x_Treated, etc.
     """
-    # Melt CDS to long format
-    panel = cds_df.reset_index().melt(
+    # ── Backward compatibility: resolve spread_df from legacy args ────────
+    if spread_df is None:
+        if cds_df is not None:
+            spread_df = cds_df
+            if variable_name == "DD":
+                variable_name = "CDS_5Y"  # auto-detect legacy mode
+        elif dd_df is not None:
+            spread_df = dd_df
+            variable_name = "DD"
+        else:
+            raise ValueError("Must provide spread_df, cds_df, or dd_df.")
+
+    if controls_df is None:
+        controls_df = pd.DataFrame(index=spread_df.index)
+
+    delta_var = f"Delta_{variable_name}"
+    delta_market = "Delta_Market"
+
+    # Melt to long format
+    panel = spread_df.reset_index().melt(
         id_vars="Date",
         var_name="Issuer",
-        value_name="CDS_5Y"
-    ).dropna(subset=["CDS_5Y"])
+        value_name=variable_name,
+    ).dropna(subset=[variable_name])
 
     # Add group labels
     panel["Group"] = panel["Issuer"].map(GROUP_LABELS)
@@ -66,23 +99,43 @@ def build_panel(
     panel["Hyperscaler"] = (panel["Group"] == "hyperscaler").astype(int)
     panel["DC_REIT"] = (panel["Group"] == "dc_reit").astype(int)
 
-    # First difference of CDS spread (weekly change in bps)
+    # First difference
     panel = panel.sort_values(["Issuer", "Date"])
-    panel["Delta_CDS"] = panel.groupby("Issuer")["CDS_5Y"].diff()
+    panel[delta_var] = panel.groupby("Issuer")[variable_name].diff()
 
-    # Log spread (for percentage interpretation)
-    panel["Log_CDS"] = np.log(panel["CDS_5Y"].clip(lower=0.1))
+    # Log level (for percentage interpretation)
+    log_col = f"Log_{variable_name}"
+    panel[log_col] = np.log(panel[variable_name].clip(lower=0.1))
 
-    # Merge market controls
-    controls_aligned = controls_df.reindex(cds_df.index, method="ffill")
+    # ── Merge market controls ─────────────────────────────────────────────
+    controls_aligned = controls_df.reindex(spread_df.index, method="ffill")
     controls_aligned = controls_aligned.reset_index()
     panel = panel.merge(controls_aligned, on="Date", how="left")
 
-    # Market control: first difference of CDX.IG
+    # Determine market control variable
+    # CDS mode: CDX_IG_5Y (first difference)
+    # DD mode:  SPX_Return (already a return) or SPX (compute return)
     panel = panel.sort_values(["Issuer", "Date"])
-    panel["Delta_CDX"] = panel.groupby("Issuer")["CDX_IG_5Y"].diff()
 
-    # ── CONSTRUCT EVENT STUDY VARIABLES ───────────────────────────────────────
+    if "CDX_IG_5Y" in panel.columns:
+        # Legacy CDS mode
+        panel[delta_market] = panel.groupby("Issuer")["CDX_IG_5Y"].diff()
+        # Keep backward-compatible alias
+        panel["Delta_CDX"] = panel[delta_market]
+    elif "SPX_Return" in panel.columns:
+        # DD mode with pre-computed SPX return
+        panel[delta_market] = panel["SPX_Return"]
+        panel["Delta_CDX"] = panel[delta_market]  # alias for formula compatibility
+    elif "SPX" in panel.columns:
+        # DD mode with SPX level — compute return
+        panel[delta_market] = panel.groupby("Issuer")["SPX"].pct_change()
+        panel["Delta_CDX"] = panel[delta_market]
+    else:
+        # No market control available — fill with zeros
+        panel[delta_market] = 0.0
+        panel["Delta_CDX"] = 0.0
+
+    # ── CONSTRUCT EVENT STUDY VARIABLES ───────────────────────────────────
 
     transitions = pd.DataFrame(GENERATION_TRANSITIONS)
     transitions["date"] = pd.to_datetime(transitions["date"])
@@ -98,7 +151,7 @@ def build_panel(
         panel.loc[mask, "Post"] = 1
         panel.loc[mask, "Event_Gen"] = row["generation"]
 
-    # Interaction term
+    # Interaction terms
     panel["Post_x_Treated"] = panel["Post"] * panel["Treated"]
     panel["Post_x_Hyper"]   = panel["Post"] * panel["Hyperscaler"]
     panel["Post_x_REIT"]    = panel["Post"] * panel["DC_REIT"]
@@ -109,7 +162,17 @@ def build_panel(
     # Time fixed effect (year-week)
     panel["YearWeek"] = panel["Date"].dt.to_period("W").astype(str)
 
-    return panel.dropna(subset=["Delta_CDS", "Delta_CDX"])
+    # Store variable name as panel attribute for downstream use
+    panel.attrs["variable_name"] = variable_name
+    panel.attrs["delta_var"] = delta_var
+
+    # Always create Delta_CDS alias so regression formulas work regardless of mode
+    if "Delta_CDS" not in panel.columns:
+        panel["Delta_CDS"] = panel[delta_var]
+    if "CDS_5Y" not in panel.columns:
+        panel["CDS_5Y"] = panel[variable_name]
+
+    return panel.dropna(subset=[delta_var, delta_market])
 
 
 # ── REGRESSIONS ───────────────────────────────────────────────────────────────
@@ -117,11 +180,15 @@ def build_panel(
 def run_baseline_did(panel: pd.DataFrame) -> sm.regression.linear_model.RegressionResultsWrapper:
     """
     Baseline DiD regression:
-        Δs_it = α_i + γ·Post×Treated + δ·ΔMarket + ε_it
+        ΔY_it = alpha_i + gamma*Post x Treated + delta*Delta_Market + epsilon_it
 
     This is the primary test of Proposition 1.
-    γ > 0 means treatment group spreads widen more post-transition
-    than the control group, after controlling for market-wide credit moves.
+    CDS mode: gamma > 0 means treatment group spreads widen post-transition.
+    DD mode:  gamma < 0 means treatment group DD falls post-transition
+              (= credit risk increases).
+
+    Uses Delta_CDS as the formula variable (aliased from Delta_{variable_name}
+    in build_panel for backward compatibility).
     """
     formula = "Delta_CDS ~ Post_x_Treated + Delta_CDX + C(Issuer) - 1"
 
@@ -134,9 +201,9 @@ def run_baseline_did(panel: pd.DataFrame) -> sm.regression.linear_model.Regressi
 
 def run_split_treatment(panel: pd.DataFrame) -> sm.regression.linear_model.RegressionResultsWrapper:
     """
-    Split treatment group regression — tests whether Hyperscalers
+    Split treatment group regression -- tests whether Hyperscalers
     and DC-REITs show different spread responses:
-        Δs_it = α_i + γ1·Post×Hyper + γ2·Post×REIT + δ·ΔMarket + ε_it
+        ΔY_it = alpha_i + gamma1*Post x Hyper + gamma2*Post x REIT + delta*Delta_Market + epsilon_it
     """
     formula = "Delta_CDS ~ Post_x_Hyper + Post_x_REIT + Delta_CDX + C(Issuer) - 1"
 
@@ -256,6 +323,7 @@ def format_results(
     split_model,
     gen_results: dict,
     corr_results: dict,
+    variable_name: str = "CDS_5Y",
 ) -> dict:
     """
     Formats all results into a clean dict for API response or export.
@@ -275,17 +343,27 @@ def format_results(
         except Exception:
             return {}
 
+    if variable_name == "DD":
+        interpretation = (
+            "gamma < 0 and significant supports Proposition 1: "
+            "Distance-to-Default falls (credit risk increases) in treatment group "
+            "post-transition, above and beyond market-wide moves."
+        )
+    else:
+        interpretation = (
+            "gamma > 0 and significant supports Proposition 1: "
+            "systematic spread widening in treatment group post-transition, "
+            "above and beyond market-wide credit moves."
+        )
+
     return {
         "baseline_did": {
             "gamma_Post_x_Treated": safe_params(baseline_model, "Post_x_Treated"),
             "delta_Market":         safe_params(baseline_model, "Delta_CDX"),
             "n_obs":    int(baseline_model.nobs),
             "r_squared": round(baseline_model.rsquared, 4),
-            "interpretation": (
-                "gamma > 0 and significant supports Proposition 1: "
-                "systematic spread widening in treatment group post-transition, "
-                "above and beyond market-wide credit moves."
-            )
+            "variable": variable_name,
+            "interpretation": interpretation,
         },
         "split_treatment": {
             "gamma_Hyperscaler": safe_params(split_model, "Post_x_Hyper"),
@@ -301,16 +379,43 @@ def format_results(
 # ── MAIN ENTRY POINT ──────────────────────────────────────────────────────────
 
 def run_event_study(
-    cds_df: pd.DataFrame,
-    controls_df: pd.DataFrame,
+    cds_df: pd.DataFrame = None,
+    controls_df: pd.DataFrame = None,
     event_window_days: int = 90,
     output_path: str | None = None,
+    *,
+    dd_df: pd.DataFrame = None,
+    spread_df: pd.DataFrame = None,
+    variable_name: str | None = None,
 ) -> dict:
     """
     Full event study pipeline. Call after data pull.
+
+    Accepts either:
+    - cds_df (legacy CDS spreads) — backward compatible
+    - dd_df (Merton Distance-to-Default) — new interface
+    - spread_df + variable_name — generic interface
     """
-    print(f"Building panel (event window: {event_window_days} days)...")
-    panel = build_panel(cds_df, controls_df, event_window_days)
+    # Resolve which data to use
+    if spread_df is not None:
+        _spread_df = spread_df
+        _var_name = variable_name or "DD"
+    elif dd_df is not None:
+        _spread_df = dd_df
+        _var_name = "DD"
+    elif cds_df is not None:
+        _spread_df = cds_df
+        _var_name = "CDS_5Y"
+    else:
+        raise ValueError("Must provide cds_df, dd_df, or spread_df.")
+
+    print(f"Building panel (event window: {event_window_days} days, var={_var_name})...")
+    panel = build_panel(
+        spread_df=_spread_df,
+        controls_df=controls_df,
+        event_window_days=event_window_days,
+        variable_name=_var_name,
+    )
     print(f"  Panel: {len(panel)} observations, "
           f"{panel['Issuer'].nunique()} issuers, "
           f"{panel['Date'].nunique()} time periods")
@@ -325,9 +430,9 @@ def run_event_study(
     gen_het = run_generation_heterogeneity(panel)
 
     print("Running cross-sectional correlation test...")
-    corr = run_cross_sectional_correlation(cds_df, event_window_days)
+    corr = run_cross_sectional_correlation(_spread_df, event_window_days)
 
-    results = format_results(baseline, split, gen_het, corr)
+    results = format_results(baseline, split, gen_het, corr, variable_name=_var_name)
 
     if output_path:
         import json
