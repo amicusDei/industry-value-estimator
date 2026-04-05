@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 
 # ── UNIVERSE ──────────────────────────────────────────────────────────────────
 
-# Treatment group A: Hyperscalers — direct AI infrastructure exposure
-HYPERSCALERS = {
+# CONTROLLERS: Frontier AI infrastructure owners — set the generational pace
+CONTROLLERS = {
     "Microsoft":  "MSFT.O",
     "Alphabet":   "GOOGL.O",
     "Amazon":     "AMZN.O",
@@ -26,32 +26,77 @@ HYPERSCALERS = {
     "Oracle":     "ORCL.N",
 }
 
-# Treatment group B: Data Centre REITs — indirect infrastructure exposure
+# Data Centre REITs — indirect infrastructure exposure (kept separate)
 DC_REITS = {
     "Equinix":       "EQIX.O",
     "DigitalRealty": "DLR.N",
     "IronMountain":  "IRM.N",
 }
 
-# Control group: IG non-AI-infrastructure corporates, matched on rating
-CONTROL_GROUP = {
-    "JPMorgan":        "JPM.N",
-    "JohnsonJohnson":  "JNJ.N",
-    "ProcterGamble":   "PG.N",
-    "Exxon":           "XOM.N",
-    "Walmart":         "WMT.N",
-    "Coca-Cola":       "KO.N",
-    "IBM":             "IBM.N",
+# ADAPTERS: Firms that must adapt to AI transitions but don't control the pace
+ADAPTERS_FINANCE = {
+    "JPMorgan":       "JPM.N",
+    "BankOfAmerica":  "BAC.N",
+    "Citigroup":      "C.N",
+    "WellsFargo":     "WFC.N",
+    "AXA":            "AXAF.PA",
+    "Allianz":        "ALVG.DE",
+    "GoldmanSachs":   "GS.N",
 }
 
-ALL_ISSUERS = {**HYPERSCALERS, **DC_REITS, **CONTROL_GROUP}
+ADAPTERS_HEALTHCARE = {
+    "JohnsonJohnson":  "JNJ.N",
+    "Pfizer":          "PFE.N",
+    "Merck":           "MRK.N",
+    "AbbVie":          "ABBV.N",
+    "UnitedHealth":    "UNH.N",
+    "CVSHealth":       "CVS.N",
+}
+
+ADAPTERS_RETAIL = {
+    "Walmart":         "WMT.N",
+    "Target":          "TGT.N",
+    "Kroger":          "KR.N",
+    "Carrefour":       "CARR.PA",
+    "Coca-Cola":       "KO.N",
+    "ProcterGamble":   "PG.N",
+}
+
+ADAPTERS_TELECOM = {
+    "ATT":             "T.N",
+    "Verizon":         "VZ.N",
+    "DeutscheTelekom": "DTEGn.DE",
+    "Comcast":         "CMCSA.O",
+    "Vodafone":        "VOD.L",
+}
+
+ALL_ADAPTERS = {**ADAPTERS_FINANCE, **ADAPTERS_HEALTHCARE, **ADAPTERS_RETAIL, **ADAPTERS_TELECOM}
+
+# Legacy aliases for backward compatibility
+HYPERSCALERS = CONTROLLERS
+CONTROL_GROUP = ALL_ADAPTERS
+
+ALL_ISSUERS = {**CONTROLLERS, **DC_REITS, **ALL_ADAPTERS}
 
 # Group labels for regression
 GROUP_LABELS = {
-    **{k: "hyperscaler" for k in HYPERSCALERS},
+    **{k: "controller" for k in CONTROLLERS},
     **{k: "dc_reit" for k in DC_REITS},
-    **{k: "control" for k in CONTROL_GROUP},
+    **{k: "adapter" for k in ALL_ADAPTERS},
 }
+
+# Sector labels for adapter heterogeneity analysis
+SECTOR_LABELS = {
+    **{k: "finance" for k in ADAPTERS_FINANCE},
+    **{k: "healthcare" for k in ADAPTERS_HEALTHCARE},
+    **{k: "retail" for k in ADAPTERS_RETAIL},
+    **{k: "telecom" for k in ADAPTERS_TELECOM},
+    **{k: "controller" for k in CONTROLLERS},
+    **{k: "dc_reit" for k in DC_REITS},
+}
+
+# Backward-compatible: "treated" = controllers + dc_reits (original treatment group)
+TREATED_GROUPS = {"controller", "dc_reit"}
 
 # ── GENERATIONAL TRANSITION DATES ─────────────────────────────────────────────
 # Defined exogenously from public release announcements.

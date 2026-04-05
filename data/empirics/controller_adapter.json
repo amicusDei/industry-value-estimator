@@ -1,0 +1,258 @@
+{
+  "baseline_did": {
+    "gamma_Post_x_Treated": {
+      "coef": 0.0051,
+      "se": 0.0016,
+      "t_stat": 3.125,
+      "p_value": 0.0018,
+      "sig": "***"
+    },
+    "delta_Market": {
+      "coef": 1.068,
+      "se": 0.1872,
+      "t_stat": 5.7039,
+      "p_value": 0.0,
+      "sig": "***"
+    },
+    "n_obs": 48276,
+    "r_squared": 0.0157,
+    "variable": "DD",
+    "interpretation": "gamma < 0 and significant supports Proposition 1: Distance-to-Default falls (credit risk increases) in treatment group post-transition, above and beyond market-wide moves."
+  },
+  "split_treatment": {
+    "gamma_Hyperscaler": {
+      "coef": 0.0074,
+      "se": 0.0016,
+      "t_stat": 4.6829,
+      "p_value": 0.0,
+      "sig": "***"
+    },
+    "gamma_DC_REIT": {
+      "coef": 0.0013,
+      "se": 0.0021,
+      "t_stat": 0.6047,
+      "p_value": 0.5454,
+      "sig": ""
+    },
+    "n_obs": 48276,
+    "r_squared": 0.0157
+  },
+  "generation_heterogeneity": {
+    "GPT-3": {
+      "generation": 1,
+      "gamma": -0.005025425568255851,
+      "t_stat": -2.4309670487162833,
+      "p_value": 0.01505858399535014,
+      "n_obs": 3474,
+      "r_squared": 0.2170735236564314
+    },
+    "ChatGPT launch": {
+      "generation": 2,
+      "gamma": 0.01839878886444049,
+      "t_stat": 8.54307732455598,
+      "p_value": 1.3069388316862951e-17,
+      "n_obs": 3956,
+      "r_squared": 0.03959760604646778
+    },
+    "GPT-4": {
+      "generation": 3,
+      "gamma": 0.011748409935266612,
+      "t_stat": 4.013660705733176,
+      "p_value": 5.978426601150433e-05,
+      "n_obs": 3944,
+      "r_squared": 0.023583060003664502
+    },
+    "GPT-4o": {
+      "generation": 4,
+      "gamma": 0.0009298946072617779,
+      "t_stat": 0.24965482392035424,
+      "p_value": 0.8028542973160875,
+      "n_obs": 3976,
+      "r_squared": 0.02501546959241796
+    },
+    "OpenAI o1": {
+      "generation": 5,
+      "gamma": 0.010128292516412951,
+      "t_stat": 2.323088091330875,
+      "p_value": 0.020174420590036147,
+      "n_obs": 4016,
+      "r_squared": 0.018019537667099628
+    }
+  },
+  "cross_sectional_correlation": {
+    "GPT-3": {
+      "generation": 1,
+      "within_treatment": 0.3697527004091205,
+      "within_control": NaN,
+      "cross_group": NaN
+    },
+    "ChatGPT launch": {
+      "generation": 2,
+      "within_treatment": 0.5192079260645431,
+      "within_control": NaN,
+      "cross_group": NaN
+    },
+    "GPT-4": {
+      "generation": 3,
+      "within_treatment": 0.4522738251625325,
+      "within_control": NaN,
+      "cross_group": NaN
+    },
+    "GPT-4o": {
+      "generation": 4,
+      "within_treatment": 0.3769706990489526,
+      "within_control": NaN,
+      "cross_group": NaN
+    },
+    "OpenAI o1": {
+      "generation": 5,
+      "within_treatment": 0.494362894121731,
+      "within_control": NaN,
+      "cross_group": NaN
+    }
+  },
+  "controller_adapter_did": {
+    "beta1_controller": {
+      "coef": 0.0074,
+      "se": 0.0016,
+      "t_stat": 4.6828,
+      "p_value": 0.0,
+      "sig": "***"
+    },
+    "beta2_adapter": {
+      "coef": -0.0005,
+      "se": 0.0014,
+      "t_stat": -0.3477,
+      "p_value": 0.728,
+      "sig": ""
+    },
+    "delta_market": {
+      "coef": 1.0683,
+      "se": 0.1872,
+      "t_stat": 5.7074,
+      "p_value": 0.0,
+      "sig": "***"
+    },
+    "n_obs": 48276,
+    "r_squared": 0.0157,
+    "interpretation": "beta1 > 0: Controllers become safer post-transition (confirmed). beta2 < 0: Adapters become riskier post-transition (hypothesis)."
+  },
+  "sector_heterogeneity": {
+    "finance": {
+      "beta1_controller": {
+        "coef": 0.0073,
+        "t_stat": 4.3781,
+        "p_value": 0.0
+      },
+      "beta2_adapter": {
+        "coef": -0.0029,
+        "t_stat": -1.538,
+        "p_value": 0.124
+      },
+      "n_obs": 18118,
+      "n_controllers": 1,
+      "n_adapters": 7,
+      "r_squared": 0.0252
+    },
+    "healthcare": {
+      "beta1_controller": {
+        "coef": 0.007,
+        "t_stat": 4.2119,
+        "p_value": 0.0
+      },
+      "beta2_adapter": {
+        "coef": -0.0056,
+        "t_stat": -1.8578,
+        "p_value": 0.0632
+      },
+      "n_obs": 16555,
+      "n_controllers": 1,
+      "n_adapters": 6,
+      "r_squared": 0.0367
+    },
+    "retail": {
+      "beta1_controller": {
+        "coef": 0.0069,
+        "t_stat": 4.1635,
+        "p_value": 0.0
+      },
+      "beta2_adapter": {
+        "coef": 0.0029,
+        "t_stat": 1.3805,
+        "p_value": 0.1674
+      },
+      "n_obs": 16589,
+      "n_controllers": 1,
+      "n_adapters": 6,
+      "r_squared": 0.0346
+    },
+    "telecom": {
+      "beta1_controller": {
+        "coef": 0.0071,
+        "t_stat": 4.2052,
+        "p_value": 0.0
+      },
+      "beta2_adapter": {
+        "coef": 0.0034,
+        "t_stat": 1.1334,
+        "p_value": 0.2571
+      },
+      "n_obs": 15074,
+      "n_controllers": 1,
+      "n_adapters": 5,
+      "r_squared": 0.0394
+    }
+  },
+  "generation_controller_adapter": {
+    "GPT-3": {
+      "generation": 1,
+      "beta1_controller": -0.0092,
+      "beta2_adapter": -0.0003,
+      "beta1_t": -5.88,
+      "beta2_t": -0.6,
+      "beta1_p": 0.0,
+      "beta2_p": 0.5475,
+      "n_obs": 3474
+    },
+    "ChatGPT launch": {
+      "generation": 2,
+      "beta1_controller": 0.022,
+      "beta2_adapter": 0.0059,
+      "beta1_t": 10.71,
+      "beta2_t": 2.24,
+      "beta1_p": 0.0,
+      "beta2_p": 0.0253,
+      "n_obs": 3956
+    },
+    "GPT-4": {
+      "generation": 3,
+      "beta1_controller": 0.0158,
+      "beta2_adapter": 0.0047,
+      "beta1_t": 4.89,
+      "beta2_t": 1.35,
+      "beta1_p": 0.0,
+      "beta2_p": 0.1779,
+      "n_obs": 3944
+    },
+    "GPT-4o": {
+      "generation": 4,
+      "beta1_controller": -0.0038,
+      "beta2_adapter": -0.0097,
+      "beta1_t": -1.01,
+      "beta2_t": -2.07,
+      "beta1_p": 0.3105,
+      "beta2_p": 0.0383,
+      "n_obs": 3976
+    },
+    "OpenAI o1": {
+      "generation": 5,
+      "beta1_controller": 0.0143,
+      "beta2_adapter": 0.0012,
+      "beta1_t": 2.6,
+      "beta2_t": 0.32,
+      "beta1_p": 0.0093,
+      "beta2_p": 0.7489,
+      "n_obs": 4016
+    }
+  }
+}

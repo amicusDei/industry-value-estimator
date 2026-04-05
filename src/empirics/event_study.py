@@ -33,7 +33,9 @@ from scipy import stats
 import warnings
 warnings.filterwarnings('ignore')
 
-from src.ingestion.credit_spreads import GROUP_LABELS, GENERATION_TRANSITIONS
+from src.ingestion.credit_spreads import (
+    GROUP_LABELS, GENERATION_TRANSITIONS, SECTOR_LABELS, TREATED_GROUPS,
+)
 
 
 # ── BUILD PANEL ───────────────────────────────────────────────────────────────
@@ -95,9 +97,12 @@ def build_panel(
 
     # Add group labels
     panel["Group"] = panel["Issuer"].map(GROUP_LABELS)
-    panel["Treated"] = (panel["Group"].isin(["hyperscaler", "dc_reit"])).astype(int)
-    panel["Hyperscaler"] = (panel["Group"] == "hyperscaler").astype(int)
+    panel["Sector"] = panel["Issuer"].map(SECTOR_LABELS)
+    panel["Treated"] = (panel["Group"].isin(TREATED_GROUPS)).astype(int)
+    panel["Hyperscaler"] = (panel["Group"] == "controller").astype(int)
     panel["DC_REIT"] = (panel["Group"] == "dc_reit").astype(int)
+    panel["Controller"] = (panel["Group"] == "controller").astype(int)
+    panel["Adapter"] = (panel["Group"] == "adapter").astype(int)
 
     # First difference
     panel = panel.sort_values(["Issuer", "Date"])
@@ -155,6 +160,8 @@ def build_panel(
     panel["Post_x_Treated"] = panel["Post"] * panel["Treated"]
     panel["Post_x_Hyper"]   = panel["Post"] * panel["Hyperscaler"]
     panel["Post_x_REIT"]    = panel["Post"] * panel["DC_REIT"]
+    panel["Post_x_Controller"] = panel["Post"] * panel["Controller"]
+    panel["Post_x_Adapter"]    = panel["Post"] * panel["Adapter"]
 
     # Issuer fixed effect encoding
     panel["Issuer_FE"] = pd.Categorical(panel["Issuer"])
@@ -316,6 +323,127 @@ def run_cross_sectional_correlation(
     return results
 
 
+# ── CONTROLLER vs ADAPTER REGRESSIONS ─────────────────────────────────────────
+
+def run_controller_adapter_did(panel: pd.DataFrame) -> sm.regression.linear_model.RegressionResultsWrapper:
+    """
+    Controller vs Adapter DiD regression:
+        ΔDD_it = α_i + β1·Post×Controller + β2·Post×Adapter + δ·ΔMarket + ε_it
+
+    Hypothesis:
+        β1 > 0 (Controllers become safer post-transition — confirmed)
+        β2 < 0 (Adapters become riskier post-transition — to be tested)
+    """
+    formula = "Delta_CDS ~ Post_x_Controller + Post_x_Adapter + Delta_CDX + C(Issuer) - 1"
+
+    model = smf.ols(formula, data=panel).fit(
+        cov_type="cluster",
+        cov_kwds={"groups": panel["Issuer"]}
+    )
+    return model
+
+
+def run_sector_heterogeneity(panel: pd.DataFrame) -> dict:
+    """
+    Run separate Controller vs Adapter DiD for each adapter sector.
+    Identifies which sector shows the strongest β2 < 0.
+
+    Sectors: finance, healthcare, retail, telecom.
+    Each regression includes all controllers + one adapter sector.
+    """
+    adapter_sectors = ["finance", "healthcare", "retail", "telecom"]
+    results = {}
+
+    for sector in adapter_sectors:
+        # Filter: controllers + adapters from this sector only
+        sector_panel = panel[
+            (panel["Group"] == "controller") |
+            ((panel["Group"] == "adapter") & (panel["Sector"] == sector))
+        ].copy()
+
+        if len(sector_panel) < 50:
+            results[sector] = {"error": f"Too few observations: {len(sector_panel)}"}
+            continue
+
+        try:
+            formula = "Delta_CDS ~ Post_x_Controller + Post_x_Adapter + Delta_CDX + C(Issuer) - 1"
+            model = smf.ols(formula, data=sector_panel).fit(
+                cov_type="cluster",
+                cov_kwds={"groups": sector_panel["Issuer"]}
+            )
+            results[sector] = {
+                "beta1_controller": {
+                    "coef": round(float(model.params.get("Post_x_Controller", np.nan)), 4),
+                    "t_stat": round(float(model.tvalues.get("Post_x_Controller", np.nan)), 4),
+                    "p_value": round(float(model.pvalues.get("Post_x_Controller", np.nan)), 4),
+                },
+                "beta2_adapter": {
+                    "coef": round(float(model.params.get("Post_x_Adapter", np.nan)), 4),
+                    "t_stat": round(float(model.tvalues.get("Post_x_Adapter", np.nan)), 4),
+                    "p_value": round(float(model.pvalues.get("Post_x_Adapter", np.nan)), 4),
+                },
+                "n_obs": int(model.nobs),
+                "n_controllers": int(sector_panel["Controller"].sum() > 0),
+                "n_adapters": int(sector_panel[sector_panel["Adapter"] == 1]["Issuer"].nunique()),
+                "r_squared": round(model.rsquared, 4),
+            }
+        except Exception as e:
+            results[sector] = {"error": str(e)}
+
+    return results
+
+
+def run_generation_controller_adapter(panel: pd.DataFrame) -> dict:
+    """
+    Controller vs Adapter DiD for each generational transition separately.
+    Tests whether the divergence strengthens over successive generations.
+    """
+    results = {}
+    transitions = pd.DataFrame(GENERATION_TRANSITIONS)
+    transitions["date"] = pd.to_datetime(transitions["date"])
+
+    for _, row in transitions.iterrows():
+        gen = row["generation"]
+        event_name = row["event"]
+
+        sub = panel[panel["Event_Gen"] == gen].copy()
+        t0 = pd.to_datetime(row["date"])
+        pre_start = t0 - pd.Timedelta(days=90)
+        pre_panel = panel[
+            (panel["Date"] >= pre_start) & (panel["Date"] < t0)
+        ].copy()
+        pre_panel["Post"] = 0
+        pre_panel["Post_x_Controller"] = 0
+        pre_panel["Post_x_Adapter"] = 0
+
+        combined = pd.concat([pre_panel, sub], ignore_index=True)
+        combined = combined.dropna(subset=["Delta_CDS", "Delta_CDX"])
+
+        if len(combined) < 50:
+            continue
+
+        try:
+            formula = "Delta_CDS ~ Post_x_Controller + Post_x_Adapter + Delta_CDX + C(Issuer) - 1"
+            model = smf.ols(formula, data=combined).fit(
+                cov_type="cluster",
+                cov_kwds={"groups": combined["Issuer"]}
+            )
+            results[event_name] = {
+                "generation": gen,
+                "beta1_controller": round(float(model.params.get("Post_x_Controller", np.nan)), 4),
+                "beta2_adapter": round(float(model.params.get("Post_x_Adapter", np.nan)), 4),
+                "beta1_t": round(float(model.tvalues.get("Post_x_Controller", np.nan)), 2),
+                "beta2_t": round(float(model.tvalues.get("Post_x_Adapter", np.nan)), 2),
+                "beta1_p": round(float(model.pvalues.get("Post_x_Controller", np.nan)), 4),
+                "beta2_p": round(float(model.pvalues.get("Post_x_Adapter", np.nan)), 4),
+                "n_obs": int(model.nobs),
+            }
+        except Exception as e:
+            results[event_name] = {"error": str(e)}
+
+    return results
+
+
 # ── SUMMARY OUTPUT ────────────────────────────────────────────────────────────
 
 def format_results(
@@ -432,7 +560,46 @@ def run_event_study(
     print("Running cross-sectional correlation test...")
     corr = run_cross_sectional_correlation(_spread_df, event_window_days)
 
+    # Controller vs Adapter regressions
+    print("Running Controller vs Adapter DiD...")
+    ca_model = run_controller_adapter_did(panel)
+
+    print("Running sector heterogeneity (adapter sectors)...")
+    sector_het = run_sector_heterogeneity(panel)
+
+    print("Running generation-level Controller vs Adapter...")
+    gen_ca = run_generation_controller_adapter(panel)
+
     results = format_results(baseline, split, gen_het, corr, variable_name=_var_name)
+
+    # Add Controller vs Adapter results
+    def _safe(model, key):
+        try:
+            return {
+                "coef": round(float(model.params[key]), 4),
+                "se": round(float(model.bse[key]), 4),
+                "t_stat": round(float(model.tvalues[key]), 4),
+                "p_value": round(float(model.pvalues[key]), 4),
+                "sig": "***" if model.pvalues[key] < 0.01
+                       else "**" if model.pvalues[key] < 0.05
+                       else "*" if model.pvalues[key] < 0.10 else "",
+            }
+        except Exception:
+            return {}
+
+    results["controller_adapter_did"] = {
+        "beta1_controller": _safe(ca_model, "Post_x_Controller"),
+        "beta2_adapter": _safe(ca_model, "Post_x_Adapter"),
+        "delta_market": _safe(ca_model, "Delta_CDX"),
+        "n_obs": int(ca_model.nobs),
+        "r_squared": round(ca_model.rsquared, 4),
+        "interpretation": (
+            "beta1 > 0: Controllers become safer post-transition (confirmed). "
+            "beta2 < 0: Adapters become riskier post-transition (hypothesis)."
+        ),
+    }
+    results["sector_heterogeneity"] = sector_het
+    results["generation_controller_adapter"] = gen_ca
 
     if output_path:
         import json
